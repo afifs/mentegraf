@@ -4,6 +4,7 @@ Mentegraf is a desktop application for authors, researchers and thinkers who wan
 
 Built with Electron + Cytoscape.js. Publishes interactive D3.js web pages.
 
+![Screenshot Mentegraf3.webp](assets/Screenshot%20Mentegraf3.webp)
 ## Quick Start
 
 ```bash
