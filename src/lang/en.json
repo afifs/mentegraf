@@ -1,0 +1,110 @@
+{
+  "addNode": "Node",
+  "layoutLabel": "Layout",
+  "fitLabel": "Fit",
+  "exportLabel": "Export",
+  "importLabel": "Import",
+  "themeLabel": "Theme",
+  "deleteLabel": "Delete",
+  "saveLabel": "Save",
+  "redoLabel": "Redo",
+  "undoLabel": "Undo",
+  "nodeDetail": "Node Detail",
+  "edgeDetail": "Edge Detail",
+  "altHint": "Alt + click node → create link",
+  "click": "Click",
+  "connect": "Link",
+  "nameLabel": "Name",
+  "typeLabel": "Type",
+  "descLabel": "Description",
+  "notesLabel": "Notes",
+  "tagsLabel": "Tags",
+  "connections": "Connections",
+  "connection": "Connection",
+  "relType": "Relation Type",
+  "note": "Note",
+  "strength": "Strength (1-5)",
+  "search": "Search...",
+  "saved": "Saved",
+  "exported": "Exported",
+  "loaded": "Loaded",
+  "publish": "Publish",
+  "published": "HTML generated",
+  "settings": "Settings",
+  "categoriesTitle": "Categories (max 10)",
+  "connTypesTitle": "Connection Types (max 8)",
+  "cancel": "Cancel",
+  "selected": "selected",
+  "exportTitle": "Export",
+  "newNodeLabel": "New Node",
+  "bookTitle": "Book Title",
+  "about": {
+    "title": "About Mentegraf",
+    "version": "Version 2.0.0",
+    "description": "Mentegraf is a visual knowledge mapping tool for authors. Plan your book by creating nodes for concepts, people, ideas, and chapters, then visualize the relationships between them.",
+    "helpSection": "Usage Tips",
+    "techSection": "Built With",
+    "copyright": "© 2026 Afif Say",
+    "help": {
+      "addNode": {
+        "title": "Adding Nodes",
+        "desc": "Click ⊕ in the left toolbar for a free node. Click the + button next to a selected node to add a connected node."
+      },
+      "connect": {
+        "title": "Creating Connections",
+        "desc": "Select a node, hold Alt, a dashed line appears. While holding Alt, click the target node to create an edge."
+      },
+      "editNode": {
+        "title": "Editing Nodes",
+        "desc": "Click a node → side panel slides in. Edit name, type, description, notes, and tags. Name updates live on the graph."
+      },
+      "edgeWeight": {
+        "title": "Edge Strength",
+        "desc": "Click an edge → side panel. Set strength 1-5, relation type (influences, contradicts, etc.) and add notes. Strength controls line width."
+      },
+      "search": {
+        "title": "Search",
+        "desc": "The search box in the top bar searches node labels. Matches are highlighted, single results auto-zoom."
+      },
+      "filter": {
+        "title": "Type Filtering",
+        "desc": "Toggle category buttons in the top bar to show/hide specific types. Hidden type edges are also hidden."
+      },
+      "multiSelect": {
+        "title": "Multi-Select",
+        "desc": "Ctrl+click (Mac: Cmd+click) to select multiple nodes. A bottom bar appears with bulk delete option."
+      },
+      "undoRedo": {
+        "title": "Undo / Redo",
+        "desc": "Ctrl+Z to undo, Ctrl+Shift+Z to redo. Up to 40 steps. Every node/edge add, delete, and move is tracked."
+      },
+      "themes": {
+        "title": "Theme & Language",
+        "desc": "Theme (dark/light) and language (TR/EN) toggles at the bottom of the left toolbar. Preferences are remembered."
+      },
+      "settings": {
+        "title": "Settings",
+        "desc": "⚙ button to customize categories and connection types. Edit color, name (TR/EN), and icon. Each project carries its own settings."
+      },
+      "save": {
+        "title": "Saving",
+        "desc": "Ctrl+S to save. Auto-save every 30 seconds. Use File → Save As to create a .mentegraf file."
+      },
+      "export": {
+        "title": "Exporting",
+        "desc": "5 formats: JSON (re-importable), HTML Publish (shareable web page), Obsidian (Markdown), SVG (print), CSV (spreadsheet)."
+      }
+    },
+    "shortcuts": "Keyboard Shortcuts",
+    "shortcutList": {
+      "addNode": "Ctrl+D → Add node",
+      "altClick": "Alt+Click → Create edge",
+      "ctrlClick": "Ctrl+Click → Multi-select",
+      "delete": "Delete → Delete selected",
+      "undo": "Ctrl+Z → Undo",
+      "redo": "Ctrl+Shift+Z → Redo",
+      "save": "Ctrl+S → Save",
+      "escape": "Esc → Deselect"
+    }
+  }
+}

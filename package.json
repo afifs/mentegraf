@@ -1,0 +1,88 @@
+{
+  "name": "mentegraf",
+  "version": "2.0.0",
+  "description": "Author's Visual Knowledge Graph Tool",
+  "main": "src/main.js",
+  "author": "Afif Say",
+  "license": "MIT",
+  "homepage": "https://www.afifsay.org",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "org.afifsay.mentegraf",
+    "productName": "Mentegraf",
+    "copyright": "Copyright © 2026 Afif Say",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "src/",
+        "to": "src/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office"
+    },
+    "fileAssociations": [
+      {
+        "ext": "mentegraf",
+        "name": "Mentegraf Project",
+        "description": "Mentegraf Knowledge Graph Project",
+        "mimeType": "application/x-mentegraf",
+        "role": "Editor"
+      }
+    ]
+  }
+}

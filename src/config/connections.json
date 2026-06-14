@@ -1,0 +1,9 @@
+[
+  {"id":"","tr":"Genel","en":"General","color":"#888","marker":"","style":"solid"},
+  {"id":"influences","tr":"Etkiliyor","en":"Influences","color":"#6a9fd8","marker":"▶","style":"solid"},
+  {"id":"contradicts","tr":"Çelişiyor","en":"Contradicts","color":"#d46a6a","marker":"✕","style":"dashed"},
+  {"id":"builds_on","tr":"Üzerine İnşa","en":"Builds On","color":"#6ab87a","marker":"«","style":"solid"},
+  {"id":"contains","tr":"İçeriyor","en":"Contains","color":"#b89a6a","marker":"◉","style":"solid"},
+  {"id":"parallel","tr":"Paralel","en":"Parallel","color":"#9a8cc4","marker":"∥","style":"dotted"},
+  {"id":"discusses","tr":"Tartışıyor","en":"Discusses","color":"#c4956b","marker":"◇","style":"solid"}
+]

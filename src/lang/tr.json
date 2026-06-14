@@ -1,0 +1,110 @@
+{
+  "addNode": "Düğüm",
+  "layoutLabel": "Görünüm Düzeni",
+  "fitLabel": "Sığdır",
+  "exportLabel": "Dışa Aktar",
+  "importLabel": "İçe Aktar",
+  "themeLabel": "Tema",
+  "deleteLabel": "Sil",
+  "saveLabel": "Kaydet",
+  "undoLabel": "Geri al",
+  "redoLabel": "Yinele",
+  "nodeDetail": "Düğüm Detayı",
+  "edgeDetail": "Bağlantı Detayı",
+  "altHint": "Alt + düğüme tıkla → bağlantı kur",
+  "click": "Tıkla",
+  "connect": "Bağlantı",
+  "nameLabel": "Ad",
+  "typeLabel": "Tür",
+  "descLabel": "Açıklama",
+  "notesLabel": "Notlar",
+  "tagsLabel": "Etiketler",
+  "connections": "Bağlantılar",
+  "connection": "Bağlantı",
+  "relType": "İlişki Türü",
+  "note": "Not",
+  "strength": "Güç (1-5)",
+  "search": "Ara...",
+  "saved": "Kaydedildi",
+  "exported": "Dışa aktarıldı",
+  "loaded": "Yüklendi",
+  "publish": "Yayımla",
+  "published": "HTML oluşturuldu",
+  "settings": "Ayarlar",
+  "categoriesTitle": "Kategoriler (max 10)",
+  "connTypesTitle": "Bağlantı Türleri (max 8)",
+  "cancel": "İptal",
+  "selected": "seçili",
+  "exportTitle": "Dışa Aktar",
+  "newNodeLabel": "Yeni Düğüm",
+  "bookTitle": "Kitap Başlığı",
+  "about": {
+    "title": "Mentegraf Hakkında",
+    "version": "Sürüm 2.0.0",
+    "description": "Mentegraf, yazarlar için görsel bilgi haritası aracıdır. Kitap planlarken kavramları, kişileri, fikirleri ve bölümleri düğümler olarak oluşturup aralarındaki ilişkileri görselleştirebilirsiniz.",
+    "helpSection": "Kullanım İpuçları",
+    "techSection": "Teknolojiler",
+    "copyright": "© 2026 Afif Say",
+    "help": {
+      "addNode": {
+        "title": "Düğüm Ekleme",
+        "desc": "Sol toolbar'dan ⊕ butonu ile serbest düğüm ekleyin. Seçili düğümün yanındaki + butonu ile bağlantılı düğüm ekleyin."
+      },
+      "connect": {
+        "title": "Bağlantı Kurma",
+        "desc": "Bir düğüm seçili iken Alt tuşuna basın, kesikli çizgi belirir. Alt basılıyken hedef düğüme tıklayın."
+      },
+      "editNode": {
+        "title": "Düğüm Düzenleme",
+        "desc": "Düğüme tıklayın → sağ panel açılır. Ad, tür, açıklama, notlar ve etiketler düzenlenebilir. Ad yazarken grafta canlı güncellenir."
+      },
+      "edgeWeight": {
+        "title": "Bağlantı Gücü",
+        "desc": "Bağlantıya tıklayın → sağ panel. 1-5 arası güç, ilişki türü (etkiliyor, çelişiyor, vb.) ve not ekleyin. Güç çizgi kalınlığını belirler."
+      },
+      "search": {
+        "title": "Arama",
+        "desc": "Üst bardaki arama kutusu düğüm adlarında arar. Eşleşenler vurgulanır, tek sonuçta otomatik zoom yapılır."
+      },
+      "filter": {
+        "title": "Tür Filtreleme",
+        "desc": "Üst bardaki kategori butonları ile belirli türleri gizleyin/gösterin. Gizlenen türlerin bağlantıları da gizlenir."
+      },
+      "multiSelect": {
+        "title": "Çoklu Seçim",
+        "desc": "Ctrl+tıkla (Mac: Cmd+tıkla) ile birden fazla düğüm seçin. Alt barda toplu silme seçeneği çıkar."
+      },
+      "undoRedo": {
+        "title": "Geri Al / Yinele",
+        "desc": "Ctrl+Z geri al, Ctrl+Shift+Z yinele. 40 adıma kadar. Her düğüm/bağlantı ekleme, silme ve taşıma kaydedilir."
+      },
+      "themes": {
+        "title": "Tema & Dil",
+        "desc": "Sol toolbar altında tema (koyu/açık) ve dil (TR/EN) değiştirme butonları. Tercihler hatırlanır."
+      },
+      "settings": {
+        "title": "Ayarlar",
+        "desc": "⚙ butonu ile kategori ve bağlantı türlerini özelleştirin. Renk, ad (TR/EN) ve ikon düzenlenebilir. Her proje kendi ayarlarını taşır."
+      },
+      "save": {
+        "title": "Kaydetme",
+        "desc": "Ctrl+S ile kaydet. 30 saniyede bir otomatik kayıt yapılır. Dosya → Farklı Kaydet ile .mentegraf dosyası oluşturun."
+      },
+      "export": {
+        "title": "Dışa Aktarma",
+        "desc": "5 format: JSON (tekrar yüklenebilir), HTML Publish (paylaşılabilir web sayfası), Obsidian (Markdown), SVG (baskı), CSV (tablo)."
+      }
+    },
+    "shortcuts": "Klavye Kısayolları",
+    "shortcutList": {
+      "addNode": "Ctrl+D → Düğüm ekle",
+      "altClick": "Alt+Tıkla → Bağlantı kur",
+      "ctrlClick": "Ctrl+Tıkla → Çoklu seçim",
+      "delete": "Delete → Seçili sil",
+      "undo": "Ctrl+Z → Geri al",
+      "redo": "Ctrl+Shift+Z → Yinele",
+      "save": "Ctrl+S → Kaydet",
+      "escape": "Esc → Seçimi bırak"
+    }
+  }
+}
