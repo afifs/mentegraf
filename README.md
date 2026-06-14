@@ -1,4 +1,4 @@
-# Mentegraf — Author's Visual Knowledge Graph Tool
+# Mentegraf: Author's Visual Knowledge Graph Tool
 
 Mentegraf is a desktop application for authors, researchers and thinkers who want to map their ideas visually. Create nodes for concepts, people, books, ideas, and chapters, then connect them with typed, weighted edges to reveal the hidden structure of your work.
 
@@ -133,3 +133,8 @@ mentegraf/
 ## License
 
 MIT © 2026 Afif Say — www.afifsay.org
+
+## About Author
+Information about the author along with his essays, information on his books are available at [www.afifsay.org](https://www.afifsay.org).
+Open to managing and consulting projects related to knowledge and authorship, or senior management consulting.
+
