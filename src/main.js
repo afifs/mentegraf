@@ -2,13 +2,12 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
-// Resolve paths - __dirname is src/ in both dev and packaged
+// Resolve paths
 const isDev = !app.isPackaged
 const srcPath = __dirname
-
-const assetsPath = isDev
-    ? path.join(__dirname, '..', 'assets')
-    : path.join(process.resourcesPath, 'assets')
+const assetsPath = isDev 
+  ? path.join(__dirname, '..', 'assets')
+  : path.join(process.resourcesPath, 'assets')
 
 let mainWindow
 let currentFile = null
@@ -156,6 +155,88 @@ function openAbout() {
     query: { lang: currentLang }
   })
 }
+
+// ═══ ZOTERO LOCAL API PROXY ═══
+const { shell } = require('electron')
+const http = require('http')
+
+function zoteroRequest(endpoint) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'localhost',
+      port: 23119,
+      path: '/api/users/0' + endpoint,
+      method: 'GET',
+      headers: {
+        'Zotero-API-Version': '3',
+        'Accept': 'application/json'
+      }
+    }
+    const req = http.request(options, (res) => {
+      let data = ''
+      res.on('data', chunk => data += chunk)
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try { resolve(JSON.parse(data)) }
+          catch(e) { reject(new Error('Invalid JSON from Zotero')) }
+        } else {
+          reject(new Error('Zotero API ' + res.statusCode))
+        }
+      })
+    })
+    req.on('error', (e) => reject(e))
+    req.setTimeout(5000, () => { req.destroy(); reject(new Error('Zotero timeout')) })
+    req.end()
+  })
+}
+
+function zoteroCheckAlive() {
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: 'localhost',
+      port: 23119,
+      path: '/api/users/0/items?limit=1&format=json',
+      method: 'GET',
+      headers: { 'Zotero-API-Version': '3', 'Accept': 'application/json' }
+    }, (res) => {
+      let data = ''
+      res.on('data', chunk => data += chunk)
+      res.on('end', () => {
+        console.log('Zotero check: status=' + res.statusCode)
+        resolve(res.statusCode >= 200 && res.statusCode < 400)
+      })
+    })
+    req.on('error', (e) => { console.log('Zotero check error:', e.message); resolve(false) })
+    req.setTimeout(5000, () => { req.destroy(); resolve(false) })
+    req.end()
+  })
+}
+
+ipcMain.handle('open-external', async (event, url) => {
+  await shell.openExternal(url)
+})
+
+ipcMain.handle('zotero-check', async () => {
+  return await zoteroCheckAlive()
+})
+
+ipcMain.handle('zotero-collections', async () => {
+  return await zoteroRequest('/collections?format=json')
+})
+
+ipcMain.handle('zotero-items', async (event, collectionKey, limit) => {
+  let url = collectionKey
+    ? '/collections/' + collectionKey + '/items?format=json&limit=' + (limit || 200)
+    : '/items?format=json&limit=' + (limit || 200)
+  url += '&itemType=-attachment+-note'
+  return await zoteroRequest(url)
+})
+
+ipcMain.handle('zotero-search', async (event, query) => {
+  const url = '/items?format=json&q=' + encodeURIComponent(query) + '&itemType=-attachment+-note&limit=50'
+  return await zoteroRequest(url)
+})
+
 
 app.whenReady().then(createWindow)
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

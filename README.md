@@ -7,11 +7,6 @@
     A desktop application for authors, researchers and thinkers who want to map their ideas visually. Create nodes for concepts, people, books, ideas, and chapters, then connect them with typed, weighted edges to reveal the hidden structure of your work.
 </p>
 
-[![Build Status][build-status]][build-status-url]
-[![Standard Version][release]][release-url]
-[![GitHub Discussions][discussion]][discussion-url]
-
-
 Built with Electron + Cytoscape.js. Publishes interactive D3.js web pages.
 
 ![Screenshot Mentegraf3.webp](assets/Screenshot%20Mentegraf3.webp)
@@ -46,6 +41,7 @@ mentegraf/
 │   ├── style.css            ← CSS (dark/light themes)
 │   ├── app.js               ← Application logic
 │   ├── publish.js           ← D3.js publish template
+│   ├── zotero.js            ← Zotero integration
 │   ├── about.html           ← Help & about (12 tips, 8 shortcuts)
 │   ├── lib/
 │   │   └── cytoscape.min.js ← Bundled (offline capable)
@@ -58,21 +54,38 @@ mentegraf/
 │   ├── main.js              ← Electron main process
 │   └── preload.js           ← Electron context bridge
 ├── assets/                  ← App icons (ico/icns/png)
+├── .github/workflows/
+│   └── build.yml            ← CI/CD: auto-build on tag push
 ├── package.json
+├── LICENSE
 └── README.md
+
 ```
 
 ## Features
 
 ### Graph Editor
-- **10 node types** with Material Symbol SVG icons inside nodes
-- **7 edge types** with colors, line styles, and mid-edge markers (▶ ✕ « ◉ ∥ ◇)
-- **Edge weight 1-5** as line thickness + visual dots
-- **Alt+click** to connect nodes (dashed gold line follows mouse)
-- **+ button** next to selected node creates connected child
-- **Slide-in panel** for editing name, type, description, notes, tags
-- **Search** with auto-zoom, **type filtering**, **multi-select** (Ctrl+click)
-- **Undo/Redo** up to 40 steps, **auto-save** every 30 seconds
+- **10 node types** with Material Symbol SVG icons inside nodes: Person, Concept, Book, Idea, Term, Document, Chapter, Event, Location, Institution
+- **7 edge types** with distinct colors, line styles, and mid-edge markers: General, Influences (▶), Contradicts (✕), Builds On («), Contains (◉), Parallel (∥), Discusses (◇)
+- **Edge weight 1-5** reflected as line thickness and visual dots
+- **Add nodes**: toolbar button (free) or + button next to selected node (connected)
+- **Connect nodes**: Alt+click source, then target. Dashed gold line follows mouse.
+- **Slide-in panel**: click node/edge → edit name, type, description, notes, tags
+- **Live name update**: type in name field, label updates instantly on graph
+- **Search**: top bar, highlights matches, auto-zooms to single result
+- **Type filtering**: toggle category buttons to show/hide node types
+- **Multi-select**: Ctrl+click multiple nodes, bulk delete from bottom bar
+- **Undo/Redo**: Ctrl+Z / Ctrl+Shift+Z, up to 40 steps
+- **Auto-save**: every 30 seconds to localStorage
+
+### Zotero Integration
+- Import books, articles, and references directly from your Zotero library
+- Browse collections or search within Zotero
+- Zotero items become graph nodes (books → Book, articles → Document)
+- Authors automatically become Person nodes with connections
+- Metadata preserved: abstract, publication, date, DOI, URL, tags
+- Click "Open in Zotero" on any imported node to jump back to the source
+- **Requires**: Zotero running + Preferences → Advanced → "Allow other applications on this computer to communicate with Zotero"
 
 ### Themes & Language
 - Dark / Light theme toggle
@@ -80,11 +93,12 @@ mentegraf/
 - New languages: add a JSON file to `lang/`
 
 ### Configurable
-- Categories: name (TR/EN), color, icon — up to 10
-- Connection types: name (TR/EN), color, marker symbol — up to 8
+- **Categories**: Settings (⚙) → edit name (TR/EN), color — up to 10
+- **Connection types**: Settings → edit name (TR/EN), color, marker symbol — up to 8
 - Config saved per-project in `.mentegraf` files
 
 ### Export (5 formats)
+
 | Format | Description |
 |---|---|
 | **JSON** | Full project, re-importable |
@@ -96,24 +110,32 @@ mentegraf/
 ### Published HTML
 - D3-force physics (drag, repel, attract)
 - Node icons, edge colors + markers
-- Type filter toggles, search, zoom controls
-- Click node → detail panel with connections
-- Dark/Light theme, inherits editor language
+- Type filter toggles, search, zoom controls (+/−/fit)
+- Click node → detail panel with description and connection list
+- Dark/Light theme toggle
+- Language inherits from editor at publish time
+
+### Electron Desktop
+- Native file open/save dialogs (`.mentegraf` file association)
+- i18n menus (Dosya/File, Düzenle/Edit, Görünüm/View)
+- About window with 12 usage tips + 8 keyboard shortcuts
+- Offline capable (Cytoscape.js bundled locally)
+- GitHub Actions CI/CD: tag push → auto-build → auto-release
 
 ## Keyboard Shortcuts
 
 | Key | Action |
 |---|---|
-| Ctrl+D | Add node |
-| Alt+Click | Create edge |
-| Ctrl+Click | Multi-select |
-| Delete | Delete selected |
-| Ctrl+Z | Undo |
-| Ctrl+Shift+Z | Redo |
-| Ctrl+S | Save |
-| Ctrl+N | New project |
-| Ctrl+O | Open project |
-| Escape | Deselect / close |
+| `Ctrl+D` | Add node |
+| `Alt+Click` | Create edge between nodes |
+| `Ctrl+Click` | Multi-select nodes |
+| `Delete` | Delete selected |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Shift+Z` | Redo |
+| `Ctrl+S` | Save |
+| `Ctrl+N` | New project |
+| `Ctrl+O` | Open project |
+| `Escape` | Deselect / close panel |
 
 ## File Format (v2.0)
 
@@ -123,23 +145,36 @@ mentegraf/
   "version": "2.0",
   "app": "Mentegraf",
   "config": {
-    "categories": [{"id":"person","tr":"Kişi","en":"Person","color":"#7b8cc4","svgPath":"..."}],
-    "connectionTypes": [{"id":"influences","tr":"Etkiliyor","en":"Influences","color":"#6a9fd8","marker":"▶","style":"solid"}]
+    "categories": [
+      {"id": "person", "tr": "Kişi", "en": "Person", "color": "#7b8cc4", "svgPath": "M12 2..."}
+    ],
+    "connectionTypes": [
+      {"id": "influences", "tr": "Etkiliyor", "en": "Influences", "color": "#6a9fd8", "marker": "▶", "style": "solid"}
+    ]
   },
   "elements": {
-    "nodes": [{"data":{"id":"n1","label":"...","type":"person",...},"position":{"x":100,"y":200}}],
-    "edges": [{"data":{"source":"n1","target":"n2","weight":4,"edgeType":"influences","note":"..."}}]
+    "nodes": [{"data": {"id": "n1", "label": "...", "type": "person", "zoteroKey": "ABC123"}, "position": {"x": 100, "y": 200}}],
+    "edges": [{"data": {"source": "n1", "target": "n2", "weight": 4, "edgeType": "influences", "note": "..."}}]
   }
 }
 ```
 
+## Adding a New Language
+
+1. Copy `src/lang/en.json` → `src/lang/XX.json`
+2. Translate all values (including `about.*` section)
+3. In `app.js` → `loadLangs()`: add `fetch('lang/XX.json')`
+4. In `app.js` → `toggleLang()`: add the new language to the cycle
+5. In `main.js` → `MENU_LABELS`: add the new language block
+
 ## Roadmap
 
-- [ ] Zotero integration (local API import)
+- [x] Zotero integration
 - [ ] Lasso selection
 - [ ] Groups / clusters (compound nodes)
 - [ ] Minimap
 - [ ] Presentation mode
+- [ ] Node image attachments
 
 ## License
 

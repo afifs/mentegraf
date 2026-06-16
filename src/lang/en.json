@@ -93,6 +93,10 @@
       "export": {
         "title": "Exporting",
         "desc": "5 formats: JSON (re-importable), HTML Publish (shareable web page), Obsidian (Markdown), SVG (print), CSV (spreadsheet)."
+      },
+      "zotero": {
+        "title": "Zotero Integration",
+        "desc": "Import books and articles from your Zotero library with the Z button. Authors become person nodes automatically. Imported nodes show an \"Open in Zotero\" button."
       }
     },
     "shortcuts": "Keyboard Shortcuts",
@@ -106,5 +110,15 @@
       "save": "Ctrl+S → Save",
       "escape": "Esc → Deselect"
     }
-  }
+  },
+  "zotero": "Zotero",
+  "zoteroImport": "Zotero Import",
+  "zoteroConnect": "Cannot connect to Zotero",
+  "zoteroImported": "items imported",
+  "openInZotero": "Open in Zotero",
+  "all": "All",
+  "none": "None",
+  "collections": "Collections",
+  "importSelected": "Import Selected",
+  "zoteroImport": "Zotero Import"
 }

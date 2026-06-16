@@ -86,7 +86,7 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .export-opts{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .export-opt{padding:12px 16px;border-radius:8px;border:1px solid var(--border);background:var(--badge-bg);cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .15s}
 .export-opt:hover{border-color:var(--accent);background:rgba(197,160,94,.06)}
-.export-opt .eo-icon{width:28px;height:28px;float:left;}
+.export-opt .eo-icon{font-size:20px;width:28px;text-align:center}
 .export-opt .eo-title{font-size:14px;color:var(--text)}
 .export-opt .eo-desc{font-size:11px;color:var(--dim)}
 
@@ -103,4 +103,15 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .cfg-del{background:0;border:0;color:var(--dim);cursor:pointer;font-size:14px;padding:2px}.cfg-del:hover{color:#c45a5a}
 .cfg-add{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;border:1px dashed var(--border);cursor:pointer;color:var(--dim);font-size:12px;margin-top:4px;transition:all .15s}
 .cfg-add:hover{border-color:var(--accent);color:var(--accent)}
+.sw-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 #importInput{display:none}
+/* Zotero Import */
+.zcoll{padding:6px 10px;border-radius:5px;font-size:12px;cursor:pointer;transition:background .1s;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zcoll:hover{background:var(--bg3);color:var(--text)}
+.zcoll.selected{background:rgba(197,160,94,.08);color:var(--accent)}
+.zitem{padding:4px 8px;border-radius:5px;font-size:12px;transition:background .1s}
+.zitem:hover{background:var(--bg3)}
+.zitem label{display:flex;align-items:flex-start;gap:6px;cursor:pointer}
+.zitem input[type=checkbox]{margin-top:3px;accent-color:var(--accent)}
+.zitem-title{display:block;color:var(--text);font-size:12px;line-height:1.4}
+.zitem-meta{display:block;color:var(--dim);font-size:10px;margin-top:1px}

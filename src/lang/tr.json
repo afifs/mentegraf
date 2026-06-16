@@ -93,6 +93,10 @@
       "export": {
         "title": "Dışa Aktarma",
         "desc": "5 format: JSON (tekrar yüklenebilir), HTML Publish (paylaşılabilir web sayfası), Obsidian (Markdown), SVG (baskı), CSV (tablo)."
+      },
+      "zotero": {
+        "title": "Zotero Entegrasyonu",
+        "desc": "Z butonuyla Zotero kütüphanenizden kitap ve makale içe aktarın. Yazarlar otomatik kişi düğümü olur. İçe aktarılan düğümde \"Zotero'da Aç\" butonu çıkar."
       }
     },
     "shortcuts": "Klavye Kısayolları",
@@ -106,5 +110,15 @@
       "save": "Ctrl+S → Kaydet",
       "escape": "Esc → Seçimi bırak"
     }
-  }
+  },
+  "zotero": "Zotero",
+  "zoteroImport": "Zotero İçe Aktar",
+  "zoteroConnect": "Zotero'ya bağlanılamadı",
+  "zoteroImported": "öğe içe aktarıldı",
+  "openInZotero": "Zotero'da Aç",
+  "all": "Tümü",
+  "none": "Hiçbiri",
+  "collections": "Koleksiyonlar",
+  "importSelected": "Seçilenleri İçe Aktar",
+  "zoteroImport": "Zotero İçe Aktar"
 }
