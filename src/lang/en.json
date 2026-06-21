@@ -120,5 +120,15 @@
   "none": "None",
   "collections": "Collections",
   "importSelected": "Import Selected",
-  "zoteroImport": "Zotero Import"
+  "zoteroImport": "Zotero Import",
+  "reportTitle": "Category Report",
+  "reportDesc": "Export descriptions, notes and connections for selected categories",
+  "reportPickCats": "Select categories to include in report:",
+  "reportIncludeConns": "Include connections",
+  "reportHeader": "Mentegraf Report",
+  "tagsLabel2": "Tags",
+  "reportGenerated": "Report generated",
+  "addCategory": "Category",
+  "addConnType": "Connection Type",
+  "newItem": "New"
 }

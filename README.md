@@ -171,6 +171,7 @@ mentegraf/
 
 - [x] Zotero integration
 - [ ] Lasso selection
+- [x] Category Reports
 - [ ] Groups / clusters (compound nodes)
 - [ ] Minimap
 - [ ] Presentation mode

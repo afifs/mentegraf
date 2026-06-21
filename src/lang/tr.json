@@ -120,5 +120,15 @@
   "none": "Hiçbiri",
   "collections": "Koleksiyonlar",
   "importSelected": "Seçilenleri İçe Aktar",
-  "zoteroImport": "Zotero İçe Aktar"
+  "zoteroImport": "Zotero İçe Aktar",
+  "reportTitle": "Kategori Raporu",
+  "reportDesc": "Seçilen kategorilerin açıklama, not ve bağlantılarını dışa aktar",
+  "reportPickCats": "Rapora dahil edilecek kategorileri seçin:",
+  "reportIncludeConns": "Bağlantıları dahil et",
+  "reportHeader": "Mentegraf Raporu",
+  "tagsLabel2": "Etiketler",
+  "reportGenerated": "Rapor oluşturuldu",
+  "addCategory": "Kategori",
+  "addConnType": "Bağlantı Türü",
+  "newItem": "Yeni"
 }

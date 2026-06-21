@@ -1,3 +1,47 @@
+
+# Mentegraf v2.1.0 — Release Notes
+
+## New Features
+
+### Zotero Integration
+- Import books, articles, and references directly from your Zotero library
+- Browse collections or search within Zotero
+- Authors automatically become Person nodes with connections
+- Metadata preserved: abstract, publication, date, DOI, URL, tags
+- "Open in Zotero" button on imported nodes for quick back-reference
+- Requires: Zotero running with "Allow other applications" enabled
+
+### Category Report Export
+- New export option: generate reports for selected node categories
+- Three output formats: Markdown, HTML, and CSV/TSV
+- Category picker with checkboxes — export only what you need
+- Optional connection list per node
+- HTML output is print-ready (Georgia serif, @media print)
+- CSV/TSV output is database-ready (nodes + edges, tab-separated)
+
+## Improvements
+
+- All hardcoded language strings replaced with i18n system — full TR/EN coverage
+- About page updated with Zotero usage tip (13 tips total)
+- GitHub Actions workflow updated for Node.js 24
+
+## Bug Fixes
+
+- Fixed crash on mouse move before canvas initialization (clearDL guard)
+- Fixed preload.js crash: `shell` module removed from preload context, routed through IPC
+- Fixed Zotero API connection: explicit hostname/port/path + req.end()
+- Fixed Zotero check endpoint: /api/ → /api/users/0/items?limit=1
+
+## System Requirements
+
+- Windows 10/11 (64-bit)
+- ~150 MB disk space
+- Zotero 7+ (optional, for import feature)
+
+---
+
+MIT License © 2026 Afif Say — [www.afifsay.org](https://www.afifsay.org)
+
 # Mentegraf v2.0.1 — Release Notes
 
 **Author's Visual Knowledge Graph Tool**
@@ -78,7 +122,7 @@ For Zotero integration: Zotero → Preferences → Advanced → enable "Allow ot
 | Ctrl+S | Save |
 | Ctrl+N / Ctrl+O | New / Open |
 | Escape | Deselect |
-
+g't 
 ---
 
 MIT License © 2026 Afif Say — [www.afifsay.org](https://www.afifsay.org)

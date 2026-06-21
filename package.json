@@ -1,6 +1,6 @@
 {
   "name": "mentegraf",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Author's Visual Knowledge Graph Tool",
   "main": "src/main.js",
   "author": "Afif Say",
