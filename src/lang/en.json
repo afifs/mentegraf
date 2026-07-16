@@ -120,7 +120,6 @@
   "none": "None",
   "collections": "Collections",
   "importSelected": "Import Selected",
-  "zoteroImport": "Zotero Import",
   "reportTitle": "Category Report",
   "reportDesc": "Export descriptions, notes and connections for selected categories",
   "reportPickCats": "Select categories to include in report:",

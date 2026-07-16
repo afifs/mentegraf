@@ -1,6 +1,6 @@
 # Mentegraf: Author's Visual Knowledge Graph Tool
 
-<p align="center">
+<p>
   <a href="https://afifsay.org/" target="_blank">
     <img src="assets/icon.png" alt="https://www.afifsay.org/" width="100"><br/>
   </a>
