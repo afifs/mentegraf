@@ -80,6 +80,7 @@
       <div class="pb">
         <div id="nodeEd" style="display:none">
           <div class="fld"><label data-l="nameLabel">Ad</label><input id="nName" aria-label="name" oninput="liveUpdateName()"></div>
+          <div id="nWdeg" style="font-size:11px;color:var(--dim);margin-bottom:8px"></div>
           <div class="fld"><label data-l="typeLabel">Tür</label><div class="tg" id="tGrid"></div></div>
           <div class="fld"><label data-l="descLabel">Açıklama</label><textarea id="nDesc" aria-label="description"></textarea></div>
           <div class="fld"><label data-l="notesLabel">Notlar</label><textarea id="nNotes" aria-label="notes" style="min-height:110px"></textarea></div>
@@ -206,10 +207,15 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 data-l="settings">Ayarlar</h2><button class="bt bg" onclick="closeSettings()">✕</button></div>
     <h3 data-l="categoriesTitle">Kategoriler (max 10)</h3><div id="cfgCats"></div>
     <h3 data-l="connTypesTitle">Bağlantı Türleri (max 8)</h3><div id="cfgConns"></div>
+    <h3 data-l="viewTitle">Görünüm</h3>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" id="cfgSizing">
+      <span data-l="sizingEnable">Düğümleri bağlantı ağırlığına göre boyutlandır</span>
+    </label>
     <div class="br" style="margin-top:20px"><button class="bt bp" onclick="saveSettings()" data-l="saveLabel">Kaydet</button><button class="bt bg" onclick="closeSettings()" data-l="cancel">İptal</button></div>
   </div>
 </div>
-
+<script src="nodeSizing.js"></script>
 <script src="app.js"></script>
 <script src="publish.js"></script>
 <script src="zotero.js"></script>

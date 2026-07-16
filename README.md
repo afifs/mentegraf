@@ -97,6 +97,21 @@ mentegraf/
 - **Connection types**: Settings → edit name (TR/EN), color, marker symbol — up to 8
 - Config saved per-project in `.mentegraf` files
 
+### Node Sizing by Weighted Degree
+
+Nodes can be sized by the sum of their connection weights, making
+hubs visually prominent at a glance. Sizing uses area-true scaling
+(circle area, not radius, is proportional to weighted degree) and
+is normalized per project, so any weight range renders sensibly.
+
+- Toggle in **Settings → Appearance**; the preference is saved
+  inside the project file, so a `.mentegraf` file remembers it
+- The node detail panel shows the raw weighted degree
+- SVG export and the interactive D3 publish respect node sizes,
+  so deliverables match the workspace
+- Implemented as a standalone module (`nodeSizing.js`) — recomputes
+  automatically when edges are added, removed, or reweighted
+
 ### Export (5 formats)
 
 | Format | Description |
@@ -172,6 +187,7 @@ mentegraf/
 - [x] Zotero integration
 - [ ] Lasso selection
 - [x] Category Reports
+- [x] Node Sizing by Weighted Degree
 - [ ] Groups / clusters (compound nodes)
 - [ ] Minimap
 - [ ] Presentation mode

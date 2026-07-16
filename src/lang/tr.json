@@ -130,5 +130,12 @@
   "reportGenerated": "Rapor oluşturuldu",
   "addCategory": "Kategori",
   "addConnType": "Bağlantı Türü",
-  "newItem": "Yeni"
+  "newItem": "Yeni",
+  "sizing.enable": "Düğümleri bağlantı ağırlığına göre boyutlandır",
+  "sizing.mode": "Boyutlandırma ölçütü",
+  "sizing.mode.total": "Tüm bağlantılar",
+  "sizing.mode.in": "Gelen (duyarlılık)",
+  "sizing.mode.out": "Giden (etkili)",
+  "sizing.tooltip.degree": "Ağırlıklı derece",
+  "wdeg": "Ağırlıklı derece"
 }

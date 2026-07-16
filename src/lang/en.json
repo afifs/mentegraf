@@ -130,5 +130,12 @@
   "reportGenerated": "Report generated",
   "addCategory": "Category",
   "addConnType": "Connection Type",
-  "newItem": "New"
+  "newItem": "New",
+  "sizing.enable": "Size nodes by connection weight",
+  "sizing.mode": "Size by",
+  "sizing.mode.total": "All connections",
+  "sizing.mode.in": "Incoming (sensitivity)",
+  "sizing.mode.out": "Outgoing (influence)",
+  "sizing.tooltip.degree": "Weighted degree",
+  "wdeg": "Weighted degree"
 }
