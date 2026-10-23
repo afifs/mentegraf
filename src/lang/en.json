@@ -136,5 +136,16 @@
   "sizing.mode.in": "Incoming (sensitivity)",
   "sizing.mode.out": "Outgoing (influence)",
   "sizing.tooltip.degree": "Weighted degree",
-  "wdeg": "Weighted degree"
+  "wdeg": "Weighted degree",
+  "textLabel": "Text",
+  "textCreate": "Create text",
+  "textOpen": "Open text",
+  "saveFirst": "Save the project first: texts are stored in the project folder.",
+  "textError": "Could not open the text.",
+  "textMissing": "The text file is missing. Create a new, empty text at the same path?",
+  "textChangedOutside": "This text was changed outside Mentegraf, and you also have unsaved edits here.\n\nOK: load the outside version (Ctrl+Z brings your edits back).\nCancel: keep your version; saving will overwrite the outside change.",
+  "words": "words",
+  "unsavedText": "unsaved",
+  "fullWidth": "Full width",
+  "closeText": "Close"
 }

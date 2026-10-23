@@ -155,4 +155,52 @@ test('odd ids give safe file names', () => {
   assert.strictEqual(Store.safeName('con'), '_con')
 })
 
+console.log('text fragments')
+
+test('slugs handle Turkish letters', () => {
+  assert.strictEqual(Store.slugify('Bilişimsel Düşünme: Giriş'), 'bilisimsel-dusunme-giris')
+  assert.strictEqual(Store.slugify('ÇĞİÖŞÜ çğıöşü'), 'cgiosu-cgiosu')
+  assert.strictEqual(Store.slugify('???'), 'metin')
+})
+
+test('new text paths: chapters in manuscript/, others in notes/, never reused', () => {
+  const dir = path.join(tmp(), 'Book')
+  Store.writeProject(dir, sample())
+  assert.strictEqual(Store.newFragmentPath(dir, 'Giriş', 'chapter', 'n-abcd1234', []), 'manuscript/giris-1234.md')
+  const p1 = Store.newFragmentPath(dir, 'Wiener', 'person', 'n1', [])
+  assert.strictEqual(p1, 'notes/wiener-n1.md')
+  assert.strictEqual(Store.newFragmentPath(dir, 'Wiener', 'person', 'n1', [p1]), 'notes/wiener-n1-2.md')
+  Store.writeFragments(dir, [{ path: p1, text: 'x' }])
+  assert.strictEqual(Store.newFragmentPath(dir, 'Wiener', 'person', 'n1', []), 'notes/wiener-n1-2.md', 'existing file counts as taken')
+})
+
+test('write and read texts; unchanged texts are not rewritten; old versions kept', () => {
+  const dir = path.join(tmp(), 'Book')
+  Store.writeProject(dir, sample())
+  assert.deepStrictEqual(Store.writeFragments(dir, [{ path: 'notes/a.md', text: 'one' }]), ['notes/a.md'])
+  assert.deepStrictEqual(Store.readFragment(dir, 'notes/a.md'), { exists: true, text: 'one' })
+  assert.deepStrictEqual(Store.writeFragments(dir, [{ path: 'notes/a.md', text: 'one' }]), [])
+  Store.writeFragments(dir, [{ path: 'notes/a.md', text: 'two' }])
+  const versions = fs.readdirSync(path.join(dir, '.mentegraf/backups/text'))
+  assert.strictEqual(versions.length, 1)
+  assert.strictEqual(read(dir, '.mentegraf/backups/text/' + versions[0]), 'one')
+  assert.deepStrictEqual(Store.readFragment(dir, 'notes/missing.md'), { exists: false })
+})
+
+test('text paths cannot escape the project', () => {
+  const dir = path.join(tmp(), 'Book')
+  for (const bad of ['../x.md', 'notes/../../x.md', 'graph/nodes/n1.md', 'notes/x.txt', 'C:/x.md', '/etc/x.md']) {
+    assert.throws(() => Store.fragmentAbs(dir, bad), e => e.code === 'bad-path', bad)
+  }
+})
+
+test('Save As copies the text folders', () => {
+  const a = path.join(tmp(), 'A'), b = path.join(tmp(), 'B')
+  Store.writeProject(a, sample())
+  Store.writeFragments(a, [{ path: 'manuscript/ch1.md', text: 'chapter' }, { path: 'notes/n.md', text: 'note' }])
+  Store.copyTextFolders(a, b)
+  assert.strictEqual(read(b, 'manuscript/ch1.md'), 'chapter')
+  assert.strictEqual(read(b, 'notes/n.md'), 'note')
+})
+
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''))

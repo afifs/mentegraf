@@ -74,6 +74,14 @@
     <button id="addBtn" onclick="addNodeConnected()">+</button>
     <div id="altHint"><span data-l="altHint">Alt + düğüme tıkla → bağlantı kur</span></div>
 
+    <!-- WRITING PANE -->
+    <div id="writer">
+      <div id="writerResize"></div>
+      <div class="wh"><div class="wt"><span id="wTitle"></span><span id="wPath"></span></div><div class="wbtns"><button onclick="Writer.toggleFull()" aria-label="full width" data-lt="fullWidth">⤢</button><button onclick="Writer.close()" aria-label="close" data-lt="closeText">✕</button></div></div>
+      <div id="wEditor"></div>
+      <div class="wst"><span id="wWords"></span><span id="wState"></span></div>
+    </div>
+
     <!-- SLIDE-IN PANEL -->
     <div id="panel">
       <div class="ph"><span id="panTitle" data-l="nodeDetail">Düğüm Detayı</span><button onclick="closePanel()">✕</button></div>
@@ -85,6 +93,7 @@
           <div class="fld"><label data-l="descLabel">Açıklama</label><textarea id="nDesc" aria-label="description"></textarea></div>
           <div class="fld"><label data-l="notesLabel">Notlar</label><textarea id="nNotes" aria-label="notes" style="min-height:110px"></textarea></div>
           <div class="fld"><label data-l="tagsLabel">Etiketler</label><input id="nTags" aria-label="tags"></div>
+          <div class="fld"><label data-l="textLabel">Metin</label><div class="txrow"><button class="bt" id="nTextBtn" onclick="Writer.openForNode(selEle)"></button><span id="nTextPath"></span></div></div>
           <div class="br"><button class="bt bp" onclick="saveNode()" data-l="saveLabel">Kaydet</button><button class="bt bd" onclick="delSel()" data-l="deleteLabel">Sil</button></div>
           <div class="cs"><div class="ctt" data-l="connections">Bağlantılar</div><div id="connList"></div></div>
         </div>
@@ -215,7 +224,9 @@
     <div class="br" style="margin-top:20px"><button class="bt bp" onclick="saveSettings()" data-l="saveLabel">Kaydet</button><button class="bt bg" onclick="closeSettings()" data-l="cancel">İptal</button></div>
   </div>
 </div>
+<script src="lib/codemirror.bundle.js"></script>
 <script src="projectFormat.js"></script>
+<script src="writer.js"></script>
 <script src="nodeSizing.js"></script>
 <script src="app.js"></script>
 <script src="publish.js"></script>

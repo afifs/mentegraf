@@ -115,3 +115,29 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .zitem input[type=checkbox]{margin-top:3px;accent-color:var(--accent)}
 .zitem-title{display:block;color:var(--text);font-size:12px;line-height:1.4}
 .zitem-meta{display:block;color:var(--dim);font-size:10px;margin-top:1px}
+
+/* ═══ WRITING PANE (texts attached to nodes) ═══ */
+#main{--writer-w:50%}
+#writer{position:absolute;top:0;right:0;bottom:0;width:var(--writer-w);display:none;flex-direction:column;background:var(--bg2);border-left:1px solid var(--border);z-index:17}
+#main.writing #writer{display:flex}
+#main.writing #cy{left:0;top:0;bottom:0;right:var(--writer-w);width:auto;height:auto}
+#main.writing #panel{right:var(--writer-w)}
+#main.writing #addBtn{display:none!important}
+#main.writing.writer-full #writer{width:100%}
+#main.writing.writer-full #cy,#main.writing.writer-full #panel{display:none}
+#main.writing.writer-full #writerResize{display:none}
+#writerResize{position:absolute;left:-3px;top:0;bottom:0;width:6px;cursor:col-resize;z-index:2}
+#writerResize:hover{background:var(--accent);opacity:.4}
+.wh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}
+.wt{display:flex;flex-direction:column;min-width:0}
+#wTitle{font-weight:600;color:var(--bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#wPath{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wbtns{display:flex;gap:2px;flex-shrink:0}
+.wbtns button{background:none;border:0;color:var(--dim);font-size:16px;cursor:pointer;padding:4px 7px;border-radius:4px}
+.wbtns button:hover{background:var(--hover);color:var(--text)}
+#wEditor{flex:1;min-height:0;overflow:hidden}
+#wEditor .cm-editor{height:100%}
+.wst{display:flex;justify-content:space-between;padding:4px 12px;font-size:11px;color:var(--dim);border-top:1px solid var(--border)}
+#wState{color:var(--accent)}
+.txrow{display:flex;align-items:center;gap:8px;min-width:0}
+#nTextPath{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

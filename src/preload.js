@@ -3,7 +3,10 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('mentegraf', {
   onMenuAction: (cb) => ipcRenderer.on('menu-action', (e, action) => cb(action)),
   onFileOpened: (cb) => ipcRenderer.on('file-opened', (e, data, path, opts) => cb(data, path, opts)),
-  saveData: (data) => ipcRenderer.invoke('save-data', data),
+  saveData: (data, fragments) => ipcRenderer.invoke('save-data', data, fragments),
+  fragmentNewPath: (label, type, nodeId, taken) => ipcRenderer.invoke('fragment-new-path', label, type, nodeId, taken),
+  fragmentRead: (p) => ipcRenderer.invoke('fragment-read', p),
+  onFragmentChanged: (cb) => ipcRenderer.on('fragment-changed', (e, p) => cb(p)),
   setDirty: (dirty) => ipcRenderer.send('set-dirty', !!dirty),
   closeWindow: () => ipcRenderer.send('close-window'),
   writeRecovery: (data) => ipcRenderer.send('write-recovery', data),

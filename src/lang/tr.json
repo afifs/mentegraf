@@ -136,5 +136,16 @@
   "sizing.mode.in": "Gelen (duyarlılık)",
   "sizing.mode.out": "Giden (etkili)",
   "sizing.tooltip.degree": "Ağırlıklı derece",
-  "wdeg": "Ağırlıklı derece"
+  "wdeg": "Ağırlıklı derece",
+  "textLabel": "Metin",
+  "textCreate": "Metin oluştur",
+  "textOpen": "Metni aç",
+  "saveFirst": "Önce projeyi kaydedin: metinler proje klasöründe tutulur.",
+  "textError": "Metin açılamadı.",
+  "textMissing": "Metin dosyası bulunamadı. Aynı yolda yeni, boş bir metin oluşturulsun mu?",
+  "textChangedOutside": "Bu metin Mentegraf dışında değiştirildi ve burada da kaydedilmemiş düzenlemeleriniz var.\n\nTamam: dışarıdaki sürümü yükle (Ctrl+Z düzenlemelerinizi geri getirir).\nİptal: kendi sürümünüzü koruyun; kaydettiğinizde dışarıdaki değişikliğin üzerine yazılır.",
+  "words": "kelime",
+  "unsavedText": "kaydedilmedi",
+  "fullWidth": "Tam genişlik",
+  "closeText": "Kapat"
 }

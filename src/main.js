@@ -109,6 +109,39 @@ function offerRecovery(file, newerThan) {
   return null
 }
 
+// ───────── texts (Markdown files attached to nodes) ─────────
+
+let textWatchers = []
+const textTimers = {}
+function unwatchTexts() { textWatchers.forEach(w => { try { w.close() } catch (e) { /* ignore */ } }); textWatchers = [] }
+// Tell the renderer when a text changes on disk (another editor, a sync client).
+function watchTexts() {
+  unwatchTexts()
+  if (!currentDir) return
+  ProjectStore.TEXT_DIRS.forEach(sub => {
+    const d = path.join(currentDir, sub)
+    try {
+      fs.mkdirSync(d, { recursive: true })
+      textWatchers.push(fs.watch(d, { recursive: true }, (ev, fname) => {
+        if (!fname || !/\.md$/i.test(String(fname))) return
+        const rel = (sub + '/' + String(fname)).split(path.sep).join('/')
+        clearTimeout(textTimers[rel])
+        textTimers[rel] = setTimeout(() => send('fragment-changed', rel), 250)
+      }))
+    } catch (e) { console.warn('Text watch failed:', e.message) }
+  })
+}
+
+ipcMain.handle('fragment-new-path', (event, label, type, nodeId, taken) => {
+  if (!currentDir) return { error: 'untitled' }
+  try { return { path: ProjectStore.newFragmentPath(currentDir, label, type, nodeId, taken) } } catch (e) { return { error: 'failed', message: e.message } }
+})
+
+ipcMain.handle('fragment-read', (event, rel) => {
+  if (!currentDir) return { error: 'untitled', message: '' }
+  try { return ProjectStore.readFragment(currentDir, rel) } catch (e) { return { error: 'failed', message: e.message } }
+})
+
 ipcMain.on('write-recovery', (event, data) => {
   try { ProjectStore.atomicWrite(recoveryPath(), JSON.stringify(data)) } catch (e) { console.warn('Recovery write failed:', e.message) }
 })
@@ -148,6 +181,7 @@ function loadDir(dir) {
     return
   }
   currentDir = dir
+  watchTexts()
   let data = res.project
   let manifestTime = 0
   try { manifestTime = fs.statSync(path.join(dir, ProjectStore.MANIFEST)).mtimeMs } catch (e) { /* ignore */ }
@@ -194,6 +228,7 @@ async function openFile() {
 function newProject() {
   if (!confirmDiscard()) return
   currentDir = null
+  unwatchTexts()
   isDirty = false
   updateTitle()
   send('menu-action', 'new')
@@ -219,20 +254,28 @@ async function chooseNewProjectDir() {
 async function saveFileAs() {
   const dir = await chooseNewProjectDir()
   if (!dir) return
+  if (currentDir) {
+    try { ProjectStore.copyTextFolders(currentDir, dir) } catch (e) {
+      dialog.showErrorBox(labels().saveError, path.basename(dir) + '\n\n' + e.message)
+      return
+    }
+  }
   clearRecovery()        // the old location's recovery no longer applies
   currentDir = dir
+  watchTexts()
   updateTitle()
   send('menu-action', 'save')
 }
 
 // Save data from renderer
-ipcMain.handle('save-data', async (event, data) => {
+ipcMain.handle('save-data', async (event, data, fragments) => {
   if (!currentDir) {
     const dir = await chooseNewProjectDir()
     if (!dir) return false
     currentDir = dir
   }
   try {
+    ProjectStore.writeFragments(currentDir, fragments || [])   // texts first, graph last
     ProjectStore.writeProject(currentDir, data)
   } catch (e) {
     dialog.showErrorBox(labels().saveError, path.basename(currentDir) + '\n\n' + e.message)
@@ -240,6 +283,7 @@ ipcMain.handle('save-data', async (event, data) => {
   }
   clearRecovery()
   removeQuietly(untitledRecoveryPath())
+  if (!textWatchers.length) watchTexts()
   updateTitle()
   return true
 })

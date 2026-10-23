@@ -267,8 +267,86 @@ function checkNewProjectDir(dir) {
   return null
 }
 
+// ───────── text fragments (Markdown files attached to nodes) ─────────
+
+const TEXT_DIRS = ['manuscript', 'notes']
+const MAX_TEXT_VERSIONS = 5
+const TR_MAP = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'Ç': 'c', 'Ğ': 'g', 'Ö': 'o', 'Ş': 's', 'Ü': 'u' }
+
+function slugify(label) {
+  const s = String(label || '')
+    .replace(/[çğıİöşüÇĞÖŞÜ]/g, c => TR_MAP[c])
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    .slice(0, 40).replace(/-+$/, '')
+  return s || 'metin'
+}
+
+// Validate a project-relative text path and return its absolute path.
+function fragmentAbs(dir, rel) {
+  if (typeof rel !== 'string' || !/^(manuscript|notes)\/[^\\:*?"<>|]+\.md$/i.test(rel) || rel.split('/').includes('..')) {
+    throw err('bad-path', 'Invalid text path: ' + rel)
+  }
+  const abs = path.resolve(dir, rel)
+  if (!abs.startsWith(path.resolve(dir) + path.sep)) throw err('bad-path', 'Invalid text path: ' + rel)
+  return abs
+}
+
+// A new, unused path for a node's text: manuscript/ for chapters, notes/ otherwise.
+function newFragmentPath(dir, label, type, nodeId, taken) {
+  const folder = type === 'chapter' ? 'manuscript' : 'notes'
+  const tail = String(nodeId || '').replace(/[^A-Za-z0-9]/g, '').slice(-4).toLowerCase()
+  const base = folder + '/' + slugify(label) + (tail ? '-' + tail : '')
+  const used = new Set((taken || []).map(p => String(p).toLowerCase()))
+  let rel = base + '.md', i = 2
+  while (used.has(rel.toLowerCase()) || fs.existsSync(path.join(dir, rel))) rel = base + '-' + (i++) + '.md'
+  return rel
+}
+
+function readFragment(dir, rel) {
+  const text = readOrNull(fragmentAbs(dir, rel))
+  return text == null ? { exists: false } : { exists: true, text }
+}
+
+// Keep the last few versions of a text before it is overwritten.
+function backupText(dir, rel, oldText) {
+  try {
+    const bdir = path.join(dir, '.mentegraf', 'backups', 'text')
+    fs.mkdirSync(bdir, { recursive: true })
+    const flat = rel.replace(/\//g, '__').replace(/\.md$/i, '')
+    atomicWrite(path.join(bdir, flat + '--' + stamp() + '.md'), oldText)
+    const mine = fs.readdirSync(bdir).filter(n => n.startsWith(flat + '--')).sort()
+    mine.slice(0, Math.max(0, mine.length - MAX_TEXT_VERSIONS)).forEach(n => fs.unlinkSync(path.join(bdir, n)))
+  } catch (e) {
+    console.warn('Text backup skipped:', e.message)
+  }
+}
+
+// Write texts [{ path, text }]. Unchanged files are skipped. Returns the paths written.
+function writeFragments(dir, list) {
+  const written = []
+  ;(list || []).forEach(f => {
+    const abs = fragmentAbs(dir, f.path)
+    const old = readOrNull(abs)
+    if (old === f.text) return
+    if (old != null) backupText(dir, f.path, old)
+    atomicWrite(abs, f.text)
+    written.push(f.path)
+  })
+  return written
+}
+
+// Save As: bring the texts along to the new project folder.
+function copyTextFolders(fromDir, toDir) {
+  TEXT_DIRS.forEach(d => {
+    const src = path.join(fromDir, d)
+    if (fs.existsSync(src)) fs.cpSync(src, path.join(toDir, d), { recursive: true, force: false, errorOnExist: false })
+  })
+}
+
 module.exports = {
   MANIFEST, FORMAT,
   toFiles, fromFiles, safeName, isConflictName,
-  atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir
+  atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
+  TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders
 }
