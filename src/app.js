@@ -61,6 +61,9 @@ var undoStack=[],redoStack=[],maxUndo=40,autoSaveTimer=null;
 var isDirty=false;
 function setDirty(v){v=!!v;if(isDirty===v)return;isDirty=v;if(window.mentegraf&&window.mentegraf.setDirty)window.mentegraf.setDirty(v)}
 function addStarterNode(){if(cy.nodes().length)return;var c=catById('book')||categories[0];cy.add({data:{id:ProjectFormat.newId('n'),label:L('bookTitle'),type:c.id,color:c.color,description:'',notes:'',tags:[]},position:{x:400,y:300}})}
+// New Project: empty the existing graph and restore default settings. init() is not
+// re-run: it is a one-time setup (it would rebuild Cytoscape and lose #dragCanvas).
+function resetForNewProject(){initConfig();nodeSizingOn=true;NodeSizing.enable(cy);multiClear();clrSel();Writer.reset();cy.elements().remove();cy.style().update();buildTF();rebuildETS();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}
 function resetHistory(){undoStack=[JSON.stringify(getProject())];redoStack=[];updateUB()}
 function snapshot(){var s=JSON.stringify(getProject());if(undoStack.length>0&&undoStack[undoStack.length-1]===s)return;undoStack.push(s);setDirty(true);if(undoStack.length>maxUndo)undoStack.shift();redoStack=[];updateUB()}
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());loadProject(JSON.parse(undoStack[undoStack.length-1]),true);setDirty(true);updateUB()}
@@ -466,7 +469,7 @@ function doExportCSV(){
 function showMsg(t){var m=document.getElementById('ml');m.innerHTML='<span style="color:var(--accent)">✓ '+t+'</span>';setTimeout(function(){m.textContent=''},2000)}
 function uStats(){var vn=cy?cy.nodes().filter(function(n){return!n.hasClass('filtered-out')}).length:0;var ve=cy?cy.edges().filter(function(e){return!e.hasClass('filtered-out')}).length:0;document.getElementById('stats').textContent=vn+' / '+ve}
 
-if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new'){initConfig();init();Writer.reset();clrSel();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
+if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new')resetForNewProject();if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
 
 document.addEventListener('DOMContentLoaded',async function(){
   await loadConfigs();
