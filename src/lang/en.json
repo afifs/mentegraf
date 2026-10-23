@@ -156,11 +156,16 @@
   "tbNumber": "Numbered list",
   "tbLink": "Link (Ctrl+K)",
   "tbFootnote": "Footnote (Ctrl+Shift+F). In the note, press again to return to the text",
-  "tbCite": "Citation (Ctrl+Shift+C)",
+  "tbCite": "Citation: pick from Zotero (Ctrl+Shift+C)",
   "tbPassage": "Passage ID (Ctrl+Shift+P): tags the paragraph and copies its link",
   "tbPreview": "Preview (Ctrl+E)",
   "linkText": "link text",
   "footnoteHint": "Write the note; Ctrl+Shift+F takes you back to the text",
   "passageCopied": "Passage ID %s — link copied",
-  "passageNeedsText": "Put the cursor inside a paragraph first"
+  "passageNeedsText": "Put the cursor inside a paragraph first",
+  "tbDocx": "Export to Word (DOCX)",
+  "zoteroPicking": "Pick a source in Zotero…",
+  "zoteroUnavailable": "Zotero is not running: brackets added, type the key by hand",
+  "bbtMissing": "Better BibTeX not found in Zotero: brackets added",
+  "exporting": "Preparing DOCX…"
 }

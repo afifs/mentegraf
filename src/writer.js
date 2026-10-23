@@ -171,7 +171,30 @@ var Writer = (function () {
     return true
   }
 
+  // Citation: Zotero's picker (Better BibTeX) when available, else empty [@] brackets.
+  var picking = false
   function cite(v) {
+    if (!api() || !api().citePick) return manualCite(v)
+    if (picking) return true
+    picking = true
+    flash(L('zoteroPicking'))
+    api().citePick().then(function (r) {
+      picking = false
+      if (!view || !current) return
+      if (r && r.text) {
+        var s = view.state.selection.main
+        view.dispatch({ changes: { from: s.from, to: s.to, insert: r.text }, selection: { anchor: s.from + r.text.length }, scrollIntoView: true, userEvent: 'input' })
+        flash('')
+      } else if (r && r.error && r.error !== 'busy') {
+        manualCite(view)
+        flash(L(r.error === 'bbt' ? 'bbtMissing' : 'zoteroUnavailable'))
+      } else flash('')
+      view.focus()
+    }, function () { picking = false; if (view && current) manualCite(view) })
+    return true
+  }
+
+  function manualCite(v) {
     var st = v.state, r = st.selection.main, sel = st.sliceDoc(r.from, r.to)
     v.dispatch({ changes: { from: r.from, to: r.to, insert: '[@' + sel + ']' },
       selection: { anchor: r.from + 2 + sel.length }, userEvent: 'input' })
@@ -247,10 +270,23 @@ var Writer = (function () {
     footnote: footnote, cite: cite, passage: passageId
   }
   var TIPS = { bold: 'tbBold', italic: 'tbItalic', heading: 'tbHeading', quote: 'tbQuote', bullet: 'tbBullet',
-    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview' }
+    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview', docx: 'tbDocx' }
+
+  // Export the open text to Word through Pandoc (main process shows the result).
+  var exporting = false
+  async function exportDocx() {
+    if (!view || !current || !api() || !api().exportDocx || exporting) return
+    exporting = true
+    flash(L('exporting'))
+    try {
+      var r = await api().exportDocx(current.path, view.state.doc.toString(), window.curLang)
+      if (r && r.error === 'untitled') alert(L('saveFirst'))
+    } finally { exporting = false; flash('') }
+  }
 
   function run(name) {
     if (name === 'preview') { togglePreview(); return }
+    if (name === 'docx') { exportDocx(); return }
     if (!view || !current || previewOn || !COMMANDS[name]) return
     COMMANDS[name](view)
     view.focus()
@@ -594,7 +630,7 @@ var Writer = (function () {
   }
 
   return {
-    init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull, run: run, togglePreview: togglePreview,
+    init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull, run: run, togglePreview: togglePreview, exportDocx: exportDocx,
     updatePanel: updatePanel, dirtyFragments: dirtyFragments, willSave: willSave, markSaved: markSaved,
     hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu
   }

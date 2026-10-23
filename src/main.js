@@ -3,6 +3,7 @@ const path = require('path')
 const fs = require('fs')
 const ProjectFormat = require('./projectFormat')
 const ProjectStore = require('./projectStore')
+const Exporter = require('./exporter')
 
 // Resolve paths
 const isDev = !app.isPackaged
@@ -43,7 +44,10 @@ const MENU_LABELS = {
     wConflict: 'Eşitleme çakışması kopyası (yüklenmedi, yerinde bırakıldı)',
     wDuplicate: 'Yinelenen düğüm (yüklenmedi)',
     wUnreadable: 'Okunamayan dosya (yüklenmedi)',
-    wDangling: 'eksik düğüme bağlı bağlantı yüklenmedi'
+    wDangling: 'eksik düğüme bağlı bağlantı yüklenmedi',
+    exportTitle: 'Word (DOCX) olarak dışa aktar', exportDone: 'Belge oluşturuldu.', openBtn: 'Aç',
+    pandocMissing: 'Pandoc bulunamadı. pandoc.org adresinden kurun, ardından Mentegraf\'ı yeniden başlatın.',
+    pandocOld: 'Pandoc sürümü çok eski (%s). pandoc.org adresinden güncel sürümü kurun.'
   },
   en: {
     file: 'File', newProject: 'New Project', open: 'Open...', save: 'Save',
@@ -70,7 +74,10 @@ const MENU_LABELS = {
     wConflict: 'Sync conflict copy (not loaded, left in place)',
     wDuplicate: 'Duplicate node (not loaded)',
     wUnreadable: 'Unreadable file (not loaded)',
-    wDangling: 'link(s) to a missing node not loaded'
+    wDangling: 'link(s) to a missing node not loaded',
+    exportTitle: 'Export to Word (DOCX)', exportDone: 'Document created.', openBtn: 'Open',
+    pandocMissing: 'Pandoc was not found. Install it from pandoc.org, then restart Mentegraf.',
+    pandocOld: 'Pandoc %s is too old. Install the current version from pandoc.org.'
   }
 }
 
@@ -113,6 +120,47 @@ function offerRecovery(file, newerThan) {
   removeQuietly(file)
   return null
 }
+
+// ───────── citations (Zotero + Better BibTeX) and DOCX export (Pandoc) ─────────
+
+let pickInFlight = false
+ipcMain.handle('cite-pick', async () => {
+  if (pickInFlight) return { error: 'busy' }
+  pickInFlight = true
+  try {
+    const text = await Exporter.citePicker()
+    try { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus() } } catch (e) { /* stay put */ }   // back from Zotero
+    return { text }
+  } catch (e) {
+    return { error: e.code || 'zotero', message: e.message }
+  } finally { pickInFlight = false }
+})
+
+ipcMain.handle('export-docx', async (event, rel, text, lang) => {
+  if (!currentDir) return { error: 'untitled' }
+  const L = labels()
+  const base = path.basename(String(rel || 'metin')).replace(/\.md$/i, '')
+  const res = await dialog.showSaveDialog(mainWindow, {
+    title: L.exportTitle, defaultPath: path.join(currentDir, 'exports', base + '.docx'),
+    filters: [{ name: 'Word', extensions: ['docx'] }]
+  })
+  if (res.canceled || !res.filePath) return { canceled: true }
+  try {
+    fs.mkdirSync(path.dirname(res.filePath), { recursive: true })
+    const r = await Exporter.exportDocx({ projectDir: currentDir, fragmentPath: rel, text: String(text || ''), lang, outFile: res.filePath })
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: r.warnings.length ? 'warning' : 'info', title: L.exportTitle, message: L.exportDone,
+      detail: res.filePath + (r.warnings.length ? '\n\n' + r.warnings.slice(0, 8).join('\n') : ''),
+      buttons: [L.openBtn, 'OK'], defaultId: 0, cancelId: 1
+    })
+    if (choice === 0) require('electron').shell.openPath(res.filePath)
+    return { ok: true, out: res.filePath }
+  } catch (e) {
+    const info = e.code === 'pandoc-old' ? Exporter.pandocInfo() : null
+    dialog.showErrorBox(L.exportTitle, e.code === 'pandoc' ? L.pandocMissing : info ? L.pandocOld.replace('%s', info.version) : e.message)
+    return { error: e.code || 'failed' }
+  }
+})
 
 // ───────── texts (Markdown files attached to nodes) ─────────
 

@@ -152,7 +152,8 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .wtb .tb-fn{font-size:17px}
 .wsep{width:1px;height:18px;background:var(--border);margin:0 6px}
 .wgrow{flex:1}
-#writer.previewing .wtb button:not([data-cmd="preview"]){opacity:.35;pointer-events:none}
+#writer.previewing .wtb button:not([data-cmd="preview"]):not([data-cmd="docx"]){opacity:.35;pointer-events:none}
+.wtb .tb-docx{font:600 11px 'DM Sans',sans-serif;letter-spacing:.04em;padding:0 8px;border:1px solid var(--border);margin-right:4px}
 #wPreview{display:none;flex:1;min-height:0;overflow:auto}
 #writer.previewing #wEditor{display:none}
 #writer.previewing #wPreview{display:block}

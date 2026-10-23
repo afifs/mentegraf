@@ -156,11 +156,16 @@
   "tbNumber": "Numaralı liste",
   "tbLink": "Bağlantı (Ctrl+K)",
   "tbFootnote": "Dipnot (Ctrl+Shift+F). Dipnotun içindeyken tekrar basınca metne döner",
-  "tbCite": "Kaynak gösterme (Ctrl+Shift+C)",
+  "tbCite": "Kaynak gösterme: Zotero’dan seç (Ctrl+Shift+C)",
   "tbPassage": "Paragraf kimliği (Ctrl+Shift+P): paragrafı işaretler, bağlantısını kopyalar",
   "tbPreview": "Önizleme (Ctrl+E)",
   "linkText": "bağlantı metni",
   "footnoteHint": "Dipnotu yazın; Ctrl+Shift+F ile metne dönersiniz",
   "passageCopied": "Paragraf kimliği %s — bağlantı kopyalandı",
-  "passageNeedsText": "Önce imleci bir paragrafın içine koyun"
+  "passageNeedsText": "Önce imleci bir paragrafın içine koyun",
+  "tbDocx": "Word (DOCX) olarak dışa aktar",
+  "zoteroPicking": "Zotero’da kaynak seçin…",
+  "zoteroUnavailable": "Zotero açık değil: köşeli parantez eklendi, anahtarı elle yazın",
+  "bbtMissing": "Zotero’da Better BibTeX bulunamadı: köşeli parantez eklendi",
+  "exporting": "DOCX hazırlanıyor…"
 }
