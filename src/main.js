@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const ProjectFormat = require('./projectFormat')
 
 // Resolve paths
 const isDev = !app.isPackaged
@@ -11,6 +12,8 @@ const assetsPath = isDev
 
 let mainWindow
 let currentFile = null
+let isDirty = false
+let forceClose = false
 let currentLang = 'tr'
 
 const MENU_LABELS = {
@@ -20,7 +23,10 @@ const MENU_LABELS = {
     edit: 'Düzenle', addNode: 'Düğüm Ekle', linkMode: 'Bağlantı Modu',
     deleteSelected: 'Seçili Sil', undo: 'Geri Al', redo: 'Yinele',
     view: 'Görünüm', relayout: 'Yeniden Düzenle', fitAll: 'Tümüne Sığdır',
-    devTools: 'Geliştirici Araçları'
+    devTools: 'Geliştirici Araçları',
+    unsavedTitle: 'Kaydedilmemiş değişiklikler', unsavedMsg: 'Projede kaydedilmemiş değişiklikler var.',
+    saveBtn: 'Kaydet', dontSave: 'Kaydetme', cancel: 'İptal', discard: 'Değişiklikleri at',
+    openError: 'Proje açılamadı', saveError: 'Proje kaydedilemedi'
   },
   en: {
     file: 'File', newProject: 'New Project', open: 'Open...', save: 'Save',
@@ -28,18 +34,59 @@ const MENU_LABELS = {
     edit: 'Edit', addNode: 'Add Node', linkMode: 'Link Mode',
     deleteSelected: 'Delete Selected', undo: 'Undo', redo: 'Redo',
     view: 'View', relayout: 'Relayout', fitAll: 'Fit All',
-    devTools: 'Developer Tools'
+    devTools: 'Developer Tools',
+    unsavedTitle: 'Unsaved changes', unsavedMsg: 'The project has unsaved changes.',
+    saveBtn: 'Save', dontSave: "Don't Save", cancel: 'Cancel', discard: 'Discard changes',
+    openError: 'Could not open project', saveError: 'Could not save project'
+  }
+}
+
+function labels() { return MENU_LABELS[currentLang] || MENU_LABELS.tr }
+
+function updateTitle() {
+  if (!mainWindow) return
+  mainWindow.setTitle('Mentegraf' + (currentFile ? ' — ' + path.basename(currentFile) : '') + (isDirty ? ' •' : ''))
+}
+
+// Ask before throwing away unsaved work. Returns true when it is OK to proceed.
+function confirmDiscard() {
+  if (!isDirty) return true
+  const L = labels()
+  const choice = dialog.showMessageBoxSync(mainWindow, {
+    type: 'warning', title: L.unsavedTitle, message: L.unsavedMsg,
+    buttons: [L.discard, L.cancel], defaultId: 1, cancelId: 1
+  })
+  return choice === 0
+}
+
+// Crash-safe save: write a temp file, flush it, keep the previous version as
+// .bak, then rename over the original. A crash or sync client never sees a
+// half-written project.
+function sleepMs(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) }
+function atomicWrite(file, text) {
+  const tmp = file + '.tmp'
+  const fd = fs.openSync(tmp, 'w')
+  try { fs.writeSync(fd, text, null, 'utf8'); fs.fsyncSync(fd) } finally { fs.closeSync(fd) }
+  if (fs.existsSync(file)) {
+    try { fs.copyFileSync(file, file + '.bak') } catch (e) { console.warn('Backup copy failed:', e.message) }
+  }
+  // Windows: antivirus or a sync client may hold the file briefly.
+  for (let i = 0; ; i++) {
+    try { fs.renameSync(tmp, file); return } catch (e) {
+      if (i < 4 && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) { sleepMs(100 * (i + 1)); continue }
+      throw e
+    }
   }
 }
 
 function buildMenu() {
-  const L = MENU_LABELS[currentLang] || MENU_LABELS.tr
+  const L = labels()
 
   const menu = Menu.buildFromTemplate([
     {
       label: L.file,
       submenu: [
-        { label: L.newProject, accelerator: 'CmdOrCtrl+N', click: () => mainWindow.webContents.send('menu-action', 'new') },
+        { label: L.newProject, accelerator: 'CmdOrCtrl+N', click: newProject },
         { label: L.open, accelerator: 'CmdOrCtrl+O', click: openFile },
         { label: L.save, accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('menu-action', 'save') },
         { label: L.saveAs, accelerator: 'CmdOrCtrl+Shift+S', click: saveFileAs },
@@ -89,19 +136,47 @@ function createWindow() {
   })
 
   mainWindow.loadFile(path.join(srcPath, 'index.html'))
+  mainWindow.on('close', (e) => {
+    if (forceClose || !isDirty) return
+    e.preventDefault()
+    const L = labels()
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: 'warning', title: L.unsavedTitle, message: L.unsavedMsg,
+      buttons: [L.saveBtn, L.dontSave, L.cancel], defaultId: 0, cancelId: 2
+    })
+    if (choice === 0) mainWindow.webContents.send('menu-action', 'save-then-close')
+    else if (choice === 1) { forceClose = true; mainWindow.close() }
+  })
   buildMenu()
 }
 
+function newProject() {
+  if (!confirmDiscard()) return
+  currentFile = null
+  isDirty = false
+  updateTitle()
+  mainWindow.webContents.send('menu-action', 'new')
+}
+
 async function openFile() {
+  if (!confirmDiscard()) return
   const result = await dialog.showOpenDialog(mainWindow, {
     filters: [{ name: 'Mentegraf', extensions: ['mentegraf', 'json'] }],
     properties: ['openFile']
   })
   if (!result.canceled && result.filePaths.length > 0) {
-    currentFile = result.filePaths[0]
-    const data = fs.readFileSync(currentFile, 'utf8')
-    mainWindow.webContents.send('file-opened', JSON.parse(data), currentFile)
-    mainWindow.setTitle('Mentegraf — ' + path.basename(currentFile))
+    const file = result.filePaths[0]
+    let migrated
+    try {
+      migrated = ProjectFormat.migrate(JSON.parse(fs.readFileSync(file, 'utf8')))
+    } catch (e) {
+      dialog.showErrorBox(labels().openError, path.basename(file) + '\n\n' + e.message)
+      return
+    }
+    currentFile = file
+    isDirty = false
+    mainWindow.webContents.send('file-opened', migrated.data, currentFile)
+    updateTitle()
   }
 }
 
@@ -113,7 +188,7 @@ async function saveFileAs() {
   if (!result.canceled) {
     currentFile = result.filePath
     mainWindow.webContents.send('menu-action', 'save')
-    mainWindow.setTitle('Mentegraf — ' + path.basename(currentFile))
+    updateTitle()
   }
 }
 
@@ -126,11 +201,19 @@ ipcMain.handle('save-data', async (event, data) => {
     })
     if (result.canceled) return false
     currentFile = result.filePath
-    mainWindow.setTitle('Mentegraf — ' + path.basename(currentFile))
   }
-  fs.writeFileSync(currentFile, JSON.stringify(data, null, 2), 'utf8')
+  try {
+    atomicWrite(currentFile, JSON.stringify(data, null, 2))
+  } catch (e) {
+    dialog.showErrorBox(labels().saveError, path.basename(currentFile) + '\n\n' + e.message)
+    return false
+  }
+  updateTitle()
   return true
 })
+
+ipcMain.on('set-dirty', (event, dirty) => { isDirty = !!dirty; updateTitle() })
+ipcMain.on('close-window', () => { forceClose = true; if (mainWindow) mainWindow.close() })
 
 // Language change from renderer
 ipcMain.on('lang-changed', (event, lang) => {

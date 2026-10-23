@@ -94,7 +94,7 @@ function zoteroImportItems(items) {
     var x = (ext.x1 + ext.x2) / 2 + (Math.random() - 0.5) * 300;
     var y = (ext.y1 + ext.y2) / 2 + (Math.random() - 0.5) * 300;
 
-    var nodeId = 'zn' + Date.now() + '_' + imported;
+    var nodeId = ProjectFormat.newId('n');
     cy.add({
       data: {
         id: nodeId, label: item.title, type: nodeType, color: cat.color,
@@ -121,7 +121,7 @@ function zoteroImportItems(items) {
           creatorNodes[creator] = existing.id();
         } else {
           var personCat = catById('person');
-          var cid = 'zp' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          var cid = ProjectFormat.newId('n');
           var cx = x + (Math.random() - 0.5) * 150;
           var cy2 = y + (Math.random() - 0.5) * 150;
           cy.add({
@@ -133,7 +133,7 @@ function zoteroImportItems(items) {
         }
       }
       cy.add({
-        data: { id: 'ze' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        data: { id: ProjectFormat.newId('e'),
           source: creatorNodes[creator], target: nodeId, weight: 4, edgeType: 'influences', note: '' }
       });
     });
