@@ -60,6 +60,7 @@ var cy,selEle=null,nid=1,curTheme='dark',altHeld=false,dragCanvas,dragCtx,active
 var undoStack=[],redoStack=[],maxUndo=40,autoSaveTimer=null;
 var isDirty=false;
 function setDirty(v){v=!!v;if(isDirty===v)return;isDirty=v;if(window.mentegraf&&window.mentegraf.setDirty)window.mentegraf.setDirty(v)}
+function addStarterNode(){if(cy.nodes().length)return;var c=catById('book')||categories[0];cy.add({data:{id:ProjectFormat.newId('n'),label:L('bookTitle'),type:c.id,color:c.color,description:'',notes:'',tags:[]},position:{x:400,y:300}})}
 function resetHistory(){undoStack=[JSON.stringify(getProject())];redoStack=[];updateUB()}
 function snapshot(){var s=JSON.stringify(getProject());if(undoStack.length>0&&undoStack[undoStack.length-1]===s)return;undoStack.push(s);setDirty(true);if(undoStack.length>maxUndo)undoStack.shift();redoStack=[];updateUB()}
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());loadProject(JSON.parse(undoStack[undoStack.length-1]),true);setDirty(true);updateUB()}
@@ -465,7 +466,7 @@ function doExportCSV(){
 function showMsg(t){var m=document.getElementById('ml');m.innerHTML='<span style="color:var(--accent)">✓ '+t+'</span>';setTimeout(function(){m.textContent=''},2000)}
 function uStats(){var vn=cy?cy.nodes().filter(function(n){return!n.hasClass('filtered-out')}).length:0;var ve=cy?cy.edges().filter(function(e){return!e.hasClass('filtered-out')}).length:0;document.getElementById('stats').textContent=vn+' / '+ve}
 
-if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new'){initConfig();init();clrSel();resetHistory();setDirty(false)}if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo()});window.mentegraf.onFileOpened(function(data){if(loadProject(data)!==false){resetHistory();setDirty(false)}})}
+if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new'){initConfig();init();clrSel();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo()});window.mentegraf.onFileOpened(function(data){if(loadProject(data)!==false){resetHistory();setDirty(false)}})}
 
 document.addEventListener('DOMContentLoaded',async function(){
   await loadConfigs();
@@ -473,5 +474,5 @@ document.addEventListener('DOMContentLoaded',async function(){
 
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
   curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();doLoad();
-  if(cy.nodes().length===0){cy.add({data:{id:'n1',label:L('bookTitle'),type:'book',color:catById('book').color,description:'',notes:'',tags:[]},position:{x:400,y:300}});nid=2}
+  addStarterNode();
   cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave()});
