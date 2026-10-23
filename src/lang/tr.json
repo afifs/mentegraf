@@ -147,5 +147,20 @@
   "words": "kelime",
   "unsavedText": "kaydedilmedi",
   "fullWidth": "Tam genişlik",
-  "closeText": "Kapat"
+  "closeText": "Kapat",
+  "tbBold": "Kalın (Ctrl+B)",
+  "tbItalic": "İtalik (Ctrl+I)",
+  "tbHeading": "Başlık düzeyi (sonraki düzey için tekrar tıklayın)",
+  "tbQuote": "Alıntı",
+  "tbBullet": "Madde listesi",
+  "tbNumber": "Numaralı liste",
+  "tbLink": "Bağlantı (Ctrl+K)",
+  "tbFootnote": "Dipnot (Ctrl+Shift+F). Dipnotun içindeyken tekrar basınca metne döner",
+  "tbCite": "Kaynak gösterme (Ctrl+Shift+C)",
+  "tbPassage": "Paragraf kimliği (Ctrl+Shift+P): paragrafı işaretler, bağlantısını kopyalar",
+  "tbPreview": "Önizleme (Ctrl+E)",
+  "linkText": "bağlantı metni",
+  "footnoteHint": "Dipnotu yazın; Ctrl+Shift+F ile metne dönersiniz",
+  "passageCopied": "Paragraf kimliği %s — bağlantı kopyalandı",
+  "passageNeedsText": "Önce imleci bir paragrafın içine koyun"
 }

@@ -141,3 +141,32 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 #wState{color:var(--accent)}
 .txrow{display:flex;align-items:center;gap:8px;min-width:0}
 #nTextPath{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* writing toolbar and preview */
+.wtb{display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.wtb button{min-width:28px;height:28px;padding:0 6px;border:0;border-radius:4px;background:none;color:var(--text);font:600 14px Georgia,'Times New Roman',serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.wtb button:hover{background:var(--hover)}
+.wtb button.on{background:var(--accent);color:var(--bg2)}
+.wtb button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.wtb .tb-i{font-style:italic}
+.wtb .tb-fn{font-size:17px}
+.wsep{width:1px;height:18px;background:var(--border);margin:0 6px}
+.wgrow{flex:1}
+#writer.previewing .wtb button:not([data-cmd="preview"]){opacity:.35;pointer-events:none}
+#wPreview{display:none;flex:1;min-height:0;overflow:auto}
+#writer.previewing #wEditor{display:none}
+#writer.previewing #wPreview{display:block}
+.pv{font-family:Georgia,'Times New Roman',serif;font-size:17px;line-height:1.7;color:var(--text);background:var(--bg2)}
+.pv>*{max-width:72ch;margin-left:auto;margin-right:auto}
+.pv{padding:28px 32px 40vh}
+.pv h1{font-size:1.6em;margin:.4em auto .6em}.pv h2{font-size:1.3em;margin:1.2em auto .5em}.pv h3{font-size:1.1em;margin:1em auto .4em}
+.pv p{margin:0 auto .9em}
+.pv blockquote{border-left:3px solid var(--border);padding-left:14px;color:var(--dim);font-style:italic}
+.pv a{color:var(--accent)}
+.pv code{font-family:Consolas,monospace;font-size:.9em;background:var(--bg3);padding:1px 4px;border-radius:3px}
+.pv sup.footnote-ref a{text-decoration:none;font-family:'DM Sans',sans-serif;font-size:.75em}
+.pv .footnotes-sep{border:0;border-top:1px solid var(--border);margin:2em auto 1em}
+.pv .footnotes{font-size:.85em;color:var(--dim)}
+.pv .footnote-backref{text-decoration:none}
+.pv .pv-cite{color:#3f8f86;font-family:'DM Sans',sans-serif;font-size:.85em}
+#wMsg{flex:1;text-align:center;color:var(--accent);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 8px}

@@ -147,5 +147,20 @@
   "words": "words",
   "unsavedText": "unsaved",
   "fullWidth": "Full width",
-  "closeText": "Close"
+  "closeText": "Close",
+  "tbBold": "Bold (Ctrl+B)",
+  "tbItalic": "Italic (Ctrl+I)",
+  "tbHeading": "Heading level (click again for the next level)",
+  "tbQuote": "Quote",
+  "tbBullet": "Bulleted list",
+  "tbNumber": "Numbered list",
+  "tbLink": "Link (Ctrl+K)",
+  "tbFootnote": "Footnote (Ctrl+Shift+F). In the note, press again to return to the text",
+  "tbCite": "Citation (Ctrl+Shift+C)",
+  "tbPassage": "Passage ID (Ctrl+Shift+P): tags the paragraph and copies its link",
+  "tbPreview": "Preview (Ctrl+E)",
+  "linkText": "link text",
+  "footnoteHint": "Write the note; Ctrl+Shift+F takes you back to the text",
+  "passageCopied": "Passage ID %s — link copied",
+  "passageNeedsText": "Put the cursor inside a paragraph first"
 }

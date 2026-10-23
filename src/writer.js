@@ -16,6 +16,10 @@ var Writer = (function () {
   var loading = false     // true while we replace text ourselves
   var lastKey = {}        // command -> time, to avoid running a command twice (keymap + menu)
   var boundCy = null
+  var md = null           // Markdown renderer for the preview (lazy)
+  var previewOn = false
+  var previewTimer = null
+  var msgTimer = null
 
   function api() { return window.mentegraf }
   function $(id) { return document.getElementById(id) }
@@ -54,7 +58,10 @@ var Writer = (function () {
       '.cm-panels input, .cm-panels button': { color: 'var(--text)' },
       '.cm-searchMatch': { backgroundColor: 'rgba(197,160,94,0.35)' },
       '.cm-selectionMatch': { backgroundColor: 'rgba(197,160,94,0.18)' },
-      '.cm-fm': { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', lineHeight: '1.6', color: 'var(--dim)' }
+      '.cm-fm': { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', lineHeight: '1.6', color: 'var(--dim)' },
+      '.cm-fn': { color: 'var(--accent)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.78em', fontWeight: '600' },
+      '.cm-cite, .cm-cite span': { color: '#3f8f86 !important', fontFamily: "'DM Sans', sans-serif", fontSize: '0.85em' },
+      '.cm-pid': { color: 'var(--dim)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.72em' }
     })
     extensions = [
       CM.history(),
@@ -62,26 +69,262 @@ var Writer = (function () {
       CM.EditorView.lineWrapping,
       CM.yamlFrontmatter({ content: CM.markdown({ base: CM.markdownLanguage }) }),
       frontMatterLines(),
+      markPlugin(/\[\^[^\]\s]+\]/g, 'cm-fn'),
+      markPlugin(/\[[^\][\n]*@[^\][\n]*\]/g, 'cm-cite'),
+      markPlugin(/\s\^[a-z0-9]{4,12}$/g, 'cm-pid'),
       CM.syntaxHighlighting(hl),
       CM.search({ top: true }),
       CM.highlightSelectionMatches(),
       theme,
+      // Typing ] right before an existing ] just steps over it (leaving a citation).
+      CM.EditorView.inputHandler.of(function (v, from, to, text) {
+        if (text !== ']' || from !== to || v.state.sliceDoc(from, from + 1) !== ']') return false
+        v.dispatch({ selection: { anchor: from + 1 } })
+        return true
+      }),
       // Our own bindings first, so menu accelerators and editor keys never both fire.
       CM.keymap.of([
         { key: 'Mod-z', run: keyCmd('undo', CM.undo), preventDefault: true },
         { key: 'Mod-y', run: keyCmd('redo', CM.redo), preventDefault: true },
         { key: 'Mod-Shift-z', run: keyCmd('redo', CM.redo), preventDefault: true },
         { key: 'Delete', run: keyCmd('delete', CM.deleteCharForward) },
-        { key: 'Mod-s', run: keyCmd('save', function () { if (typeof doSave === 'function') doSave(); return true }), preventDefault: true }
+        { key: 'Mod-s', run: keyCmd('save', function () { if (typeof doSave === 'function') doSave(); return true }), preventDefault: true },
+        { key: 'Mod-b', run: wrap('**'), preventDefault: true },
+        { key: 'Mod-i', run: wrap('_'), preventDefault: true },
+        { key: 'Mod-k', run: link, preventDefault: true },
+        { key: 'Mod-Shift-f', run: footnote, preventDefault: true },
+        { key: 'Mod-Shift-c', run: cite, preventDefault: true },
+        { key: 'Mod-Shift-p', run: passageId, preventDefault: true },
+        { key: 'Mod-e', run: function () { togglePreview(); return true }, preventDefault: true }
       ]),
       CM.keymap.of([].concat(CM.searchKeymap, CM.historyKeymap, CM.defaultKeymap, [CM.indentWithTab])),
       CM.EditorView.updateListener.of(function (u) {
         if (!u.docChanged) return
         updateStatus()
+        schedulePreview()
         if (!loading && typeof setDirty === 'function') setDirty(true)
       })
     ]
     view = new CM.EditorView({ state: makeState(''), parent: $('wEditor') })
+  }
+
+  // Colour footnote markers, citations and passage IDs.
+  function markPlugin(re, cls) {
+    var deco = new CM.MatchDecorator({ regexp: re, decoration: CM.Decoration.mark({ class: cls }) })
+    return CM.ViewPlugin.fromClass(class {
+      constructor(v) { this.decorations = deco.createDeco(v) }
+      update(u) { this.decorations = deco.updateDeco(u, this.decorations) }
+    }, { decorations: function (v) { return v.decorations } })
+  }
+
+  // ───────── formatting commands (toolbar and shortcuts) ─────────
+
+  // Toggle **bold** / _italic_ around each selection.
+  function wrap(mark) {
+    return function (v) {
+      var st = v.state, n = mark.length
+      v.dispatch(st.update(st.changeByRange(function (r) {
+        var text = st.sliceDoc(r.from, r.to)
+        if (st.sliceDoc(r.from - n, r.from) === mark && st.sliceDoc(r.to, r.to + n) === mark) {
+          return { changes: [{ from: r.from - n, to: r.from }, { from: r.to, to: r.to + n }], range: CM.EditorSelection.range(r.from - n, r.to - n) }
+        }
+        if (text.length > 2 * n && text.slice(0, n) === mark && text.slice(-n) === mark) {
+          return { changes: { from: r.from, to: r.to, insert: text.slice(n, -n) }, range: CM.EditorSelection.range(r.from, r.to - 2 * n) }
+        }
+        return { changes: [{ from: r.from, insert: mark }, { from: r.to, insert: mark }], range: CM.EditorSelection.range(r.from + n, r.to + n) }
+      }), { scrollIntoView: true, userEvent: 'input' }))
+      return true
+    }
+  }
+
+  // Heading levels, quotes and lists: toggle a prefix on every selected line.
+  function linePrefix(kind) {
+    return function (v) {
+      var st = v.state, changes = [], seen = {}
+      st.selection.ranges.forEach(function (r) {
+        var multi = st.doc.lineAt(r.from).number !== st.doc.lineAt(r.to).number
+        for (var pos = r.from; pos <= r.to;) {
+          var line = st.doc.lineAt(pos)
+          if (!seen[line.number] && !(multi && !line.text.trim())) {
+            seen[line.number] = true
+            var cur = (/^(#{1,6} |> |- |\d+\. )/.exec(line.text) || [''])[0], next
+            if (kind === 'heading') next = cur === '# ' ? '## ' : cur === '## ' ? '### ' : cur === '### ' ? '' : '# '
+            else if (kind === 'quote') next = cur === '> ' ? '' : '> '
+            else if (kind === 'bullet') next = cur === '- ' ? '' : '- '
+            else next = /^\d+\. $/.test(cur) ? '' : '1. '
+            changes.push({ from: line.from, to: line.from + cur.length, insert: next })
+          }
+          pos = line.to + 1
+        }
+      })
+      v.dispatch({ changes: changes, userEvent: 'input' })
+      return true
+    }
+  }
+
+  function link(v) {
+    var st = v.state, r = st.selection.main
+    var text = st.sliceDoc(r.from, r.to) || L('linkText')
+    var ins = '[' + text + '](https://)'
+    v.dispatch({ changes: { from: r.from, to: r.to, insert: ins },
+      selection: { anchor: r.from + text.length + 3, head: r.from + ins.length - 1 }, userEvent: 'input' })
+    return true
+  }
+
+  function cite(v) {
+    var st = v.state, r = st.selection.main, sel = st.sliceDoc(r.from, r.to)
+    v.dispatch({ changes: { from: r.from, to: r.to, insert: '[@' + sel + ']' },
+      selection: { anchor: r.from + 2 + sel.length }, userEvent: 'input' })
+    return true
+  }
+
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+
+  // Footnote labels: first word of the file name + node id tail + number, so
+  // labels stay unique when chapters are joined into one book.
+  function noteKey() {
+    var base = (current.path.split('/').pop() || '').replace(/\.md$/i, '')
+    var first = (base.split('-')[0] || 'not').slice(0, 12)
+    var tail = String(current.nodeId).replace(/[^A-Za-z0-9]/g, '').slice(-4).toLowerCase()
+    return first + '-' + tail
+  }
+
+  // Insert a footnote and jump to its definition at the end. Pressed again on a
+  // definition line, jump back to where the note is referenced.
+  function footnote(v) {
+    if (!current) return false
+    var st = v.state, doc = st.doc.toString()
+    var line = st.doc.lineAt(st.selection.main.head)
+    var def = /^\[\^([^\]\s]+)\]:/.exec(line.text)
+    if (def) {
+      var ref = '[^' + def[1] + ']', i = -1
+      while ((i = doc.indexOf(ref, i + 1)) >= 0) {
+        if (doc.charAt(i + ref.length) !== ':') { v.dispatch({ selection: { anchor: i + ref.length }, scrollIntoView: true }); return true }
+      }
+      return true
+    }
+    var key = noteKey(), max = 0, m, re = new RegExp('\\[\\^' + escapeRe(key) + '-(\\d+)\\]', 'g')
+    while ((m = re.exec(doc))) max = Math.max(max, +m[1])
+    var label = '[^' + key + '-' + (max + 1) + ']'
+    var pos = st.selection.main.to, end = st.doc.length
+    var gap = /\n\n$/.test(doc) ? '' : /\n$/.test(doc) ? '\n' : '\n\n'
+    var defText = gap + label + ': '
+    v.dispatch({ changes: [{ from: pos, insert: label }, { from: end, insert: defText }],
+      selection: { anchor: end + label.length + defText.length }, scrollIntoView: true, userEvent: 'input' })
+    flash(L('footnoteHint'))
+    return true
+  }
+
+  function randomId() {
+    var s = ''
+    for (var i = 0; i < 6; i++) s += '0123456789abcdefghijklmnopqrstuvwxyz'.charAt(Math.floor(Math.random() * 36))
+    return s
+  }
+
+  // Tag the paragraph under the cursor with ^id (kept if it already has one)
+  // and copy its link (path#id) for use elsewhere.
+  function passageId(v) {
+    if (!current) return false
+    var st = v.state, line = st.doc.lineAt(st.selection.main.head)
+    if (!line.text.trim() || /^---\s*$/.test(line.text)) { flash(L('passageNeedsText')); return true }
+    var n = line.number
+    while (n < st.doc.lines && st.doc.line(n + 1).text.trim()) n++
+    var last = st.doc.line(n), m = /\s\^([a-z0-9]{4,12})\s*$/.exec(last.text), id
+    if (m) id = m[1]
+    else {
+      var doc = st.doc.toString()
+      do { id = randomId() } while (doc.indexOf('^' + id) >= 0)
+      v.dispatch({ changes: { from: last.to, insert: ' ^' + id }, userEvent: 'input' })
+    }
+    try { navigator.clipboard.writeText(current.path + '#' + id) } catch (e) { /* ignore */ }
+    flash(L('passageCopied').replace('%s', '^' + id))
+    return true
+  }
+
+  var COMMANDS = {
+    bold: wrap('**'), italic: wrap('_'), heading: linePrefix('heading'), quote: linePrefix('quote'),
+    bullet: linePrefix('bullet'), number: linePrefix('number'), link: link,
+    footnote: footnote, cite: cite, passage: passageId
+  }
+  var TIPS = { bold: 'tbBold', italic: 'tbItalic', heading: 'tbHeading', quote: 'tbQuote', bullet: 'tbBullet',
+    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview' }
+
+  function run(name) {
+    if (name === 'preview') { togglePreview(); return }
+    if (!view || !current || previewOn || !COMMANDS[name]) return
+    COMMANDS[name](view)
+    view.focus()
+  }
+
+  function bindToolbar() {
+    var bar = $('wToolbar')
+    if (!bar || bar._bound) return
+    bar._bound = true
+    bar.addEventListener('mousedown', function (e) { if (e.target.closest('button')) e.preventDefault() })   // keep the cursor in the text
+    bar.addEventListener('click', function (e) { var b = e.target.closest('button[data-cmd]'); if (b) run(b.dataset.cmd) })
+  }
+
+  function setTips() {
+    var bar = $('wToolbar')
+    if (bar) bar.querySelectorAll('button[data-cmd]').forEach(function (b) { b.title = L(TIPS[b.dataset.cmd]) })
+  }
+
+  function flash(text) {
+    var el = $('wMsg')
+    if (!el) return
+    el.textContent = text
+    clearTimeout(msgTimer)
+    msgTimer = setTimeout(function () { el.textContent = '' }, 4000)
+  }
+
+  // ───────── preview (read-only, rendered) ─────────
+
+  function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+
+  function renderPreview() {
+    if (!previewOn || !view || !window.MD) return
+    if (!md) md = window.MD()
+    var text = view.state.doc.toString()
+      .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '')        // metadata block
+      .replace(/[ \t]\^[a-z0-9]{4,12}[ \t]*$/gm, '')         // passage IDs
+    var html = md.render(text)
+      .replace(/\[([^\[\]<]*@[^\[\]<]*)\]/g, function (all, inner) { return '<span class="pv-cite">[' + inner + ']</span>' })
+    $('wPreview').innerHTML = html
+  }
+
+  function schedulePreview() {
+    if (!previewOn) return
+    clearTimeout(previewTimer)
+    previewTimer = setTimeout(renderPreview, 150)
+  }
+
+  function togglePreview() {
+    if (!view || !current) return
+    previewOn = !previewOn
+    $('writer').classList.toggle('previewing', previewOn)
+    var b = document.querySelector('#wToolbar button[data-cmd="preview"]')
+    if (b) b.classList.toggle('on', previewOn)
+    if (previewOn) renderPreview()
+    else view.focus()
+  }
+
+  function bindPreview() {
+    var pv = $('wPreview')
+    if (!pv || pv._bound) return
+    pv._bound = true
+    // Never let a link replace the app: in-page anchors scroll, web links open in the browser.
+    pv.addEventListener('click', function (e) {
+      var a = e.target.closest('a')
+      if (!a) return
+      e.preventDefault()
+      var href = a.getAttribute('href') || ''
+      if (href.charAt(0) === '#') {
+        var target = pv.querySelector('[id="' + href.slice(1).replace(/"/g, '') + '"]')
+        if (target) target.scrollIntoView({ block: 'center' })
+      } else if (/^https?:\/\//i.test(href) && api() && api().openExternal) {
+        api().openExternal(href)
+      }
+    })
   }
 
   // Dim the metadata block (--- … ---) at the top of a text.
@@ -172,8 +415,10 @@ var Writer = (function () {
     $('wTitle').textContent = node.data('label') || ''
     $('wPath').textContent = path
     openPane()
+    setTips()
     updateStatus()
-    view.focus()
+    if (previewOn) renderPreview()
+    else view.focus()
   }
 
   function close() {
@@ -309,6 +554,8 @@ var Writer = (function () {
 
   function init() {
     bindResizer()
+    bindToolbar()
+    bindPreview()
     bindCy()
     if (api() && api().onFragmentChanged && !init._watching) {
       init._watching = true
@@ -319,6 +566,12 @@ var Writer = (function () {
   // New or opened project: forget all texts.
   function reset() {
     close()
+    if (previewOn) {
+      previewOn = false
+      $('writer').classList.remove('previewing')
+      var b = document.querySelector('#wToolbar button[data-cmd="preview"]')
+      if (b) b.classList.remove('on')
+    }
     buffers = {}
     lastWritten = {}
     if (view) { loading = true; view.setState(makeState('')); loading = false }
@@ -341,7 +594,7 @@ var Writer = (function () {
   }
 
   return {
-    init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull,
+    init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull, run: run, togglePreview: togglePreview,
     updatePanel: updatePanel, dirtyFragments: dirtyFragments, willSave: willSave, markSaved: markSaved,
     hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu
   }
