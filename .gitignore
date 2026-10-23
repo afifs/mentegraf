@@ -4,3 +4,4 @@ out/
 .DS_Store
 *.mentegraf
 package-lock.json
+/qodana.yaml
