@@ -9,12 +9,14 @@
 })(this, function () {
   'use strict'
 
-  // Version written by this build. 2.1 = 2.0 + all node/edge data fields kept
-  // (e.g. zoteroKey) + computed fields (leading "_") never stored.
-  var CURRENT_VERSION = '2.1'
-  // Highest major version this build can open. A future folder-based
-  // format (3.x) must be refused, not silently overwritten.
-  var SUPPORTED_MAJOR = 2
+  // In-memory/export version. History:
+  //   2.0  single-file project
+  //   2.1  all node/edge data fields kept (e.g. zoteroKey), computed "_" fields never stored
+  //   3.0  folder-based project on disk (see projectStore.js); same in-memory shape
+  var CURRENT_VERSION = '3.0'
+  // Highest major version this build can open. Anything newer is refused,
+  // never silently overwritten.
+  var SUPPORTED_MAJOR = 3
 
   function parseVersion(v) {
     var parts = String(v || '2.0').split('.')
@@ -92,7 +94,7 @@
     }
     var data = JSON.parse(JSON.stringify(input))
 
-    // 2.0 (and unversioned) -> 2.1: normalize elements, drop computed fields.
+    // 2.x (and unversioned) -> 3.0: normalize elements, drop computed fields.
     var nodes = Array.isArray(data.elements.nodes) ? data.elements.nodes : []
     var edges = Array.isArray(data.elements.edges) ? data.elements.edges : []
     var nodeIds = {}

@@ -2,10 +2,12 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('mentegraf', {
   onMenuAction: (cb) => ipcRenderer.on('menu-action', (e, action) => cb(action)),
-  onFileOpened: (cb) => ipcRenderer.on('file-opened', (e, data, path) => cb(data, path)),
+  onFileOpened: (cb) => ipcRenderer.on('file-opened', (e, data, path, opts) => cb(data, path, opts)),
   saveData: (data) => ipcRenderer.invoke('save-data', data),
   setDirty: (dirty) => ipcRenderer.send('set-dirty', !!dirty),
   closeWindow: () => ipcRenderer.send('close-window'),
+  writeRecovery: (data) => ipcRenderer.send('write-recovery', data),
+  rendererReady: () => ipcRenderer.send('renderer-ready'),
   setLang: (lang) => ipcRenderer.send('lang-changed', lang),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   // Zotero

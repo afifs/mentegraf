@@ -66,7 +66,7 @@ function snapshot(){var s=JSON.stringify(getProject());if(undoStack.length>0&&un
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());loadProject(JSON.parse(undoStack[undoStack.length-1]),true);setDirty(true);updateUB()}
 function redo(){if(!redoStack.length)return;var s=redoStack.pop();undoStack.push(s);loadProject(JSON.parse(s),true);setDirty(true);updateUB()}
 function updateUB(){document.getElementById('b_undo').classList.toggle('disabled',undoStack.length<2);document.getElementById('b_redo').classList.toggle('disabled',!redoStack.length)}
-function startAutoSave(){if(autoSaveTimer)clearInterval(autoSaveTimer);autoSaveTimer=setInterval(function(){localStorage.setItem('mentegraf-project',JSON.stringify(getProject()));var ind=document.getElementById('autoSaveInd');ind.style.opacity='1';setTimeout(function(){ind.style.opacity='0'},1500)},30000)}
+function startAutoSave(){if(autoSaveTimer)clearInterval(autoSaveTimer);autoSaveTimer=setInterval(function(){if(window.mentegraf&&window.mentegraf.writeRecovery){if(!isDirty)return;window.mentegraf.writeRecovery(getProject())}else localStorage.setItem('mentegraf-project',JSON.stringify(getProject()));var ind=document.getElementById('autoSaveInd');ind.style.opacity='1';setTimeout(function(){ind.style.opacity='0'},1500)},30000)}
 
 function init(){
   cy=cytoscape({container:document.getElementById('cy'),elements:[],
@@ -466,7 +466,7 @@ function doExportCSV(){
 function showMsg(t){var m=document.getElementById('ml');m.innerHTML='<span style="color:var(--accent)">✓ '+t+'</span>';setTimeout(function(){m.textContent=''},2000)}
 function uStats(){var vn=cy?cy.nodes().filter(function(n){return!n.hasClass('filtered-out')}).length:0;var ve=cy?cy.edges().filter(function(e){return!e.hasClass('filtered-out')}).length:0;document.getElementById('stats').textContent=vn+' / '+ve}
 
-if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new'){initConfig();init();clrSel();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo()});window.mentegraf.onFileOpened(function(data){if(loadProject(data)!==false){resetHistory();setDirty(false)}})}
+if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new'){initConfig();init();clrSel();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){resetHistory();setDirty(!!(opts&&opts.recovered))}})}
 
 document.addEventListener('DOMContentLoaded',async function(){
   await loadConfigs();
@@ -475,4 +475,4 @@ document.addEventListener('DOMContentLoaded',async function(){
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
   curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();doLoad();
   addStarterNode();
-  cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave()});
+  cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});

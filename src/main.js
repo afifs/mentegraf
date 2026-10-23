@@ -2,16 +2,17 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const ProjectFormat = require('./projectFormat')
+const ProjectStore = require('./projectStore')
 
 // Resolve paths
 const isDev = !app.isPackaged
 const srcPath = __dirname
-const assetsPath = isDev 
+const assetsPath = isDev
   ? path.join(__dirname, '..', 'assets')
   : path.join(process.resourcesPath, 'assets')
 
 let mainWindow
-let currentFile = null
+let currentDir = null      // folder of the open project; null = untitled
 let isDirty = false
 let forceClose = false
 let currentLang = 'tr'
@@ -26,7 +27,23 @@ const MENU_LABELS = {
     devTools: 'Geliştirici Araçları',
     unsavedTitle: 'Kaydedilmemiş değişiklikler', unsavedMsg: 'Projede kaydedilmemiş değişiklikler var.',
     saveBtn: 'Kaydet', dontSave: 'Kaydetme', cancel: 'İptal', discard: 'Değişiklikleri at',
-    openError: 'Proje açılamadı', saveError: 'Proje kaydedilemedi'
+    openError: 'Proje açılamadı', saveError: 'Proje kaydedilemedi',
+    newProjectTitle: 'Yeni proje klasörü', newProjectName: 'Yeni Proje', createBtn: 'Oluştur',
+    notEmpty: 'Bu adla dolu bir klasör zaten var. Başka bir ad seçin.',
+    notFolder: 'Bu adla bir dosya zaten var. Başka bir ad seçin.',
+    convertTitle: 'Eski proje biçimi',
+    convertMsg: 'Bu, eski tek dosyalı bir proje. Mentegraf yanına bir proje klasörü oluşturacak; özgün dosyaya dokunulmayacak.',
+    convertBtn: 'Klasöre dönüştür',
+    convertDone: 'Proje klasörü oluşturuldu:',
+    recoveryTitle: 'Kurtarılan değişiklikler',
+    recoveryMsg: 'Önceki oturumdan kaydedilmemiş değişiklikler bulundu.',
+    restoreBtn: 'Geri yükle', discardBtn: 'At',
+    warningsTitle: 'Proje uyarıları',
+    warningsMsg: 'Proje açıldı, ancak bazı dosyalar sorun içeriyor:',
+    wConflict: 'Eşitleme çakışması kopyası (yüklenmedi, yerinde bırakıldı)',
+    wDuplicate: 'Yinelenen düğüm (yüklenmedi)',
+    wUnreadable: 'Okunamayan dosya (yüklenmedi)',
+    wDangling: 'eksik düğüme bağlı bağlantı yüklenmedi'
   },
   en: {
     file: 'File', newProject: 'New Project', open: 'Open...', save: 'Save',
@@ -37,16 +54,66 @@ const MENU_LABELS = {
     devTools: 'Developer Tools',
     unsavedTitle: 'Unsaved changes', unsavedMsg: 'The project has unsaved changes.',
     saveBtn: 'Save', dontSave: "Don't Save", cancel: 'Cancel', discard: 'Discard changes',
-    openError: 'Could not open project', saveError: 'Could not save project'
+    openError: 'Could not open project', saveError: 'Could not save project',
+    newProjectTitle: 'New project folder', newProjectName: 'New Project', createBtn: 'Create',
+    notEmpty: 'A folder with this name already exists and is not empty. Choose another name.',
+    notFolder: 'A file with this name already exists. Choose another name.',
+    convertTitle: 'Older project format',
+    convertMsg: 'This is an older single-file project. Mentegraf will create a project folder next to it; the original file is not changed.',
+    convertBtn: 'Convert to folder',
+    convertDone: 'Project folder created:',
+    recoveryTitle: 'Recovered changes',
+    recoveryMsg: 'Unsaved changes from a previous session were found.',
+    restoreBtn: 'Restore', discardBtn: 'Discard',
+    warningsTitle: 'Project warnings',
+    warningsMsg: 'The project opened, but some files have problems:',
+    wConflict: 'Sync conflict copy (not loaded, left in place)',
+    wDuplicate: 'Duplicate node (not loaded)',
+    wUnreadable: 'Unreadable file (not loaded)',
+    wDangling: 'link(s) to a missing node not loaded'
   }
 }
 
 function labels() { return MENU_LABELS[currentLang] || MENU_LABELS.tr }
+function send(channel, ...args) { if (mainWindow) mainWindow.webContents.send(channel, ...args) }
 
 function updateTitle() {
   if (!mainWindow) return
-  mainWindow.setTitle('Mentegraf' + (currentFile ? ' — ' + path.basename(currentFile) : '') + (isDirty ? ' •' : ''))
+  mainWindow.setTitle('Mentegraf' + (currentDir ? ' — ' + path.basename(currentDir) : '') + (isDirty ? ' •' : ''))
 }
+
+// ───────── recovery file (replaces the old localStorage autosave) ─────────
+
+function untitledRecoveryPath() { return path.join(app.getPath('userData'), 'recovery-untitled.json') }
+function recoveryPath() {
+  return currentDir ? path.join(currentDir, '.mentegraf', 'recovery.json') : untitledRecoveryPath()
+}
+function removeQuietly(file) { try { fs.unlinkSync(file) } catch (e) { /* not there */ } }
+function clearRecovery() { removeQuietly(recoveryPath()) }
+
+// If a recovery file exists, ask whether to restore it. Returns project data or null.
+function offerRecovery(file, newerThan) {
+  let stat
+  try { stat = fs.statSync(file) } catch (e) { return null }
+  if (newerThan && stat.mtimeMs <= newerThan) { removeQuietly(file); return null }
+  let data = null
+  try { data = ProjectFormat.migrate(JSON.parse(fs.readFileSync(file, 'utf8'))).data } catch (e) { removeQuietly(file); return null }
+  const L = labels()
+  const choice = dialog.showMessageBoxSync(mainWindow, {
+    type: 'question', title: L.recoveryTitle, message: L.recoveryMsg,
+    detail: new Date(stat.mtimeMs).toLocaleString(currentLang === 'tr' ? 'tr-TR' : 'en-GB'),
+    buttons: [L.restoreBtn, L.discardBtn], defaultId: 0, cancelId: 1
+  })
+  if (choice === 0) return data
+  removeQuietly(file)
+  return null
+}
+
+ipcMain.on('write-recovery', (event, data) => {
+  try { ProjectStore.atomicWrite(recoveryPath(), JSON.stringify(data)) } catch (e) { console.warn('Recovery write failed:', e.message) }
+})
+
+// ───────── open / new / save ─────────
 
 // Ask before throwing away unsaved work. Returns true when it is OK to proceed.
 function confirmDiscard() {
@@ -56,28 +123,142 @@ function confirmDiscard() {
     type: 'warning', title: L.unsavedTitle, message: L.unsavedMsg,
     buttons: [L.discard, L.cancel], defaultId: 1, cancelId: 1
   })
-  return choice === 0
+  if (choice !== 0) return false
+  clearRecovery()
+  return true
 }
 
-// Crash-safe save: write a temp file, flush it, keep the previous version as
-// .bak, then rename over the original. A crash or sync client never sees a
-// half-written project.
-function sleepMs(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) }
-function atomicWrite(file, text) {
-  const tmp = file + '.tmp'
-  const fd = fs.openSync(tmp, 'w')
-  try { fs.writeSync(fd, text, null, 'utf8'); fs.fsyncSync(fd) } finally { fs.closeSync(fd) }
-  if (fs.existsSync(file)) {
-    try { fs.copyFileSync(file, file + '.bak') } catch (e) { console.warn('Backup copy failed:', e.message) }
+function showWarnings(warnings) {
+  if (!warnings || !warnings.length) return
+  const L = labels()
+  const lines = warnings.slice(0, 12).map(w => {
+    if (w.kind === 'conflict') return '• ' + L.wConflict + ': ' + w.file
+    if (w.kind === 'duplicate') return '• ' + L.wDuplicate + ': ' + w.file
+    if (w.kind === 'dangling') return '• ' + w.count + ' ' + L.wDangling
+    return '• ' + L.wUnreadable + ': ' + w.file
+  })
+  if (warnings.length > 12) lines.push('… +' + (warnings.length - 12))
+  dialog.showMessageBox(mainWindow, { type: 'warning', title: L.warningsTitle, message: L.warningsMsg, detail: lines.join('\n') })
+}
+
+function loadDir(dir) {
+  let res
+  try { res = ProjectStore.readProject(dir) } catch (e) {
+    dialog.showErrorBox(labels().openError, path.basename(dir) + '\n\n' + e.message)
+    return
   }
-  // Windows: antivirus or a sync client may hold the file briefly.
-  for (let i = 0; ; i++) {
-    try { fs.renameSync(tmp, file); return } catch (e) {
-      if (i < 4 && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) { sleepMs(100 * (i + 1)); continue }
-      throw e
-    }
+  currentDir = dir
+  let data = res.project
+  let manifestTime = 0
+  try { manifestTime = fs.statSync(path.join(dir, ProjectStore.MANIFEST)).mtimeMs } catch (e) { /* ignore */ }
+  const recovered = offerRecovery(recoveryPath(), manifestTime)
+  if (recovered) data = recovered
+  isDirty = !!recovered
+  send('file-opened', data, currentDir, { recovered: !!recovered })
+  updateTitle()
+  showWarnings(res.warnings)
+}
+
+// Open a project.mentegraf manifest, or convert an old single-file project.
+function openPath(file) {
+  let kind
+  try { kind = ProjectStore.classify(file) } catch (e) {
+    dialog.showErrorBox(labels().openError, path.basename(file) + '\n\n' + e.message)
+    return
+  }
+  if (kind === 'folder') return loadDir(path.dirname(file))
+  const L = labels()
+  const choice = dialog.showMessageBoxSync(mainWindow, {
+    type: 'question', title: L.convertTitle, message: L.convertMsg, detail: path.basename(file),
+    buttons: [L.convertBtn, L.cancel], defaultId: 0, cancelId: 1
+  })
+  if (choice !== 0) return
+  let dir
+  try { dir = ProjectStore.convertLegacy(file) } catch (e) {
+    dialog.showErrorBox(labels().openError, path.basename(file) + '\n\n' + e.message)
+    return
+  }
+  loadDir(dir)
+  dialog.showMessageBox(mainWindow, { type: 'info', title: L.convertTitle, message: L.convertDone, detail: dir })
+}
+
+async function openFile() {
+  if (!confirmDiscard()) return
+  const result = await dialog.showOpenDialog(mainWindow, {
+    filters: [{ name: 'Mentegraf', extensions: ['mentegraf', 'json'] }],
+    properties: ['openFile']
+  })
+  if (!result.canceled && result.filePaths.length > 0) openPath(result.filePaths[0])
+}
+
+function newProject() {
+  if (!confirmDiscard()) return
+  currentDir = null
+  isDirty = false
+  updateTitle()
+  send('menu-action', 'new')
+}
+
+// Ask for a name; the project becomes a folder of that name. Returns the folder or null.
+async function chooseNewProjectDir() {
+  const L = labels()
+  for (;;) {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: L.newProjectTitle, buttonLabel: L.createBtn,
+      defaultPath: path.join(currentDir ? path.dirname(currentDir) : app.getPath('documents'), L.newProjectName),
+      properties: ['createDirectory', 'showOverwriteConfirmation']
+    })
+    if (result.canceled || !result.filePath) return null
+    const dir = result.filePath.replace(/\.(mentegraf|json)$/i, '')
+    const problem = ProjectStore.checkNewProjectDir(dir)
+    if (!problem) return dir
+    dialog.showErrorBox(L.saveError, path.basename(dir) + '\n\n' + (problem === 'not-a-folder' ? L.notFolder : L.notEmpty))
   }
 }
+
+async function saveFileAs() {
+  const dir = await chooseNewProjectDir()
+  if (!dir) return
+  clearRecovery()        // the old location's recovery no longer applies
+  currentDir = dir
+  updateTitle()
+  send('menu-action', 'save')
+}
+
+// Save data from renderer
+ipcMain.handle('save-data', async (event, data) => {
+  if (!currentDir) {
+    const dir = await chooseNewProjectDir()
+    if (!dir) return false
+    currentDir = dir
+  }
+  try {
+    ProjectStore.writeProject(currentDir, data)
+  } catch (e) {
+    dialog.showErrorBox(labels().saveError, path.basename(currentDir) + '\n\n' + e.message)
+    return false
+  }
+  clearRecovery()
+  removeQuietly(untitledRecoveryPath())
+  updateTitle()
+  return true
+})
+
+ipcMain.on('set-dirty', (event, dirty) => { isDirty = !!dirty; updateTitle() })
+ipcMain.on('close-window', () => { forceClose = true; if (mainWindow) mainWindow.close() })
+
+// Renderer finished its start-up: open a project passed on the command line
+// (double-click on project.mentegraf), else offer an untitled recovery.
+ipcMain.once('renderer-ready', () => {
+  const arg = process.argv.slice(1).find(a => /\.(mentegraf|json)$/i.test(a) && fs.existsSync(a))
+  if (arg) return openPath(path.resolve(arg))
+  const recovered = offerRecovery(untitledRecoveryPath(), 0)
+  if (recovered) {
+    isDirty = true
+    send('file-opened', recovered, null, { recovered: true })
+    updateTitle()
+  }
+})
 
 function buildMenu() {
   const L = labels()
@@ -145,75 +326,10 @@ function createWindow() {
       buttons: [L.saveBtn, L.dontSave, L.cancel], defaultId: 0, cancelId: 2
     })
     if (choice === 0) mainWindow.webContents.send('menu-action', 'save-then-close')
-    else if (choice === 1) { forceClose = true; mainWindow.close() }
+    else if (choice === 1) { clearRecovery(); forceClose = true; mainWindow.close() }
   })
   buildMenu()
 }
-
-function newProject() {
-  if (!confirmDiscard()) return
-  currentFile = null
-  isDirty = false
-  updateTitle()
-  mainWindow.webContents.send('menu-action', 'new')
-}
-
-async function openFile() {
-  if (!confirmDiscard()) return
-  const result = await dialog.showOpenDialog(mainWindow, {
-    filters: [{ name: 'Mentegraf', extensions: ['mentegraf', 'json'] }],
-    properties: ['openFile']
-  })
-  if (!result.canceled && result.filePaths.length > 0) {
-    const file = result.filePaths[0]
-    let migrated
-    try {
-      migrated = ProjectFormat.migrate(JSON.parse(fs.readFileSync(file, 'utf8')))
-    } catch (e) {
-      dialog.showErrorBox(labels().openError, path.basename(file) + '\n\n' + e.message)
-      return
-    }
-    currentFile = file
-    isDirty = false
-    mainWindow.webContents.send('file-opened', migrated.data, currentFile)
-    updateTitle()
-  }
-}
-
-async function saveFileAs() {
-  const result = await dialog.showSaveDialog(mainWindow, {
-    filters: [{ name: 'Mentegraf', extensions: ['mentegraf'] }],
-    defaultPath: 'project.mentegraf'
-  })
-  if (!result.canceled) {
-    currentFile = result.filePath
-    mainWindow.webContents.send('menu-action', 'save')
-    updateTitle()
-  }
-}
-
-// Save data from renderer
-ipcMain.handle('save-data', async (event, data) => {
-  if (!currentFile) {
-    const result = await dialog.showSaveDialog(mainWindow, {
-      filters: [{ name: 'Mentegraf', extensions: ['mentegraf'] }],
-      defaultPath: 'project.mentegraf'
-    })
-    if (result.canceled) return false
-    currentFile = result.filePath
-  }
-  try {
-    atomicWrite(currentFile, JSON.stringify(data, null, 2))
-  } catch (e) {
-    dialog.showErrorBox(labels().saveError, path.basename(currentFile) + '\n\n' + e.message)
-    return false
-  }
-  updateTitle()
-  return true
-})
-
-ipcMain.on('set-dirty', (event, dirty) => { isDirty = !!dirty; updateTitle() })
-ipcMain.on('close-window', () => { forceClose = true; if (mainWindow) mainWindow.close() })
 
 // Language change from renderer
 ipcMain.on('lang-changed', (event, lang) => {
