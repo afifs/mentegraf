@@ -84,12 +84,17 @@ function updateTitle() {
 
 // ───────── recovery file (replaces the old localStorage autosave) ─────────
 
+// Recovery files live in Mentegraf's own settings folder on this computer, never
+// in the project: they change every 30 s and must not be picked up by sync clients.
 function untitledRecoveryPath() { return path.join(app.getPath('userData'), 'recovery-untitled.json') }
 function recoveryPath() {
-  return currentDir ? path.join(currentDir, '.mentegraf', 'recovery.json') : untitledRecoveryPath()
+  if (!currentDir) return untitledRecoveryPath()
+  const key = require('crypto').createHash('sha1').update(path.resolve(currentDir).toLowerCase()).digest('hex').slice(0, 16)
+  return path.join(app.getPath('userData'), 'recovery', key + '.json')
 }
+let lastRecovery = { file: null, text: null }
 function removeQuietly(file) { try { fs.unlinkSync(file) } catch (e) { /* not there */ } }
-function clearRecovery() { removeQuietly(recoveryPath()) }
+function clearRecovery() { removeQuietly(recoveryPath()); lastRecovery = { file: null, text: null } }
 
 // If a recovery file exists, ask whether to restore it. Returns project data or null.
 function offerRecovery(file, newerThan) {
@@ -143,7 +148,9 @@ ipcMain.handle('fragment-read', (event, rel) => {
 })
 
 ipcMain.on('write-recovery', (event, data) => {
-  try { ProjectStore.atomicWrite(recoveryPath(), JSON.stringify(data)) } catch (e) { console.warn('Recovery write failed:', e.message) }
+  const file = recoveryPath(), text = JSON.stringify(data)
+  if (file === lastRecovery.file && text === lastRecovery.text) return   // nothing new
+  try { ProjectStore.atomicWrite(file, text); lastRecovery = { file, text } } catch (e) { console.warn('Recovery write failed:', e.message) }
 })
 
 // ───────── open / new / save ─────────
@@ -182,6 +189,12 @@ function loadDir(dir) {
   }
   currentDir = dir
   watchTexts()
+  // Older builds kept the recovery file inside the project: move it out.
+  const oldRecovery = path.join(dir, '.mentegraf', 'recovery.json')
+  if (fs.existsSync(oldRecovery)) {
+    try { fs.mkdirSync(path.dirname(recoveryPath()), { recursive: true }); if (!fs.existsSync(recoveryPath())) fs.copyFileSync(oldRecovery, recoveryPath()) } catch (e) { /* ignore */ }
+    removeQuietly(oldRecovery)
+  }
   let data = res.project
   let manifestTime = 0
   try { manifestTime = fs.statSync(path.join(dir, ProjectStore.MANIFEST)).mtimeMs } catch (e) { /* ignore */ }
