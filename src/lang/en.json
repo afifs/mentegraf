@@ -31,7 +31,7 @@
   "publish": "Publish",
   "published": "HTML generated",
   "settings": "Settings",
-  "categoriesTitle": "Categories (max 10)",
+  "categoriesTitle": "Node types",
   "connTypesTitle": "Connection Types (max 8)",
   "cancel": "Cancel",
   "selected": "selected",
@@ -68,7 +68,7 @@
       },
       "filter": {
         "title": "Type Filtering",
-        "desc": "Toggle category buttons in the top bar to show/hide specific types. Hidden type edges are also hidden."
+        "desc": "Toggle node type buttons in the top bar to show/hide specific types. Hidden type edges are also hidden."
       },
       "multiSelect": {
         "title": "Multi-Select",
@@ -84,7 +84,7 @@
       },
       "settings": {
         "title": "Settings",
-        "desc": "⚙ button to customize categories and connection types. Edit color, name (TR/EN), and icon. Each project carries its own settings."
+        "desc": "⚙ button to customize node types and connection types. Edit color, name (TR/EN), and icon. Each project carries its own settings."
       },
       "save": {
         "title": "Saving",
@@ -120,14 +120,14 @@
   "none": "None",
   "collections": "Collections",
   "importSelected": "Import Selected",
-  "reportTitle": "Category Report",
-  "reportDesc": "Export descriptions, notes and connections for selected categories",
-  "reportPickCats": "Select categories to include in report:",
+  "reportTitle": "Type Report",
+  "reportDesc": "Export descriptions, notes and connections for selected node types",
+  "reportPickCats": "Select node types to include in report:",
   "reportIncludeConns": "Include connections",
   "reportHeader": "Mentegraf Report",
   "tagsLabel2": "Tags",
   "reportGenerated": "Report generated",
-  "addCategory": "Category",
+  "addCategory": "Type",
   "addConnType": "Connection Type",
   "newItem": "New",
   "sizing.enable": "Size nodes by connection weight",
@@ -233,5 +233,21 @@
   "tblWord": "Table",
   "csvTable": "CSV table",
   "assetLabel": "File",
-  "figError": "Could not add the file."
+  "figError": "Could not add the file.",
+  "classesLabel": "Classification",
+  "addCat": "+ Category",
+  "addSubcat": "+ Subcategory",
+  "newCatName": "New category",
+  "catsTitle": "Categories",
+  "tagsTitle": "Tags",
+  "catsPh": "Add a category…",
+  "catCreate": "+ New category: %s",
+  "catRemove": "Remove from category",
+  "noTags": "No tags yet. Add them in the node panel, separated by commas.",
+  "catEmpty": "No categories yet. Arrange your topics as a tree, e.g. Cybernetics › Feedback.",
+  "catDeleteConfirm": "The category \"%s\" is used by %n nodes. Delete it? (Its subcategories move up one level.)",
+  "lensClear": "Clear filter",
+  "lensCount": "%n nodes, %t texts",
+  "lensNone": "No nodes match this filter.",
+  "classesKeys": "Click: filter · Double-click: rename · Drag: move"
 }

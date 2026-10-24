@@ -31,7 +31,7 @@
   "publish": "Yayımla",
   "published": "HTML oluşturuldu",
   "settings": "Ayarlar",
-  "categoriesTitle": "Kategoriler (max 10)",
+  "categoriesTitle": "Düğüm türleri",
   "connTypesTitle": "Bağlantı Türleri (max 8)",
   "cancel": "İptal",
   "selected": "seçili",
@@ -68,7 +68,7 @@
       },
       "filter": {
         "title": "Tür Filtreleme",
-        "desc": "Üst bardaki kategori butonları ile belirli türleri gizleyin/gösterin. Gizlenen türlerin bağlantıları da gizlenir."
+        "desc": "Üst bardaki tür butonları ile belirli türleri gizleyin/gösterin. Gizlenen türlerin bağlantıları da gizlenir."
       },
       "multiSelect": {
         "title": "Çoklu Seçim",
@@ -84,7 +84,7 @@
       },
       "settings": {
         "title": "Ayarlar",
-        "desc": "⚙ butonu ile kategori ve bağlantı türlerini özelleştirin. Renk, ad (TR/EN) ve ikon düzenlenebilir. Her proje kendi ayarlarını taşır."
+        "desc": "⚙ butonu ile düğüm ve bağlantı türlerini özelleştirin. Renk, ad (TR/EN) ve ikon düzenlenebilir. Her proje kendi ayarlarını taşır."
       },
       "save": {
         "title": "Kaydetme",
@@ -120,14 +120,14 @@
   "none": "Hiçbiri",
   "collections": "Koleksiyonlar",
   "importSelected": "Seçilenleri İçe Aktar",
-  "reportTitle": "Kategori Raporu",
-  "reportDesc": "Seçilen kategorilerin açıklama, not ve bağlantılarını dışa aktar",
-  "reportPickCats": "Rapora dahil edilecek kategorileri seçin:",
+  "reportTitle": "Tür Raporu",
+  "reportDesc": "Seçilen düğüm türlerinin açıklama, not ve bağlantılarını dışa aktar",
+  "reportPickCats": "Rapora dahil edilecek türleri seçin:",
   "reportIncludeConns": "Bağlantıları dahil et",
   "reportHeader": "Mentegraf Raporu",
   "tagsLabel2": "Etiketler",
   "reportGenerated": "Rapor oluşturuldu",
-  "addCategory": "Kategori",
+  "addCategory": "Tür",
   "addConnType": "Bağlantı Türü",
   "newItem": "Yeni",
   "sizing.enable": "Düğümleri bağlantı ağırlığına göre boyutlandır",
@@ -233,5 +233,21 @@
   "tblWord": "Tablo",
   "csvTable": "CSV tablo",
   "assetLabel": "Dosya",
-  "figError": "Dosya eklenemedi."
+  "figError": "Dosya eklenemedi.",
+  "classesLabel": "Sınıflandırma",
+  "addCat": "+ Kategori",
+  "addSubcat": "+ Alt kategori",
+  "newCatName": "Yeni kategori",
+  "catsTitle": "Kategoriler",
+  "tagsTitle": "Etiketler",
+  "catsPh": "Kategori ekle…",
+  "catCreate": "+ Yeni kategori: %s",
+  "catRemove": "Kategoriden çıkar",
+  "noTags": "Henüz etiket yok. Düğüm panelinde virgülle ayırarak ekleyin.",
+  "catEmpty": "Henüz kategori yok. Konularınızı bir ağaç olarak düzenleyin; ör. Sibernetik › Geri besleme.",
+  "catDeleteConfirm": "\"%s\" kategorisi %n düğümde kullanılıyor. Silinsin mi? (Alt kategoriler bir üst düzeye taşınır.)",
+  "lensClear": "Filtreyi kaldır",
+  "lensCount": "%n düğüm, %t metin",
+  "lensNone": "Bu filtreye uyan düğüm yok.",
+  "classesKeys": "Tıkla: filtrele · Çift tık: yeniden adlandır · Sürükle: taşı"
 }

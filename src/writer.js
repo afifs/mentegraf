@@ -61,7 +61,9 @@ var Writer = (function () {
       '.cm-fm': { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', lineHeight: '1.6', color: 'var(--dim)' },
       '.cm-fn': { color: 'var(--accent)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.78em', fontWeight: '600' },
       '.cm-cite, .cm-cite span': { color: '#3f8f86 !important', fontFamily: "'DM Sans', sans-serif", fontSize: '0.85em' },
-      '.cm-pid': { color: 'var(--dim)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.72em' }
+      '.cm-pid': { color: 'var(--dim)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.72em' },
+      '.cm-lensline': { backgroundColor: 'rgba(197,160,94,0.13)', boxShadow: 'inset 3px 0 0 #c5a05e' },
+      '.cm-lensword': { borderBottom: '2px solid #c5a05e' }
     })
     extensions = [
       CM.history(),
@@ -72,6 +74,7 @@ var Writer = (function () {
       markPlugin(/\[\^[^\]\s]+\]/g, 'cm-fn'),
       markPlugin(/\[[^\][\n]*@[^\][\n]*\]/g, 'cm-cite'),
       markPlugin(/\s\^[a-z0-9]{4,12}$/g, 'cm-pid'),
+      lensPlugin(),
       CM.syntaxHighlighting(hl),
       CM.search({ top: true }),
       CM.highlightSelectionMatches(),
@@ -121,6 +124,34 @@ var Writer = (function () {
     return CM.ViewPlugin.fromClass(class {
       constructor(v) { this.decorations = deco.createDeco(v) }
       update(u) { this.decorations = deco.updateDeco(u, this.decorations) }
+    }, { decorations: function (v) { return v.decorations } })
+  }
+
+  // Classification lens: mark lines that mention a node in the chosen category or tag.
+  function lensPlugin() {
+    var line = CM.Decoration.line({ class: 'cm-lensline' }), word = CM.Decoration.mark({ class: 'cm-lensword' })
+    function find(v) {
+      var terms = window.Classify && current ? Classify.lensTerms(current.nodeId) : []
+      if (!terms.length) return CM.Decoration.none
+      var re = new RegExp('(^|[^\\p{L}\\p{N}])(' + terms.map(function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }).join('|') + ')(?![\\p{L}\\p{N}])', 'giu')
+      var ranges = []
+      v.visibleRanges.forEach(function (r) {
+        for (var pos = r.from; pos <= r.to;) {
+          var l = v.state.doc.lineAt(pos), m, hit = false
+          re.lastIndex = 0
+          while ((m = re.exec(l.text))) { hit = true; var s = l.from + m.index + m[1].length; ranges.push(word.range(s, s + m[2].length)); if (!m[0].length) re.lastIndex++ }
+          if (hit) ranges.push(line.range(l.from))
+          pos = l.to + 1
+        }
+      })
+      return CM.Decoration.set(ranges, true)
+    }
+    return CM.ViewPlugin.fromClass(class {
+      constructor(v) { this.ver = window.Classify ? Classify.version() : 0; this.decorations = find(v) }
+      update(u) {
+        var ver = window.Classify ? Classify.version() : 0
+        if (u.docChanged || u.viewportChanged || ver !== this.ver) { this.ver = ver; this.decorations = find(u.view) }
+      }
     }, { decorations: function (v) { return v.decorations } })
   }
 
@@ -651,6 +682,8 @@ var Writer = (function () {
     hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu,
     // Text of a loaded buffer (including unsaved edits), or null if not loaded.
     textFor: function (path) { return buffers[path] ? textOf(path) : null },
+    // Re-mark lens lines after the lens changed.
+    refreshLens: function () { if (view) view.dispatch({}) },
     // The open text: { path, nodeId } or null.
     current: function () { return current ? { path: current.path, nodeId: current.nodeId } : null },
     // Insert at the cursor; block = on its own paragraph (blank lines around it).

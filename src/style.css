@@ -263,3 +263,54 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .naref{font:11px Consolas,monospace;color:var(--accent);user-select:all}
 .pv img{display:block;max-width:100%;margin:1em auto .3em;border-radius:4px}
 .pv p>em:only-child{display:block;text-align:center;font-size:.85em;color:var(--dim)}
+
+/* ═══ CLASSIFICATION ═══ */
+#classes{position:absolute;left:0;top:0;bottom:0;width:var(--binder-w);display:none;flex-direction:column;background:var(--bg2);border-right:1px solid var(--border);z-index:16}
+#main.binding.classing #binder{display:none}
+#main.binding.classing #classes{display:flex}
+#b_classes.on{color:var(--accent);background:var(--bg3)}
+.ctitle{flex:1;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.cscroll{flex:1;min-height:0;overflow:auto;padding-bottom:8px}
+.csec{padding:10px 12px 4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.ctree{padding:2px 0}
+.crow{display:flex;align-items:center;gap:5px;min-height:28px;padding-right:6px;cursor:pointer;font-size:13px;border-top:2px solid transparent;border-bottom:2px solid transparent;user-select:none}
+.crow:hover{background:var(--hover)}
+.crow.cfocus{background:var(--bg3)}
+.crow.con{background:rgba(197,160,94,.2)}
+.crow.con .cname{color:var(--accent);font-weight:600}
+.crow.drop-before{border-top-color:var(--accent)}.crow.drop-after{border-bottom-color:var(--accent)}.crow.drop-inside{background:rgba(197,160,94,.18)}
+.ctog{width:12px;flex:none;color:var(--dim);font-size:11px;text-align:center}
+.crow .cname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.ccount{font-size:11px;color:var(--dim);min-width:16px;text-align:right}
+.cadd,.crm{background:none;border:0;color:var(--dim);cursor:pointer;font-size:13px;padding:0 3px;opacity:0}
+.crow:hover .cadd,.crow:hover .crm{opacity:1}
+.cadd:hover,.crm:hover{color:var(--accent)}
+.cedit{flex:1;min-width:0;font:13px 'DM Sans',sans-serif;padding:2px 4px;border:1px solid var(--accent);border-radius:4px;background:var(--input-bg);color:var(--text);outline:none}
+.ctags{display:flex;flex-wrap:wrap;gap:5px;padding:4px 12px}
+.ctag{background:var(--bg3);border:1px solid transparent;border-radius:12px;padding:2px 9px;font:12px 'DM Sans',sans-serif;color:var(--text);cursor:pointer}
+.ctag span{color:var(--dim);font-size:11px}
+.ctag:hover{border-color:var(--border)}
+.ctag.con{border-color:var(--accent);color:var(--accent)}
+.cnone{padding:4px 12px;font-size:12px;color:var(--dim);line-height:1.5}
+.cresults{flex:0 1 45%;min-height:90px;overflow:auto;border-top:1px solid var(--border);background:var(--bg)}
+.crh{display:flex;align-items:center;gap:8px;padding:8px 12px 2px}
+.crt{flex:1;min-width:0;font-weight:600;font-size:13px;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cclear{font-size:11px;padding:3px 8px}
+.crs{padding:0 12px 6px;font-size:11px;color:var(--dim)}
+.cres{display:flex;align-items:center;gap:7px;padding:5px 12px;font-size:13px;cursor:pointer}
+.cres:hover{background:var(--hover)}
+.cres .cname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cdot{width:9px;height:9px;border-radius:50%;flex:none}
+.ctext{color:var(--dim);font-size:12px}
+.brow.blens{opacity:.3}
+.cchips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.cchips:empty{display:none}
+.cchip{display:inline-flex;align-items:center;gap:4px;background:rgba(197,160,94,.16);border-radius:12px;padding:2px 4px 2px 9px;font-size:12px;color:var(--text)}
+.cchip button{background:none;border:0;color:var(--dim);cursor:pointer;font-size:11px;padding:0 3px}
+.cchip button:hover{color:var(--accent)}
+.cpick{position:relative}
+.cpick input{width:100%}
+.csugs{position:absolute;left:0;right:0;top:100%;margin-top:2px;z-index:30;background:var(--bg2);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px var(--shadow);padding:4px;max-height:240px;overflow:auto}
+.csug{padding:5px 8px;border-radius:5px;font-size:13px;cursor:pointer;color:var(--text)}
+.csug.csel,.csug:hover{background:var(--hover)}
+.csug.cnew{color:var(--accent)}

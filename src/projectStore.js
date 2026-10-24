@@ -90,6 +90,26 @@ function normalizeManuscript(m, nodeIds) {
   return { title: typeof src.title === 'string' ? src.title : '', items: walk(src.items, 0) }
 }
 
+// ───────── classification (category tree) ─────────
+//
+// { categories: [ { id, name, parent } ] }  parent null = top level; order = array order.
+// Unknown parents and cycles are repaired by moving the item to the top level.
+function normalizeClassification(c) {
+  const list = (c && Array.isArray(c.categories) ? c.categories : [])
+    .filter(x => x && x.id != null && typeof x.name === 'string')
+    .map(x => ({ id: String(x.id), name: x.name, parent: x.parent != null && x.parent !== '' ? String(x.parent) : null }))
+  const seenIds = new Set()
+  const unique = list.filter(x => !seenIds.has(x.id) && seenIds.add(x.id))
+  const byId = new Map(unique.map(x => [x.id, x]))
+  unique.forEach(x => {
+    if (x.parent && !byId.has(x.parent)) x.parent = null
+    const seen = new Set()
+    let p = x.parent
+    while (p) { if (p === x.id || seen.has(p)) { x.parent = null; break } seen.add(p); p = byId.has(p) ? byId.get(p).parent : null }
+  })
+  return { categories: unique }
+}
+
 // Words in a text, as the editor counts them (metadata block excluded).
 function countWords(text) {
   const body = String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '')
@@ -111,6 +131,8 @@ function toFiles(project) {
     nodeTypes: cfg.categories || [],
     connectionTypes: cfg.connectionTypes || []
   }
+  const classification = normalizeClassification(p.classification)
+  const catIds = new Set(classification.categories.map(c => c.id))
   const layout = {}
   const nodes = {}
   p.elements.nodes.map(n => n).sort((a, b) => byId(a.data, b.data)).forEach(n => {
@@ -119,16 +141,17 @@ function toFiles(project) {
     if (pos) layout[d.id] = { x: round1(pos.x), y: round1(pos.y) }
     delete d.x; delete d.y
     delete d.color // derived from the node type on load
+    if (Array.isArray(d.cats)) { d.cats = d.cats.map(String).filter(c => catIds.has(c)); if (!d.cats.length) delete d.cats } else delete d.cats
     nodes[d.id] = stable(d)
   })
   const edges = p.elements.edges.map(e => e.data).sort(byId)
   const ids = {}; Object.keys(nodes).forEach(id => { ids[id] = true })
   const manuscript = normalizeManuscript(p.manuscript, ids)
-  return { manifest: stable(manifest), edges: stable(edges), layout: stable(layout), manuscript: stable(manuscript), nodes }
+  return { manifest: stable(manifest), edges: stable(edges), layout: stable(layout), manuscript: stable(manuscript), categories: stable(classification), nodes }
 }
 
 // File texts -> { project, warnings }. nodeFiles: [{ name, text }].
-function fromFiles({ manifestText, edgesText, layoutText, manuscriptText, nodeFiles }) {
+function fromFiles({ manifestText, edgesText, layoutText, manuscriptText, categoriesText, nodeFiles }) {
   let m
   try { m = JSON.parse(manifestText) } catch (e) { throw err('not-a-project', 'The project file is not valid JSON.') }
   if (!m || typeof m !== 'object' || !m.format) throw err('not-a-project', 'This file is not a Mentegraf folder project.')
@@ -190,6 +213,11 @@ function fromFiles({ manifestText, edgesText, layoutText, manuscriptText, nodeFi
   }
   const ids = {}; nodes.forEach(n => { ids[n.data.id] = true })
   project.manuscript = normalizeManuscript(manuscript, ids)
+  let classification = null
+  if (categoriesText) {
+    try { classification = JSON.parse(categoriesText) } catch (e) { warnings.push({ kind: 'unreadable', file: 'graph/categories.json' }) }
+  }
+  project.classification = normalizeClassification(classification)
   const migrated = ProjectFormat.migrate(project).data
   const dropped = project.elements.edges.length - migrated.elements.edges.length
   if (dropped > 0) warnings.push({ kind: 'dangling', count: dropped })
@@ -229,6 +257,7 @@ function readProject(dir) {
     edgesText: readOrNull(path.join(dir, 'graph', 'edges.json')),
     layoutText: readOrNull(path.join(dir, 'graph', 'layout.json')),
     manuscriptText: readOrNull(path.join(dir, 'graph', 'manuscript.json')),
+    categoriesText: readOrNull(path.join(dir, 'graph', 'categories.json')),
     nodeFiles
   })
   // Conflict copies of edges/layout/manifest.
@@ -272,6 +301,7 @@ function writeProject(dir, project) {
   want['graph/edges.json'] = f.edges
   want['graph/layout.json'] = f.layout
   want['graph/manuscript.json'] = f.manuscript
+  want['graph/categories.json'] = f.categories
   want[MANIFEST] = f.manifest
 
   const changed = Object.keys(want).filter(rel => readOrNull(path.join(dir, rel)) !== want[rel])
@@ -429,5 +459,5 @@ module.exports = {
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
   TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
-  normalizeManuscript, countWords, fragmentStats, assetKind, importAsset
+  normalizeManuscript, normalizeClassification, countWords, fragmentStats, assetKind, importAsset
 }

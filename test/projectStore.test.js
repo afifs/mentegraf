@@ -194,6 +194,36 @@ test('older projects without a book structure open with an empty one', () => {
   assert.deepStrictEqual(Store.readProject(dir).project.manuscript, { title: '', items: [] })
 })
 
+console.log('classification')
+
+test('category tree is saved in graph/categories.json; nodes keep their categories', () => {
+  const dir = path.join(tmp(), 'Book'), p = sample()
+  p.classification = { categories: [{ id: 'c1', name: 'Sibernetik', parent: null }, { id: 'c2', name: 'Geri besleme', parent: 'c1' }, { id: 'c3', name: 'Homeostaz', parent: 'c2' }] }
+  p.elements.nodes[0].data.cats = ['c2', 'gone']
+  Store.writeProject(dir, p)
+  const back = Store.readProject(dir).project
+  assert.deepStrictEqual(back.classification, p.classification)
+  assert.deepStrictEqual(JSON.parse(read(dir, 'graph/categories.json')), p.classification)
+  assert.deepStrictEqual(back.elements.nodes.find(n => n.data.id === p.elements.nodes[0].data.id).data.cats, ['c2'])
+})
+
+test('category tree: unknown parents and cycles go to the top level; duplicates dropped', () => {
+  const c = Store.normalizeClassification({ categories: [
+    { id: 'a', name: 'A', parent: 'b' }, { id: 'b', name: 'B', parent: 'a' }, { id: 'c', name: 'C', parent: 'nope' },
+    { id: 'd', name: 'D', parent: 'c' }, { id: 'd', name: 'dup' }, { name: 'no id' }, null] })
+  assert.deepStrictEqual(c.categories.map(x => [x.id, x.parent]), [['a', null], ['b', 'a'], ['c', null], ['d', 'c']])
+  assert.deepStrictEqual(Store.normalizeClassification(undefined), { categories: [] })
+})
+
+test('older projects open with no categories; a node without categories has no cats field', () => {
+  const dir = path.join(tmp(), 'Book')
+  Store.writeProject(dir, sample())
+  fs.unlinkSync(path.join(dir, 'graph/categories.json'))
+  const back = Store.readProject(dir).project
+  assert.deepStrictEqual(back.classification, { categories: [] })
+  assert.ok(back.elements.nodes.every(n => !('cats' in n.data)))
+})
+
 test('word counts of texts on disk', () => {
   const dir = path.join(tmp(), 'Book')
   Store.writeProject(dir, sample())

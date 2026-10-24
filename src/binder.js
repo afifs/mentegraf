@@ -191,7 +191,7 @@ var Binder = (function () {
       }
       var kids = it.children || [], hasKids = kids.length > 0, open = !collapsed[it.id]
       var t = totals(it, included)
-      var cls = ['brow', it.kind === 'part' ? 'bpart' : 'bnode', on ? '' : 'boff', it.kind === 'node' && it.node === selected ? 'bsel' : '', it.id === focusId ? 'bfocus' : ''].join(' ')
+      var cls = ['brow', it.kind === 'part' ? 'bpart' : 'bnode', on ? '' : 'boff', it.kind === 'node' && it.node === selected ? 'bsel' : '', it.id === focusId ? 'bfocus' : '', it.kind === 'node' && window.Classify && !Classify.matches(it.node) ? 'blens' : ''].join(' ')
       var num = '', label, extra = ''
       if (it.kind === 'part') {
         if (on) num = roman(++partNo) + '.'
@@ -240,9 +240,13 @@ var Binder = (function () {
 
   function toggle() {
     var main = $('main')
-    main.classList.toggle('binding')
+    if (main.classList.contains('classing')) {          // the classification pane is showing: switch to the plan
+      if (window.Classify) Classify.leave()
+      main.classList.add('binding')
+    } else main.classList.toggle('binding')
     try { localStorage.setItem('mentegraf-binder', isOpen() ? '1' : '0') } catch (e) { /* ignore */ }
     var b = $('b_binder'); if (b) b.classList.toggle('on', isOpen())
+    if (window.Classify) Classify.syncButtons()
     if (isOpen()) { render(); refreshCounts() }
     setTimeout(function () { if (window.cy) cy.resize() }, 30)
   }
