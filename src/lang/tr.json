@@ -206,5 +206,9 @@
   "removeFromBook": "Kitap planından çıkar (düğüm grafikte kalır)",
   "bookTotal": "Toplam",
   "selectNodeFirst": "Önce grafikte bir düğüm seçin",
-  "alreadyInBook": "Bu düğüm zaten kitap planında"
+  "alreadyInBook": "Bu düğüm zaten kitap planında",
+  "statusTitle": "Durum: %s (değiştirmek için tıklayın)",
+  "cannotIndent": "Burada bir alt düzeye taşınamaz",
+  "cannotOutdent": "Zaten en üst düzeyde",
+  "binderKeys": "↑ ↓ gezin · Tab / Shift+Tab düzey · Enter aç · Delete plandan çıkar"
 }

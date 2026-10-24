@@ -223,3 +223,18 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 #panel:not(.open){visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
 #panel.open{visibility:visible}
 .fld.frow select,.fld.frow input{width:100%}
+
+/* book plan: compact status icon, include dot, keyboard focus, status menu */
+.btree:focus{outline:none}
+.btree:focus .brow.bfocus{box-shadow:inset 3px 0 0 var(--accent)}
+.binc{width:9px;height:9px;min-width:9px;padding:0;border-radius:50%;border:1.5px solid #4f8f5e;background:#4f8f5e;cursor:pointer;opacity:1!important;margin:0 3px 0 1px}
+.binc.off{background:transparent;border-color:var(--dim)}
+.binc.bnone{border:0;background:none;cursor:default}
+.binc:hover{transform:scale(1.25)}
+.bst{flex-shrink:0;background:none;border:0;padding:2px;border-radius:4px;cursor:pointer;display:inline-flex;line-height:0}
+.bst:hover{background:var(--hover)}
+.bmenu{position:absolute;z-index:40;background:var(--bg2);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 24px var(--shadow);padding:4px;display:flex;flex-direction:column;min-width:150px}
+.bmenu button{display:flex;align-items:center;gap:8px;background:none;border:0;border-radius:5px;padding:5px 8px;font:13px 'DM Sans',sans-serif;color:var(--text);cursor:pointer;text-align:left}
+.bmenu button:hover{background:var(--hover)}
+.bmenu button.cur{font-weight:600}
+.bhint{padding:6px 12px;border-top:1px solid var(--border);font-size:10.5px;color:var(--dim);line-height:1.4}

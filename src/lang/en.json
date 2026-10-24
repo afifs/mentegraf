@@ -206,5 +206,9 @@
   "removeFromBook": "Remove from the book plan (the node stays in the graph)",
   "bookTotal": "Total",
   "selectNodeFirst": "Select a node in the graph first",
-  "alreadyInBook": "This node is already in the book plan"
+  "alreadyInBook": "This node is already in the book plan",
+  "statusTitle": "Status: %s (click to change)",
+  "cannotIndent": "Cannot move one level deeper here",
+  "cannotOutdent": "Already at the top level",
+  "binderKeys": "↑ ↓ move · Tab / Shift+Tab level · Enter open · Delete remove from plan"
 }

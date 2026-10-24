@@ -443,7 +443,7 @@ var Writer = (function () {
     $('wState').textContent = b && view.state.doc.toString() !== b.saved ? L('unsavedText') : ''
   }
 
-  function show(path, node) {
+  function show(path, node, keepFocus) {
     build()
     syncCurrent()
     current = { nodeId: node.id(), path: path }
@@ -456,7 +456,7 @@ var Writer = (function () {
     setTips()
     updateStatus()
     if (previewOn) renderPreview()
-    else view.focus()
+    else if (!keepFocus) view.focus()
   }
 
   function close() {
@@ -485,7 +485,8 @@ var Writer = (function () {
     return '---\nmentegraf-node: ' + node.id() + '\n---\n\n# ' + (node.data('label') || '') + '\n\n'
   }
 
-  async function openForNode(node) {
+  // opts.focus === false: open the text but leave the keyboard where it is (e.g. in the book plan).
+  async function openForNode(node, opts) {
     if (!node || !node.isNode || !node.isNode() || !api()) return
     var path = node.data('fragment')
     if (!path) {
@@ -506,8 +507,9 @@ var Writer = (function () {
         buffers[path] = { state: makeState(r.text), saved: r.text }
       }
     }
-    show(path, node)
-    if (view) view.dispatch({ selection: { anchor: view.state.doc.length } })
+    var keep = !!(opts && opts.focus === false)
+    show(path, node, keep)
+    if (view && !keep) view.dispatch({ selection: { anchor: view.state.doc.length } })
   }
 
   function updatePanel(node) {

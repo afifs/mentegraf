@@ -8,6 +8,19 @@ var Binder = (function () {
   'use strict'
 
   var STATUSES = ['idea', 'draft', 'revision', 'done']
+  var STATUS_FILL = { idea: 0, draft: 0.25, revision: 0.75, done: 1 }
+  var STATUS_COLOR = { idea: '#8f8a7e', draft: '#c08a3e', revision: '#4f7fa8', done: '#4f8f5e' }
+
+  // A circle that fills up as the chapter progresses: ○ ◔ ◕ ●
+  function statusIcon(st) {
+    var f = STATUS_FILL[st] || 0, c = STATUS_COLOR[st] || STATUS_COLOR.idea, fill = ''
+    if (f >= 1) fill = '<circle cx="8" cy="8" r="6" fill="' + c + '"/>'
+    else if (f > 0) {
+      var a = 2 * Math.PI * f - Math.PI / 2, x = 8 + 6 * Math.cos(a), y = 8 + 6 * Math.sin(a)
+      fill = '<path d="M8 8V2A6 6 0 ' + (f > 0.5 ? 1 : 0) + ' 1 ' + x.toFixed(2) + ' ' + y.toFixed(2) + 'Z" fill="' + c + '"/>'
+    }
+    return '<svg viewBox="0 0 16 16" width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="' + c + '" stroke-width="1.6"/>' + fill + '</svg>'
+  }
   var MAX_NODE_DEPTH = 3                 // part > chapter > section, or chapter > section > subsection
   var data = { title: '', items: [] }
   var counts = {}                        // text path -> words on disk
@@ -188,17 +201,17 @@ var Binder = (function () {
         label = esc(n ? n.data('label') : '?')
         if (on && paths[it.id].length) num = paths[it.id].join('.') + (paths[it.id].length === 1 ? '.' : '')
         var st = (n && n.data('status')) || 'idea'
-        extra += '<select class="bstat st-' + st + '" data-act="status" title="' + esc(L('statusLabel')) + '">' +
-          STATUSES.map(function (s) { return '<option value="' + s + '"' + (s === st ? ' selected' : '') + '>' + esc(L('st_' + s)) + '</option>' }).join('') + '</select>'
-        extra += '<button class="binc' + (it.include === false ? ' off' : '') + '" data-act="include" title="' + esc(L(it.include === false ? 'includeOff' : 'includeOn')) + '">' + (it.include === false ? '○' : '●') + '</button>'
+        extra = '<button class="bst" data-act="status" title="' + esc(L('statusTitle').replace('%s', L('st_' + st))) + '">' + statusIcon(st) + '</button>'
       }
+      var inc = it.kind === 'part' ? '<span class="binc bnone"></span>'
+        : '<button class="binc' + (it.include === false ? ' off' : '') + '" data-act="include" title="' + esc(L(it.include === false ? 'includeOff' : 'includeOn')) + '"></button>'
       var words = t.target ? fmt(t.words) + ' / ' + fmt(t.target) : t.words ? fmt(t.words) : ''
       var over = t.target && t.words >= t.target ? ' bdone' : ''
       var syn = it.kind === 'node' && node(it.node) ? node(it.node).data('description') : ''
       html.push('<div class="' + cls + '" draggable="true" data-id="' + esc(it.id) + '" style="padding-left:' + (8 + depth * 16) + 'px"' + (syn ? ' title="' + esc(syn) + '"' : '') + '>' +
         '<span class="btog" data-act="toggle">' + (hasKids ? (open ? '▾' : '▸') : '') + '</span>' +
-        '<span class="bnum">' + num + '</span><span class="blabel">' + label + '</span>' + extra +
-        '<span class="bwords' + over + '">' + words + '</span>' +
+        inc + '<span class="bnum">' + num + '</span><span class="blabel">' + label + '</span>' +
+        '<span class="bwords' + over + '">' + words + '</span>' + extra +
         '<button class="brm" data-act="remove" title="' + esc(L('removeFromBook')) + '">✕</button></div>')
       if (hasKids) {
         // Children are numbered even when collapsed, so numbers never jump.
@@ -305,34 +318,103 @@ var Binder = (function () {
     var f = find(rowEl.dataset.id)
     if (!f) return
     var act = e.target.closest('[data-act]') ? e.target.closest('[data-act]').dataset.act : null
-    if (act === 'status') return
+    if (act === 'status') { openStatusMenu(e.target.closest('[data-act]'), f); return }
     if (act === 'toggle') { collapsed[f.item.id] = !collapsed[f.item.id]; render(); return }
     if (act === 'include') { f.item.include = f.item.include === false; changed(); return }
     if (act === 'remove') { f.list.splice(f.index, 1); changed(); return }
     focusId = f.item.id
+    $('bTree').focus({ preventScroll: true })
     render()
-    if (f.item.kind === 'node') {
-      var n = node(f.item.node)
-      if (!n) return
-      selNode(n)
-      cy.animate({ center: { eles: n }, duration: 250 })
-      Writer.openForNode(n)
-    }
+    openItem(f, false)
+  }
+
+  // Select the node, show it with its direct connections, open its text
+  // (moving the cursor into the text only when asked, e.g. with Enter).
+  function openItem(f, focusText) {
+    if (!f || f.item.kind !== 'node') return
+    var n = node(f.item.node)
+    if (!n) return
+    selNode(n)
+    if (!focusText) $('bTree').focus({ preventScroll: true })
+    // Zoom after the text pane has opened: it narrows the graph.
+    Promise.resolve(Writer.openForNode(n, { focus: !!focusText })).then(function () {
+      setTimeout(function () { if (typeof focusNeighborhood === 'function' && selEle && selEle.id && selEle.id() === n.id()) focusNeighborhood(n) }, 60)
+    })
+  }
+
+  // ───────── status menu ─────────
+
+  function closeStatusMenu() { var m = $('bStatusMenu'); if (m) m.remove() }
+
+  function openStatusMenu(btn, f) {
+    closeStatusMenu()
+    var n = node(f.item.node)
+    if (!n || !btn) return
+    var menu = document.createElement('div')
+    menu.id = 'bStatusMenu'
+    menu.className = 'bmenu'
+    menu.innerHTML = STATUSES.map(function (s) {
+      return '<button data-status="' + s + '"' + ((n.data('status') || 'idea') === s ? ' class="cur"' : '') + '>' + statusIcon(s) + '<span>' + esc(L('st_' + s)) + '</span></button>'
+    }).join('')
+    $('binder').appendChild(menu)
+    var r = btn.getBoundingClientRect(), b = $('binder').getBoundingClientRect()
+    menu.style.top = Math.min(r.bottom - b.top + 2, b.height - menu.offsetHeight - 8) + 'px'
+    menu.style.left = Math.max(8, r.right - b.left - menu.offsetWidth) + 'px'
+    menu.addEventListener('click', function (e) {
+      var o = e.target.closest('[data-status]')
+      if (!o) return
+      n.data('status', o.dataset.status)
+      closeStatusMenu()
+      changed()
+      if (window.selEle && selEle.id && selEle.id() === n.id()) updatePanel(n)
+    })
+    setTimeout(function () { document.addEventListener('mousedown', function away(e) { if (!e.target.closest('#bStatusMenu')) { closeStatusMenu(); document.removeEventListener('mousedown', away, true) } }, true) }, 0)
+  }
+
+  // ───────── keyboard: ↑ ↓ move, Tab / Shift+Tab change level, Enter open, Delete remove ─────────
+
+  function visibleIds() { return Array.prototype.map.call(document.querySelectorAll('#bTree .brow'), function (r) { return r.dataset.id }) }
+
+  function indent(id) {
+    var f = find(id)
+    if (!f || f.item.kind === 'part' || f.index === 0) return false
+    return move(id, f.list[f.index - 1].id, 'inside')
+  }
+  function outdent(id) {
+    var f = find(id)
+    if (!f || !f.parent) return false
+    return move(id, f.parent.id, 'after')
+  }
+
+  function onKey(e) {
+    if (e.target !== $('bTree')) return                          // not while renaming a part
+    var ids = visibleIds(), i = ids.indexOf(focusId), handled = true
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      var j = i < 0 ? 0 : Math.max(0, Math.min(ids.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))
+      if (ids.length) { focusId = ids[j]; render(); scrollToFocus() }
+    } else if (e.key === 'Tab') {
+      if (focusId && ((e.shiftKey ? outdent : indent)(focusId))) { changed(); scrollToFocus() }
+      else if (focusId) flash(L(e.shiftKey ? 'cannotOutdent' : 'cannotIndent'))
+    } else if (e.key === 'Enter') {
+      var f = find(focusId)
+      if (f && f.item.kind === 'part') editPartTitle(f.item.id); else openItem(f, true)
+    } else if (e.key === 'Delete') {
+      var g = find(focusId)
+      if (g) { focusId = ids[i + 1] || ids[i - 1] || null; g.list.splice(g.index, 1); changed() }
+    } else if (e.key === 'F2') {
+      var h = find(focusId); if (h && h.item.kind === 'part') editPartTitle(h.item.id)
+    } else handled = false
+    if (handled) { e.preventDefault(); e.stopPropagation() }    // keep keys away from the graph
+  }
+
+  function scrollToFocus() {
+    var el = focusId && document.querySelector('#bTree .brow[data-id="' + CSS.escape(focusId) + '"]')
+    if (el) el.scrollIntoView({ block: 'nearest' })
   }
 
   function onDblClick(e) {
     var rowEl = e.target.closest('.brow.bpart')
     if (rowEl && !e.target.closest('[data-act]')) editPartTitle(rowEl.dataset.id)
-  }
-
-  function onChange(e) {
-    if (!e.target.matches('select[data-act="status"]')) return
-    var f = find(e.target.closest('.brow').dataset.id)
-    var n = f && node(f.item.node)
-    if (!n) return
-    n.data('status', e.target.value)
-    changed()
-    if (window.selEle && selEle.id && selEle.id() === n.id()) updatePanel(n)
   }
 
   function zoneOf(e, rowEl) {
@@ -345,7 +427,8 @@ var Binder = (function () {
     var tree = $('bTree')
     tree.addEventListener('click', onClick)
     tree.addEventListener('dblclick', onDblClick)
-    tree.addEventListener('change', onChange)
+    tree.addEventListener('keydown', onKey)
+    tree.addEventListener('scroll', closeStatusMenu)
     tree.addEventListener('dragstart', function (e) {
       var rowEl = e.target.closest('.brow'); if (!rowEl) return
       dragId = rowEl.dataset.id
@@ -413,6 +496,7 @@ var Binder = (function () {
   }
 
   return {
+    indent: indent, outdent: outdent,
     init: init, load: load, get: get, render: render, toggle: toggle, refreshCounts: refreshCounts, textChanged: textChanged,
     addPart: addPart, addChapter: addChapter, addSelected: addSelected, updatePanel: updatePanel,
     _move: move, _find: find
