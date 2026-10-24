@@ -238,3 +238,7 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .bmenu button:hover{background:var(--hover)}
 .bmenu button.cur{font-weight:600}
 .bhint{padding:6px 12px;border-top:1px solid var(--border);font-size:10.5px;color:var(--dim);line-height:1.4}
+
+/* book plan: compile */
+.bacts .bcomp{margin-left:auto;background:var(--accent);color:var(--bg2);border-color:var(--accent)}
+.bacts .bcomp:hover{filter:brightness(1.08)}

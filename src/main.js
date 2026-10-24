@@ -5,6 +5,7 @@ const ProjectFormat = require('./projectFormat')
 const ProjectStore = require('./projectStore')
 const Exporter = require('./exporter')
 const Styles = require('./styles')
+const Compiler = require('./compiler')
 
 // Resolve paths
 const isDev = !app.isPackaged
@@ -49,7 +50,8 @@ const MENU_LABELS = {
     exportTitle: 'Word (DOCX) olarak dışa aktar', exportDone: 'Belge oluşturuldu.', openBtn: 'Aç',
     pandocMissing: 'Pandoc bulunamadı. pandoc.org adresinden kurun, ardından Mentegraf\'ı yeniden başlatın.',
     pandocOld: 'Pandoc sürümü çok eski (%s). pandoc.org adresinden güncel sürümü kurun.',
-    importStyleTitle: 'Kaynak gösterme biçimi seçin (.csl)', importTemplateTitle: 'Word şablonu seçin (.docx)'
+    importStyleTitle: 'Kaynak gösterme biçimi seçin (.csl)', importTemplateTitle: 'Word şablonu seçin (.docx)',
+    compileTitle: 'Kitabı derle', compileDone: 'Kitap derlendi.'
   },
   en: {
     file: 'File', newProject: 'New Project', open: 'Open...', save: 'Save',
@@ -80,7 +82,8 @@ const MENU_LABELS = {
     exportTitle: 'Export to Word (DOCX)', exportDone: 'Document created.', openBtn: 'Open',
     pandocMissing: 'Pandoc was not found. Install it from pandoc.org, then restart Mentegraf.',
     pandocOld: 'Pandoc %s is too old. Install the current version from pandoc.org.',
-    importStyleTitle: 'Choose a citation style (.csl)', importTemplateTitle: 'Choose a Word template (.docx)'
+    importStyleTitle: 'Choose a citation style (.csl)', importTemplateTitle: 'Choose a Word template (.docx)',
+    compileTitle: 'Compile the book', compileDone: 'The book was compiled.'
   }
 }
 
@@ -137,6 +140,56 @@ ipcMain.handle('cite-pick', async () => {
   } catch (e) {
     return { error: e.code || 'zotero', message: e.message }
   } finally { pickInFlight = false }
+})
+
+// Export settings -> exporter options. citationStyle / wordTemplate: project-relative path,
+// 'default' (none) or unset (use what the project folder has).
+function exportOptions(settings) {
+  const s = settings && typeof settings === 'object' ? settings : { language: settings }
+  const notes = []
+  const pick = v => {
+    if (v === undefined || v === null || v === '') return undefined
+    if (v === 'default') return null
+    try { return Styles.resolve(currentDir, v) } catch (e) { notes.push(e.message); return null }
+  }
+  return { lang: s.language === 'en' ? 'en' : 'tr', csl: pick(s.citationStyle), reference: pick(s.wordTemplate), notes }
+}
+
+const COMPILE_FORMATS = { docx: ['Word', 'docx'], epub: ['EPUB', 'epub'], md: ['Markdown', 'md'] }
+
+ipcMain.handle('compile-book', async (event, job) => {
+  if (!currentDir) return { error: 'untitled' }
+  const L = labels()
+  const format = job && COMPILE_FORMATS[job.format] ? job.format : 'docx'
+  const items = job && Array.isArray(job.items) ? job.items.slice(0, 5000) : []
+  if (!items.some(i => i && i.kind === 'node')) return { error: 'empty' }
+  const title = String((job && job.title) || '').trim() || path.basename(currentDir)
+  const res = await dialog.showSaveDialog(mainWindow, {
+    title: L.compileTitle, defaultPath: path.join(currentDir, 'exports', ProjectStore.slugify(title) + '.' + COMPILE_FORMATS[format][1]),
+    filters: [{ name: COMPILE_FORMATS[format][0], extensions: [COMPILE_FORMATS[format][1]] }]
+  })
+  if (res.canceled || !res.filePath) return { canceled: true }
+  try {
+    fs.mkdirSync(path.dirname(res.filePath), { recursive: true })
+    const o = exportOptions(job.settings)
+    const r = await Compiler.compileBook({
+      projectDir: currentDir, items, title, format, lang: o.lang, csl: o.csl, reference: o.reference, outFile: res.filePath,
+      readText: rel => { const f = ProjectStore.readFragment(currentDir, rel); return f.exists ? f.text : null }
+    })
+    const warnings = o.notes.concat(r.warnings)
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: warnings.length ? 'warning' : 'info', title: L.compileTitle, message: L.compileDone,
+      detail: res.filePath + (warnings.length ? '\n\n' + warnings.slice(0, 10).join('\n') : ''),
+      buttons: [L.openBtn, 'OK'], defaultId: 0, cancelId: 1
+    })
+    if (choice === 0) require('electron').shell.openPath(res.filePath)
+    return { ok: true, out: res.filePath }
+  } catch (e) {
+    if (e.code === 'empty') return { error: 'empty' }
+    const info = e.code === 'pandoc-old' ? Exporter.pandocInfo() : null
+    dialog.showErrorBox(L.compileTitle, e.code === 'pandoc' ? L.pandocMissing : info ? L.pandocOld.replace('%s', info.version) : e.message)
+    return { error: e.code || 'failed' }
+  }
 })
 
 // Citation styles and Word templates for the Settings window.

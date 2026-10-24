@@ -175,12 +175,16 @@ function runPandoc(pandoc, args, input, cwd) {
 }
 
 // Export one text to DOCX. Returns { out, warnings }.
-// csl / reference: absolute path = use it, null = none, undefined = what the project folder has.
-async function exportDocx({ projectDir, fragmentPath, text, lang, outFile, csl, reference }) {
+// Run Pandoc on Markdown text and write a DOCX or EPUB file. Returns { out, warnings }.
+//   csl / reference: absolute path = use it, null = none, undefined = what the project folder has
+//   title, toc: book metadata (title page / table of contents)
+//   resourceDirs: where images and other files are looked up
+async function render({ projectDir, text, lang, outFile, csl, reference, format, title, toc, resourceDirs }) {
   const info = pandocInfo()
   if (!info.path) throw err('pandoc', 'Pandoc was not found.')
   if (!info.ok) throw err('pandoc-old', 'Pandoc ' + info.version + ' is too old; Mentegraf needs 2.11 or newer.')
   const pandoc = info.path
+  const to = format === 'epub' ? 'epub3' : 'docx'
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mentegraf-'))
   const warnings = []
   try {
@@ -190,7 +194,9 @@ async function exportDocx({ projectDir, fragmentPath, text, lang, outFile, csl, 
     // Language and headings go in a UTF-8 metadata file: non-ASCII command-line
     // arguments can be garbled by the system locale.
     const meta = { lang: tr ? 'tr-TR' : 'en-GB' }
-    const args = ['-f', 'markdown', '-t', 'docx', '-o', outFile, '--lua-filter', filter]
+    if (title) meta.title = String(title)
+    const args = ['-f', 'markdown', '-t', to, '-o', outFile, '--lua-filter', filter]
+    if (toc) { args.push('--toc'); meta['toc-title'] = tr ? 'İçindekiler' : 'Contents' }
     const keys = citeKeys(text)
     if (keys.length) {
       try {
@@ -208,9 +214,8 @@ async function exportDocx({ projectDir, fragmentPath, text, lang, outFile, csl, 
     const cslFile = csl === undefined ? auto.csl : csl
     const refFile = reference === undefined ? auto.reference : reference
     if (cslFile) args.push('--csl', cslFile)
-    if (refFile) args.push('--reference-doc', refFile)
-    const fragDir = path.dirname(path.join(projectDir, fragmentPath))
-    args.push('--resource-path', [fragDir, projectDir].join(path.delimiter))
+    if (refFile && to === 'docx') args.push('--reference-doc', refFile)
+    args.push('--resource-path', (resourceDirs && resourceDirs.length ? resourceDirs : [projectDir]).join(path.delimiter))
     const stderr = await runPandoc(pandoc, args, text, projectDir)
     stderr.split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => warnings.push(s))
     return { out: outFile, warnings }
@@ -219,4 +224,10 @@ async function exportDocx({ projectDir, fragmentPath, text, lang, outFile, csl, 
   }
 }
 
-module.exports = { BBT, PASSAGE_ID_FILTER, citePicker, citeKeys, exportBibliography, findPandoc, pandocInfo, projectStyles, exportDocx }
+// One text to DOCX (the DOCX button in the text pane).
+async function exportDocx({ projectDir, fragmentPath, text, lang, outFile, csl, reference }) {
+  const fragDir = path.dirname(path.join(projectDir, fragmentPath))
+  return render({ projectDir, text, lang, outFile, csl, reference, format: 'docx', resourceDirs: [fragDir, projectDir] })
+}
+
+module.exports = { BBT, PASSAGE_ID_FILTER, citePicker, citeKeys, exportBibliography, findPandoc, pandocInfo, projectStyles, render, exportDocx }

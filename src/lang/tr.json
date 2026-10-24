@@ -210,5 +210,11 @@
   "statusTitle": "Durum: %s (değiştirmek için tıklayın)",
   "cannotIndent": "Burada bir alt düzeye taşınamaz",
   "cannotOutdent": "Zaten en üst düzeyde",
-  "binderKeys": "↑ ↓ gezin · Tab / Shift+Tab düzey · Enter aç · Delete plandan çıkar"
+  "binderKeys": "↑ ↓ gezin · Tab / Shift+Tab düzey · Enter aç · Delete plandan çıkar",
+  "compileBtn": "Derle ▾",
+  "compileDocx": "Word (DOCX)",
+  "compileEpub": "E-kitap (EPUB)",
+  "compileMd": "Tek Markdown dosyası",
+  "compiling": "Kitap derleniyor…",
+  "compileEmpty": "Derlenecek (dahil edilmiş) bölüm yok"
 }

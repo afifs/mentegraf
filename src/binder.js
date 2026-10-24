@@ -368,7 +368,8 @@ var Binder = (function () {
       changed()
       if (window.selEle && selEle.id && selEle.id() === n.id()) updatePanel(n)
     })
-    setTimeout(function () { document.addEventListener('mousedown', function away(e) { if (!e.target.closest('#bStatusMenu')) { closeStatusMenu(); document.removeEventListener('mousedown', away, true) } }, true) }, 0)
+    // Registered right away: the mouse-down that opened the menu has already happened.
+    document.addEventListener('mousedown', function away(e) { if (!e.target.closest('#bStatusMenu')) { closeStatusMenu(); document.removeEventListener('mousedown', away, true) } }, true)
   }
 
   // ───────── keyboard: ↑ ↓ move, Tab / Shift+Tab change level, Enter open, Delete remove ─────────
@@ -456,6 +457,74 @@ var Binder = (function () {
     $('bTitle').addEventListener('keydown', function (e) { if (e.key === 'Enter') this.blur(); e.stopPropagation() })
   }
 
+  // ───────── compile the book ─────────
+
+  // The plan as the compiler needs it: included items in order, with heading levels.
+  // Excluded items are skipped together with everything below them; empty parts are dropped.
+  function compileItems() {
+    var out = []
+    function visit(list, depth) {
+      list.forEach(function (it) {
+        if (it.kind === 'part') {
+          var start = out.length
+          out.push({ kind: 'part', title: it.title || L('untitledPart'), level: depth + 1 })
+          visit(it.children || [], depth + 1)
+          if (!out.slice(start + 1).some(function (x) { return x.kind === 'node' })) out.length = start
+          return
+        }
+        if (it.include === false) return
+        var n = node(it.node)
+        if (!n) return
+        var p = n.data('fragment') || null
+        out.push({ kind: 'node', title: n.data('label') || '', level: depth + 1, path: p, text: p && Writer.textFor ? Writer.textFor(p) : null })
+        visit(it.children || [], depth + 1)
+      })
+    }
+    visit(data.items, 0)
+    return out
+  }
+
+  var FORMATS = [['docx', 'compileDocx'], ['epub', 'compileEpub'], ['md', 'compileMd']]
+  var compiling = false
+
+  function compileMenu(btn) {
+    closeStatusMenu()
+    var old = $('bCompileMenu'); if (old) { old.remove(); return }
+    var menu = document.createElement('div')
+    menu.id = 'bCompileMenu'
+    menu.className = 'bmenu'
+    menu.innerHTML = FORMATS.map(function (f) { return '<button data-format="' + f[0] + '"><span>' + esc(L(f[1])) + '</span></button>' }).join('')
+    $('binder').appendChild(menu)
+    var r = btn.getBoundingClientRect(), b = $('binder').getBoundingClientRect()
+    menu.style.top = (r.bottom - b.top + 2) + 'px'
+    menu.style.left = Math.max(8, Math.min(r.left - b.left, b.width - menu.offsetWidth - 8)) + 'px'
+    menu.addEventListener('click', function (e) {
+      var o = e.target.closest('[data-format]')
+      if (!o) return
+      menu.remove()
+      compile(o.dataset.format)
+    })
+    document.addEventListener('mousedown', function away(e) { if (!e.target.closest('#bCompileMenu') && !e.target.closest('.bcomp')) { menu.remove(); document.removeEventListener('mousedown', away, true) } }, true)
+  }
+
+  async function compile(format) {
+    if (compiling || !api() || !api().compileBook) return
+    var items = compileItems()
+    if (!items.some(function (x) { return x.kind === 'node' })) { flash(L('compileEmpty')); return }
+    compiling = true
+    var el = $('bSum'); el.textContent = L('compiling'); el.classList.add('bflash')
+    try {
+      var settings = Object.assign({ language: curLang === 'en' ? 'en' : 'tr' }, window.exportSettings || {})
+      var r = await api().compileBook({ title: data.title || bookTitle(), items: items, format: format, settings: settings })
+      if (r && r.error === 'untitled') alert(L('saveFirst'))
+      else if (r && r.error === 'empty') flash(L('compileEmpty'))
+    } finally {
+      compiling = false
+      el.classList.remove('bflash')
+      render()
+    }
+  }
+
   // ───────── node panel: status and target ─────────
 
   function updatePanel(n) {
@@ -496,7 +565,7 @@ var Binder = (function () {
   }
 
   return {
-    indent: indent, outdent: outdent,
+    indent: indent, outdent: outdent, compileMenu: compileMenu, compile: compile, compileItems: compileItems,
     init: init, load: load, get: get, render: render, toggle: toggle, refreshCounts: refreshCounts, textChanged: textChanged,
     addPart: addPart, addChapter: addChapter, addSelected: addSelected, updatePanel: updatePanel,
     _move: move, _find: find

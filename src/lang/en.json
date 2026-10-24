@@ -210,5 +210,11 @@
   "statusTitle": "Status: %s (click to change)",
   "cannotIndent": "Cannot move one level deeper here",
   "cannotOutdent": "Already at the top level",
-  "binderKeys": "↑ ↓ move · Tab / Shift+Tab level · Enter open · Delete remove from plan"
+  "binderKeys": "↑ ↓ move · Tab / Shift+Tab level · Enter open · Delete remove from plan",
+  "compileBtn": "Compile ▾",
+  "compileDocx": "Word (DOCX)",
+  "compileEpub": "E-book (EPUB)",
+  "compileMd": "Single Markdown file",
+  "compiling": "Compiling the book…",
+  "compileEmpty": "There are no included chapters to compile"
 }

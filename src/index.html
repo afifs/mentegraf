@@ -79,7 +79,7 @@
     <div id="binder">
       <div class="bh"><input id="bTitle" class="btitle" aria-label="book title"><button class="bx" onclick="Binder.toggle()" aria-label="close">✕</button></div>
       <div class="bsum" id="bSum"></div>
-      <div class="bacts"><button class="bt" onclick="Binder.addPart()" data-l="addPart">+ Kısım</button><button class="bt" onclick="Binder.addChapter()" data-l="addChapter">+ Bölüm</button><button class="bt" onclick="Binder.addSelected()" data-l="addSelected">+ Seçili düğüm</button></div>
+      <div class="bacts"><button class="bt" onclick="Binder.addPart()" data-l="addPart">+ Kısım</button><button class="bt" onclick="Binder.addChapter()" data-l="addChapter">+ Bölüm</button><button class="bt" onclick="Binder.addSelected()" data-l="addSelected">+ Seçili düğüm</button><button class="bt bcomp" onclick="Binder.compileMenu(this)" data-l="compileBtn">Derle ▾</button></div>
       <div id="bTree" class="btree" tabindex="0"></div>
       <div class="bhint" data-l="binderKeys">↑ ↓ gezin · Tab / Shift+Tab düzey · Enter aç · Delete plandan çıkar</div>
       <div class="bempty" id="bEmpty" data-l="binderEmpty">Kitap planı boş.</div>

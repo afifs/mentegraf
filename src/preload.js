@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('mentegraf', {
   stylesList: () => ipcRenderer.invoke('styles-list'),
   stylesImport: (kind) => ipcRenderer.invoke('styles-import', kind),
   stylesUse: (value) => ipcRenderer.invoke('styles-use', value),
+  compileBook: (job) => ipcRenderer.invoke('compile-book', job),
   onFragmentChanged: (cb) => ipcRenderer.on('fragment-changed', (e, p) => cb(p)),
   setDirty: (dirty) => ipcRenderer.send('set-dirty', !!dirty),
   closeWindow: () => ipcRenderer.send('close-window'),
