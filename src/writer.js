@@ -279,7 +279,8 @@ var Writer = (function () {
     exporting = true
     flash(L('exporting'))
     try {
-      var r = await api().exportDocx(current.path, view.state.doc.toString(), window.curLang)
+      var settings = Object.assign({ language: window.curLang === 'en' ? 'en' : 'tr' }, window.exportSettings || {})
+      var r = await api().exportDocx(current.path, view.state.doc.toString(), settings)
       if (r && r.error === 'untitled') alert(L('saveFirst'))
     } finally { exporting = false; flash('') }
   }

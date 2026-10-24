@@ -4,6 +4,7 @@ const fs = require('fs')
 const ProjectFormat = require('./projectFormat')
 const ProjectStore = require('./projectStore')
 const Exporter = require('./exporter')
+const Styles = require('./styles')
 
 // Resolve paths
 const isDev = !app.isPackaged
@@ -47,7 +48,8 @@ const MENU_LABELS = {
     wDangling: 'eksik düğüme bağlı bağlantı yüklenmedi',
     exportTitle: 'Word (DOCX) olarak dışa aktar', exportDone: 'Belge oluşturuldu.', openBtn: 'Aç',
     pandocMissing: 'Pandoc bulunamadı. pandoc.org adresinden kurun, ardından Mentegraf\'ı yeniden başlatın.',
-    pandocOld: 'Pandoc sürümü çok eski (%s). pandoc.org adresinden güncel sürümü kurun.'
+    pandocOld: 'Pandoc sürümü çok eski (%s). pandoc.org adresinden güncel sürümü kurun.',
+    importStyleTitle: 'Kaynak gösterme biçimi seçin (.csl)', importTemplateTitle: 'Word şablonu seçin (.docx)'
   },
   en: {
     file: 'File', newProject: 'New Project', open: 'Open...', save: 'Save',
@@ -77,7 +79,8 @@ const MENU_LABELS = {
     wDangling: 'link(s) to a missing node not loaded',
     exportTitle: 'Export to Word (DOCX)', exportDone: 'Document created.', openBtn: 'Open',
     pandocMissing: 'Pandoc was not found. Install it from pandoc.org, then restart Mentegraf.',
-    pandocOld: 'Pandoc %s is too old. Install the current version from pandoc.org.'
+    pandocOld: 'Pandoc %s is too old. Install the current version from pandoc.org.',
+    importStyleTitle: 'Choose a citation style (.csl)', importTemplateTitle: 'Choose a Word template (.docx)'
   }
 }
 
@@ -136,7 +139,32 @@ ipcMain.handle('cite-pick', async () => {
   } finally { pickInFlight = false }
 })
 
-ipcMain.handle('export-docx', async (event, rel, text, lang) => {
+// Citation styles and Word templates for the Settings window.
+ipcMain.handle('styles-list', () => {
+  try { return Object.assign({ untitled: !currentDir }, Styles.listOptions(currentDir, app.getPath('userData'))) } catch (e) {
+    return { untitled: !currentDir, styles: [], templates: [], error: e.message }
+  }
+})
+
+ipcMain.handle('styles-import', async (event, kind) => {
+  const L = labels(), csl = kind === 'csl'
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: csl ? L.importStyleTitle : L.importTemplateTitle, properties: ['openFile'],
+    defaultPath: (csl && Styles.zoteroStylesDir()) || app.getPath('documents'),
+    filters: [csl ? { name: 'CSL', extensions: ['csl'] } : { name: 'Word', extensions: ['docx'] }]
+  })
+  if (res.canceled || !res.filePaths.length) return { canceled: true }
+  try { return Styles.importToLibrary(res.filePaths[0], csl ? 'csl' : 'docx', app.getPath('userData')) } catch (e) {
+    return { error: e.code || 'failed', message: e.message }
+  }
+})
+
+ipcMain.handle('styles-use', (event, value) => {
+  if (!currentDir) return { error: 'untitled' }
+  try { return { rel: Styles.useInProject(currentDir, value) } } catch (e) { return { error: e.code || 'failed', message: e.message } }
+})
+
+ipcMain.handle('export-docx', async (event, rel, text, settings) => {
   if (!currentDir) return { error: 'untitled' }
   const L = labels()
   const base = path.basename(String(rel || 'metin')).replace(/\.md$/i, '')
@@ -147,7 +175,20 @@ ipcMain.handle('export-docx', async (event, rel, text, lang) => {
   if (res.canceled || !res.filePath) return { canceled: true }
   try {
     fs.mkdirSync(path.dirname(res.filePath), { recursive: true })
-    const r = await Exporter.exportDocx({ projectDir: currentDir, fragmentPath: rel, text: String(text || ''), lang, outFile: res.filePath })
+    // Settings: language, citationStyle / wordTemplate = project-relative path, 'default' (none),
+    // or unset (use what the project folder has). Older callers pass just the language.
+    const s = settings && typeof settings === 'object' ? settings : { language: settings }
+    const notes = []
+    const pick = v => {
+      if (v === undefined || v === null || v === '') return undefined
+      if (v === 'default') return null
+      try { return Styles.resolve(currentDir, v) } catch (e) { notes.push(e.message); return null }
+    }
+    const r = await Exporter.exportDocx({
+      projectDir: currentDir, fragmentPath: rel, text: String(text || ''), lang: s.language === 'en' ? 'en' : 'tr',
+      csl: pick(s.citationStyle), reference: pick(s.wordTemplate), outFile: res.filePath
+    })
+    r.warnings = notes.concat(r.warnings)
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: r.warnings.length ? 'warning' : 'info', title: L.exportTitle, message: L.exportDone,
       detail: res.filePath + (r.warnings.length ? '\n\n' + r.warnings.slice(0, 8).join('\n') : ''),

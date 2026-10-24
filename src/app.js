@@ -17,7 +17,7 @@ async function loadConfigs() {
 
 
 
-var categories=[],connTypes=[];var nodeSizingOn=true;
+var categories=[],connTypes=[];var nodeSizingOn=true;var exportSettings={};
 function initConfig(){categories=JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));connTypes=JSON.parse(JSON.stringify(DEFAULT_CONN_TYPES))}
 function catById(id){return categories.find(function(c){return c.id===id})}
 function catLabel(c){return curLang==='en'?c.en:c.tr}
@@ -46,7 +46,7 @@ function applyLang(){curLang=localStorage.getItem('mentegraf-lang')||'tr';if(win
 function toggleLang(){curLang=curLang==='tr'?'en':'tr';localStorage.setItem('mentegraf-lang',curLang);applyLang();buildTF();if(selEle&&selEle.isNode())selNode(selEle);if(window.mentegraf&&window.mentegraf.setLang)window.mentegraf.setLang(curLang)}
 function rebuildETS(){var s=document.getElementById('eType');if(!s)return;var cv=s.value;s.innerHTML='';connTypes.forEach(function(ct){var o=document.createElement('option');o.value=ct.id;o.textContent=(ct.marker?ct.marker+' ':'')+connLabel(ct);o.style.color=ct.color||'';s.appendChild(o)});s.value=cv}
 
-function openSettings(){document.getElementById('cfgSizing').checked = NodeSizing.getOptions(cy).enabled;document.getElementById('settingsModal').style.display='flex';renderCfgCats();renderCfgConns()}
+function openSettings(){document.getElementById('cfgSizing').checked = NodeSizing.getOptions(cy).enabled;document.getElementById('settingsModal').style.display='flex';renderCfgCats();renderCfgConns();ExportSettings.open()}
 function closeSettings(){document.getElementById('settingsModal').style.display='none'}
 function renderCfgCats(){var c=document.getElementById('cfgCats');c.innerHTML='';categories.forEach(function(cat,i){var r=document.createElement('div');r.className='cfg-row';r.innerHTML='<input type="color" value="'+cat.color+'" onchange="categories['+i+'].color=this.value"><input type="text" value="'+cat.tr+'" placeholder="TR" style="width:70px" onchange="categories['+i+'].tr=this.value"><input type="text" value="'+cat.en+'" placeholder="EN" style="width:70px" onchange="categories['+i+'].en=this.value"><span style="font-size:10px;color:var(--dim);width:50px;overflow:hidden">'+cat.id+'</span><button class="cfg-del" onclick="if(categories.length>1){categories.splice('+i+',1);renderCfgCats()}">✕</button>';c.appendChild(r)});if(categories.length<10){var a=document.createElement('div');a.className='cfg-add';a.textContent='+ '+L('addCategory');a.onclick=function(){categories.push({id:ProjectFormat.newId('c'),tr:L('newItem'),en:'New',color:'#aaa',svgPath:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z'});renderCfgCats()};c.appendChild(a)}}
 function renderCfgConns(){var c=document.getElementById('cfgConns');c.innerHTML='';connTypes.forEach(function(ct,i){var r=document.createElement('div');r.className='cfg-row';if(i===0){r.innerHTML='<span style="font-size:11px;color:var(--dim);width:50px">default</span><input type="text" value="'+ct.tr+'" placeholder="TR" onchange="connTypes[0].tr=this.value"><input type="text" value="'+ct.en+'" placeholder="EN" onchange="connTypes[0].en=this.value">'}else{r.innerHTML='<input type="color" value="'+(ct.color||"#888")+'" style="width:28px;height:28px;border:0;padding:0;cursor:pointer;border-radius:4px" onchange="connTypes['+i+'].color=this.value"><input type="text" value="'+ct.tr+'" placeholder="TR" onchange="connTypes['+i+'].tr=this.value"><input type="text" value="'+ct.en+'" placeholder="EN" onchange="connTypes['+i+'].en=this.value"><input type="text" value="'+(ct.marker||"")+'" placeholder="marker" style="width:30px;text-align:center" onchange="connTypes['+i+'].marker=this.value" title="Marker symbol"><button class="cfg-del" onclick="if(connTypes.length>1){connTypes.splice('+i+',1);renderCfgConns()}">✕</button>'}c.appendChild(r)});if(connTypes.length<8){var a=document.createElement('div');a.className='cfg-add';a.textContent='+ '+L('addConnType');a.onclick=function(){connTypes.push({id:ProjectFormat.newId('r'),tr:L('newItem'),en:'New',color:'#888',marker:'',style:'solid'});renderCfgConns()};c.appendChild(a)}}
@@ -54,7 +54,7 @@ function saveSettings(){
   var sz=document.getElementById('cfgSizing').checked;
   sz?NodeSizing.enable(cy):NodeSizing.disable(cy);
   nodeSizingOn=sz;
-  closeSettings();buildTF();rebuildETS();cy.style().update();showMsg(L('saved'));snapshot()}
+  closeSettings();buildTF();rebuildETS();cy.style().update();ExportSettings.save().then(function(){showMsg(L('saved'));snapshot()})}
 
 var cy,selEle=null,nid=1,curTheme='dark',altHeld=false,dragCanvas,dragCtx,activeTypes;
 var undoStack=[],redoStack=[],maxUndo=40,autoSaveTimer=null;
@@ -63,7 +63,7 @@ function setDirty(v){v=!!v;if(isDirty===v)return;isDirty=v;if(window.mentegraf&&
 function addStarterNode(){if(cy.nodes().length)return;var c=catById('book')||categories[0];cy.add({data:{id:ProjectFormat.newId('n'),label:L('bookTitle'),type:c.id,color:c.color,description:'',notes:'',tags:[]},position:{x:400,y:300}})}
 // New Project: empty the existing graph and restore default settings. init() is not
 // re-run: it is a one-time setup (it would rebuild Cytoscape and lose #dragCanvas).
-function resetForNewProject(){initConfig();nodeSizingOn=true;NodeSizing.enable(cy);multiClear();clrSel();Writer.reset();cy.elements().remove();cy.style().update();buildTF();rebuildETS();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}
+function resetForNewProject(){initConfig();exportSettings={};nodeSizingOn=true;NodeSizing.enable(cy);multiClear();clrSel();Writer.reset();cy.elements().remove();cy.style().update();buildTF();rebuildETS();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}
 function resetHistory(){undoStack=[JSON.stringify(getProject())];redoStack=[];updateUB()}
 function snapshot(){var s=JSON.stringify(getProject());if(undoStack.length>0&&undoStack[undoStack.length-1]===s)return;undoStack.push(s);setDirty(true);if(undoStack.length>maxUndo)undoStack.shift();redoStack=[];updateUB()}
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());loadProject(JSON.parse(undoStack[undoStack.length-1]),true);setDirty(true);updateUB()}
@@ -176,8 +176,8 @@ function clrHL(){cy.batch(function(){cy.elements().removeClass('dim hl hle')})}
 function doLayout(){cy.layout({name:'cose',animate:true,animationDuration:800,randomize:false,nodeDimensionsIncludeLabels:true,idealEdgeLength:function(){return 130},nodeRepulsion:function(){return 8000},gravity:.35,numIter:2000,padding:50}).run()}
 function toggleTheme(){curTheme=curTheme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',curTheme);localStorage.setItem('mentegraf-theme',curTheme);cy.style().update()}
 
-function getProject(){var nodes=[],edges=[];cy.nodes().forEach(function(n){var d=n.data(),p=n.position();var nd=ProjectFormat.cleanData(d);nd.description=d.description||'';nd.notes=d.notes||'';nd.tags=d.tags||[];nd.x=p.x;nd.y=p.y;nodes.push({data:nd,position:{x:p.x,y:p.y}})});cy.edges().forEach(function(e){var d=e.data();var ed=ProjectFormat.cleanData(d);ed.weight=d.weight||3;ed.edgeType=d.edgeType||'';ed.note=d.note||'';edges.push({data:ed})});return{version:ProjectFormat.CURRENT_VERSION,app:'Mentegraf',lang:curLang,config:{categories:categories,connectionTypes:connTypes,nodeSizing:nodeSizingOn},elements:{nodes:nodes,edges:edges}}}
-function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;if(data.config.connectionTypes&&data.config.connectionTypes.length){
+function getProject(){var nodes=[],edges=[];cy.nodes().forEach(function(n){var d=n.data(),p=n.position();var nd=ProjectFormat.cleanData(d);nd.description=d.description||'';nd.notes=d.notes||'';nd.tags=d.tags||[];nd.x=p.x;nd.y=p.y;nodes.push({data:nd,position:{x:p.x,y:p.y}})});cy.edges().forEach(function(e){var d=e.data();var ed=ProjectFormat.cleanData(d);ed.weight=d.weight||3;ed.edgeType=d.edgeType||'';ed.note=d.note||'';edges.push({data:ed})});return{version:ProjectFormat.CURRENT_VERSION,app:'Mentegraf',lang:curLang,config:{categories:categories,connectionTypes:connTypes,nodeSizing:nodeSizingOn,export:exportSettings},elements:{nodes:nodes,edges:edges}}}
+function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();exportSettings=(data.config&&data.config.export&&typeof data.config.export==='object')?data.config.export:{};if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;if(data.config.connectionTypes&&data.config.connectionTypes.length){
   connTypes=data.config.connectionTypes;
   var defMap={};DEFAULT_CONN_TYPES.forEach(function(d){defMap[d.id]=d});
   connTypes.forEach(function(ct){var df=defMap[ct.id];if(df){if(!ct.color)ct.color=df.color;if(!ct.marker)ct.marker=df.marker;if(!ct.style)ct.style=df.style}else{if(!ct.color)ct.color='#888';if(!ct.marker)ct.marker='';if(!ct.style)ct.style='solid'}})
@@ -476,6 +476,6 @@ document.addEventListener('DOMContentLoaded',async function(){
   await loadLangs();
 
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
-  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();doLoad();
+  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();ExportSettings.bind();doLoad();
   addStarterNode();
   cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});

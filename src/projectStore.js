@@ -74,6 +74,7 @@ function toFiles(project) {
     app: 'Mentegraf',
     lang: p.lang || 'tr',
     settings: { nodeSizing: cfg.nodeSizing !== false },
+    export: cfg.export && typeof cfg.export === 'object' ? cfg.export : {},
     nodeTypes: cfg.categories || [],
     connectionTypes: cfg.connectionTypes || []
   }
@@ -143,7 +144,8 @@ function fromFiles({ manifestText, edgesText, layoutText, nodeFiles }) {
     config: {
       categories: types,
       connectionTypes: Array.isArray(m.connectionTypes) ? m.connectionTypes : [],
-      nodeSizing: !(m.settings && m.settings.nodeSizing === false)
+      nodeSizing: !(m.settings && m.settings.nodeSizing === false),
+      export: m.export && typeof m.export === 'object' ? m.export : {}
     },
     elements: { nodes, edges: edgeData.map(d => ({ data: d })) }
   }

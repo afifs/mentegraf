@@ -14,7 +14,7 @@
     "build:linux": "electron-builder --linux",
     "build": "electron-builder",
     "build:cm": "node tools/build-codemirror.mjs",
-    "test": "node test/projectStore.test.js && node test/exporter.test.js"
+    "test": "node test/projectStore.test.js && node test/exporter.test.js && node test/styles.test.js"
   },
   "dependencies": {},
   "devDependencies": {

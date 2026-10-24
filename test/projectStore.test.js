@@ -155,6 +155,16 @@ test('odd ids give safe file names', () => {
   assert.strictEqual(Store.safeName('con'), '_con')
 })
 
+test('export settings are kept in the manifest', () => {
+  const dir = path.join(tmp(), 'Book'), p = sample()
+  p.config.export = { citationStyle: 'styles/apa.csl', wordTemplate: 'default', language: 'tr' }
+  Store.writeProject(dir, p)
+  assert.deepStrictEqual(JSON.parse(read(dir, 'project.mentegraf')).export, p.config.export)
+  assert.deepStrictEqual(Store.readProject(dir).project.config.export, p.config.export)
+  const old = path.join(tmp(), 'Old'); Store.writeProject(old, sample())
+  assert.deepStrictEqual(Store.readProject(old).project.config.export, {})
+})
+
 console.log('text fragments')
 
 test('slugs handle Turkish letters', () => {

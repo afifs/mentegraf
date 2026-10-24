@@ -175,7 +175,8 @@ function runPandoc(pandoc, args, input, cwd) {
 }
 
 // Export one text to DOCX. Returns { out, warnings }.
-async function exportDocx({ projectDir, fragmentPath, text, lang, outFile }) {
+// csl / reference: absolute path = use it, null = none, undefined = what the project folder has.
+async function exportDocx({ projectDir, fragmentPath, text, lang, outFile, csl, reference }) {
   const info = pandocInfo()
   if (!info.path) throw err('pandoc', 'Pandoc was not found.')
   if (!info.ok) throw err('pandoc-old', 'Pandoc ' + info.version + ' is too old; Mentegraf needs 2.11 or newer.')
@@ -203,9 +204,11 @@ async function exportDocx({ projectDir, fragmentPath, text, lang, outFile }) {
     const metaFile = path.join(tmp, 'meta.yaml')
     fs.writeFileSync(metaFile, Object.keys(meta).map(k => k + ': ' + JSON.stringify(meta[k])).join('\n') + '\n', 'utf8')
     args.push('--metadata-file', metaFile)
-    const styles = projectStyles(projectDir)
-    if (styles.csl) args.push('--csl', styles.csl)
-    if (styles.reference) args.push('--reference-doc', styles.reference)
+    const auto = projectStyles(projectDir)
+    const cslFile = csl === undefined ? auto.csl : csl
+    const refFile = reference === undefined ? auto.reference : reference
+    if (cslFile) args.push('--csl', cslFile)
+    if (refFile) args.push('--reference-doc', refFile)
     const fragDir = path.dirname(path.join(projectDir, fragmentPath))
     args.push('--resource-path', [fragDir, projectDir].join(path.delimiter))
     const stderr = await runPandoc(pandoc, args, text, projectDir)

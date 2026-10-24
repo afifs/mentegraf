@@ -223,12 +223,18 @@
       <input type="checkbox" id="cfgSizing">
       <span data-l="sizingEnable">Düğümleri bağlantı ağırlığına göre boyutlandır</span>
     </label>
+    <h3 data-l="exportCfgTitle">Dışa aktarma</h3>
+    <div class="cfg-field"><label for="cfgCsl" data-l="cfgCitation">Kaynak gösterme biçimi</label><select id="cfgCsl"></select></div>
+    <div class="cfg-field"><label for="cfgDocx" data-l="cfgTemplate">Word şablonu</label><select id="cfgDocx"></select></div>
+    <div class="cfg-field"><label for="cfgLang" data-l="cfgLanguage">Belge dili</label><select id="cfgLang"><option value="tr">Türkçe</option><option value="en">English</option></select></div>
+    <div class="cfg-note" id="cfgExportNote"></div>
     <div class="br" style="margin-top:20px"><button class="bt bp" onclick="saveSettings()" data-l="saveLabel">Kaydet</button><button class="bt bg" onclick="closeSettings()" data-l="cancel">İptal</button></div>
   </div>
 </div>
 <script src="lib/codemirror.bundle.js"></script>
 <script src="projectFormat.js"></script>
 <script src="writer.js"></script>
+<script src="exportSettings.js"></script>
 <script src="nodeSizing.js"></script>
 <script src="app.js"></script>
 <script src="publish.js"></script>
