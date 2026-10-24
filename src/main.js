@@ -51,7 +51,8 @@ const MENU_LABELS = {
     pandocMissing: 'Pandoc bulunamadı. pandoc.org adresinden kurun, ardından Mentegraf\'ı yeniden başlatın.',
     pandocOld: 'Pandoc sürümü çok eski (%s). pandoc.org adresinden güncel sürümü kurun.',
     importStyleTitle: 'Kaynak gösterme biçimi seçin (.csl)', importTemplateTitle: 'Word şablonu seçin (.docx)',
-    compileTitle: 'Kitabı derle', compileDone: 'Kitap derlendi.'
+    compileTitle: 'Kitabı derle', compileDone: 'Kitap derlendi.',
+    assetFigureTitle: 'Görsel seçin', assetTableTitle: 'Tablo için CSV dosyası seçin', imagesLabel: 'Görseller'
   },
   en: {
     file: 'File', newProject: 'New Project', open: 'Open...', save: 'Save',
@@ -83,15 +84,24 @@ const MENU_LABELS = {
     pandocMissing: 'Pandoc was not found. Install it from pandoc.org, then restart Mentegraf.',
     pandocOld: 'Pandoc %s is too old. Install the current version from pandoc.org.',
     importStyleTitle: 'Choose a citation style (.csl)', importTemplateTitle: 'Choose a Word template (.docx)',
-    compileTitle: 'Compile the book', compileDone: 'The book was compiled.'
+    compileTitle: 'Compile the book', compileDone: 'The book was compiled.',
+    assetFigureTitle: 'Choose an image', assetTableTitle: 'Choose a CSV file for the table', imagesLabel: 'Images'
   }
 }
 
 function labels() { return MENU_LABELS[currentLang] || MENU_LABELS.tr }
 function send(channel, ...args) { if (mainWindow) mainWindow.webContents.send(channel, ...args) }
 
+// Tell the renderer where the project folder is, so it can show images from assets/.
+let lastBase
+function sendProjectBase(force) {
+  const u = currentDir ? require('url').pathToFileURL(currentDir + path.sep).href : null
+  if (force || u !== lastBase) { lastBase = u; send('project-base', u) }
+}
+
 function updateTitle() {
   if (!mainWindow) return
+  sendProjectBase()
   mainWindow.setTitle('Mentegraf' + (currentDir ? ' — ' + path.basename(currentDir) : '') + (isDirty ? ' •' : ''))
 }
 
@@ -190,6 +200,33 @@ ipcMain.handle('compile-book', async (event, job) => {
     dialog.showErrorBox(L.compileTitle, e.code === 'pandoc' ? L.pandocMissing : info ? L.pandocOld.replace('%s', info.version) : e.message)
     return { error: e.code || 'failed' }
   }
+})
+
+// Images and CSV files for figure and table nodes, copied into <project>/assets.
+function importAssetSafely(src) {
+  if (!currentDir) return { error: 'untitled' }
+  try { return ProjectStore.importAsset(currentDir, src) } catch (e) { return { error: e.code || 'failed', message: e.message } }
+}
+
+ipcMain.handle('asset-import', async (event, kind) => {
+  if (!currentDir) return { error: 'untitled' }
+  const L = labels(), table = kind === 'table'
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: table ? L.assetTableTitle : L.assetFigureTitle, properties: ['openFile'],
+    filters: [table ? { name: 'CSV', extensions: ['csv'] } : { name: L.imagesLabel, extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }]
+  })
+  if (res.canceled || !res.filePaths.length) return { canceled: true }
+  return importAssetSafely({ file: res.filePaths[0] })
+})
+
+ipcMain.handle('asset-import-path', (event, file) => {
+  try { if (typeof file !== 'string' || !fs.statSync(file).isFile()) return { error: 'failed', message: 'Not a file.' } } catch (e) { return { error: 'failed', message: e.message } }
+  return importAssetSafely({ file })
+})
+
+ipcMain.handle('asset-import-data', (event, name, data) => {
+  if (!data || typeof data.length !== 'number') return { error: 'failed', message: 'No data.' }
+  return importAssetSafely({ name: String(name || 'gorsel.png'), data: Buffer.from(data) })
 })
 
 // Citation styles and Word templates for the Settings window.
@@ -454,6 +491,7 @@ ipcMain.on('close-window', () => { forceClose = true; if (mainWindow) mainWindow
 // Renderer finished its start-up: open a project passed on the command line
 // (double-click on project.mentegraf), else offer an untitled recovery.
 ipcMain.once('renderer-ready', () => {
+  sendProjectBase(true)
   const arg = process.argv.slice(1).find(a => /\.(mentegraf|json)$/i.test(a) && fs.existsSync(a))
   if (arg) return openPath(path.resolve(arg))
   const recovered = offerRecovery(untitledRecoveryPath(), 0)

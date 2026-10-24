@@ -25,6 +25,115 @@ const PASSAGE_ID_FILTER = [
   ''
 ].join('\n')
 
+// Pandoc Lua filter: figure/table numbering, CSV tables, @fig:/@tbl: references.
+const CROSSREF_FILTER = `-- Mentegraf: number figures and tables, turn CSV figures into tables, resolve @fig: / @tbl: references.
+local FIG, TBL = 'Şekil', 'Tablo'
+local nums, nf, nt = {}, 0, 0
+
+local function read_file(src)
+  local function try(p) local f = io.open(p, 'rb'); if f then local c = f:read('a'); f:close(); return c end end
+  local c = try(src)
+  if c then return c end
+  for _, d in ipairs(PANDOC_STATE.resource_path or {}) do
+    c = try(d .. '/' .. src) or try(d .. '/' .. src:gsub('^%.%./', ''))
+    if c then return c end
+  end
+end
+
+-- "Şekil 3." in front of a caption (blocks or inlines)
+local function label_inlines(word, n) return { pandoc.Str(word), pandoc.Space(), pandoc.Str(n .. '.'), pandoc.Space() } end
+local function prefix_blocks(blocks, word, n)
+  if #blocks == 0 then return end
+  local b = blocks[1]
+  if b.content then for i, x in ipairs(label_inlines(word, n)) do table.insert(b.content, i, x) end end
+end
+
+local function csv_table(img, id, caption_blocks)
+  local data = read_file(img.src)
+  if not data then io.stderr:write('Mentegraf: table file not found: ' .. img.src .. '\\n'); return nil end
+  local doc = pandoc.read(data, 'csv')
+  local t = doc.blocks[1]
+  if not t or t.t ~= 'Table' then return nil end
+  nt = nt + 1
+  if id ~= '' then nums[id] = { TBL, nt } end
+  t.caption.long = caption_blocks
+  prefix_blocks(t.caption.long, TBL, nt)
+  t.attr = pandoc.Attr(id)
+  return t
+end
+
+local function is_csv(img) return img.src:lower():match('%.csv$') ~= nil end
+
+local function single_image(blocks)
+  if #blocks ~= 1 then return nil end
+  local b = blocks[1]
+  if (b.t == 'Plain' or b.t == 'Para') and #b.content == 1 and b.content[1].t == 'Image' then return b.content[1] end
+end
+
+local numbering = {
+  traverse = 'topdown',
+  -- Pandoc 3: a standalone image is a Figure block
+  Figure = function(el)
+    local img = single_image(el.content)
+    local id = el.identifier ~= '' and el.identifier or (img and img.identifier or '')
+    if img and is_csv(img) then
+      local t = csv_table(img, id, el.caption.long)
+      if t then return t end
+      return el
+    end
+    nf = nf + 1
+    if id ~= '' then nums[id] = { FIG, nf } end
+    prefix_blocks(el.caption.long, FIG, nf)
+    return el
+  end,
+  -- Pandoc 2: a standalone image is a paragraph holding one image titled "fig:"
+  Para = function(el)
+    if #el.content ~= 1 or el.content[1].t ~= 'Image' or el.content[1].title ~= 'fig:' then return nil end
+    local img = el.content[1]
+    if is_csv(img) then return csv_table(img, img.identifier, { pandoc.Plain(img.caption) }) end
+    nf = nf + 1
+    if img.identifier ~= '' then nums[img.identifier] = { FIG, nf } end
+    for i, x in ipairs(label_inlines(FIG, nf)) do table.insert(img.caption, i, x) end
+    return el
+  end,
+  Table = function(el)
+    if #el.caption.long == 0 then return nil end
+    nt = nt + 1
+    if el.identifier and el.identifier ~= '' then nums[el.identifier] = { TBL, nt } end
+    prefix_blocks(el.caption.long, TBL, nt)
+    return el
+  end
+}
+
+local references = {
+  Cite = function(el)
+    for _, c in ipairs(el.citations) do
+      if not (c.id:match('^fig:') or c.id:match('^tbl:')) then return nil end   -- a real citation: leave it to citeproc
+    end
+    local out = {}
+    for i, c in ipairs(el.citations) do
+      if i > 1 then table.insert(out, pandoc.Str(',')); table.insert(out, pandoc.Space()) end
+      local n = nums[c.id]
+      if n then
+        table.insert(out, pandoc.Str(n[1])); table.insert(out, pandoc.Space()); table.insert(out, pandoc.Str(tostring(n[2])))
+      else
+        io.stderr:write('Mentegraf: reference to a missing figure or table: ' .. c.id .. '\\n')
+        table.insert(out, pandoc.Str('??'))
+      end
+    end
+    return out
+  end
+}
+
+function Pandoc(doc)
+  local m = doc.meta
+  if m['mentegraf-figure'] then FIG = pandoc.utils.stringify(m['mentegraf-figure']) end
+  if m['mentegraf-table'] then TBL = pandoc.utils.stringify(m['mentegraf-table']) end
+  doc = doc:walk(numbering)
+  return doc:walk(references)
+end
+`
+
 function err(code, message) { const e = new Error(message); e.code = code; return e }
 
 // ───────── Better BibTeX ─────────
@@ -73,7 +182,8 @@ function citeKeys(text) {
   const inText = /(^|[\s(])@([A-Za-z0-9_][\w:.#$%&\-+?<>~/]*)/g
   let m
   while ((m = inText.exec(body))) keys.add(clean(m[2]))
-  return Array.from(keys).filter(Boolean)
+  // @fig: and @tbl: are references to figures and tables, not bibliography entries.
+  return Array.from(keys).filter(k => k && !/^(fig|tbl):/.test(k))
 }
 
 // Ask Better BibTeX for the cited items. Writes refs.json (CSL JSON) or refs.bib into dir.
@@ -104,8 +214,8 @@ async function exportBibliography(keys, dir) {
 
 // ───────── Pandoc ─────────
 
-// Mentegraf needs Pandoc 2.11+ (built-in citations, --citeproc).
-const MIN_PANDOC = [2, 11]
+// Mentegraf needs Pandoc 2.17+ (built-in citations, Lua filters with doc:walk).
+const MIN_PANDOC = [2, 17]
 let pandocPath = null, pandocVersion = null
 function findPandoc() {
   if (pandocPath) return pandocPath
@@ -182,20 +292,28 @@ function runPandoc(pandoc, args, input, cwd) {
 async function render({ projectDir, text, lang, outFile, csl, reference, format, title, toc, resourceDirs }) {
   const info = pandocInfo()
   if (!info.path) throw err('pandoc', 'Pandoc was not found.')
-  if (!info.ok) throw err('pandoc-old', 'Pandoc ' + info.version + ' is too old; Mentegraf needs 2.11 or newer.')
+  if (!info.ok) throw err('pandoc-old', 'Pandoc ' + info.version + ' is too old; Mentegraf needs 2.17 or newer.')
   const pandoc = info.path
+  // Texts point at ../assets/… (relative to manuscript/ or notes/); resolve them from the project folder.
+  if (projectDir) {
+    text = String(text).replace(/(\]\()(?:\.\.\/)+(assets\/)/g, '$1$2')
+    resourceDirs = (resourceDirs && resourceDirs.length ? resourceDirs : []).concat(resourceDirs && resourceDirs.indexOf(projectDir) >= 0 ? [] : [projectDir])
+  }
   const to = format === 'epub' ? 'epub3' : 'docx'
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mentegraf-'))
   const warnings = []
   try {
     const filter = path.join(tmp, 'passage-ids.lua')
     fs.writeFileSync(filter, PASSAGE_ID_FILTER, 'utf8')
+    const crossref = path.join(tmp, 'crossref.lua')
+    fs.writeFileSync(crossref, CROSSREF_FILTER, 'utf8')
     const tr = lang !== 'en'
     // Language and headings go in a UTF-8 metadata file: non-ASCII command-line
     // arguments can be garbled by the system locale.
-    const meta = { lang: tr ? 'tr-TR' : 'en-GB' }
+    const meta = { lang: tr ? 'tr-TR' : 'en-GB', 'mentegraf-figure': tr ? 'Şekil' : 'Figure', 'mentegraf-table': tr ? 'Tablo' : 'Table' }
     if (title) meta.title = String(title)
-    const args = ['-f', 'markdown', '-t', to, '-o', outFile, '--lua-filter', filter]
+    // The cross-reference filter must run before citeproc, which would otherwise treat @fig: as citations.
+    const args = ['-f', 'markdown', '-t', to, '-o', outFile, '--lua-filter', filter, '--lua-filter', crossref]
     if (toc) { args.push('--toc'); meta['toc-title'] = tr ? 'İçindekiler' : 'Contents' }
     const keys = citeKeys(text)
     if (keys.length) {
@@ -230,4 +348,4 @@ async function exportDocx({ projectDir, fragmentPath, text, lang, outFile, csl, 
   return render({ projectDir, text, lang, outFile, csl, reference, format: 'docx', resourceDirs: [fragDir, projectDir] })
 }
 
-module.exports = { BBT, PASSAGE_ID_FILTER, citePicker, citeKeys, exportBibliography, findPandoc, pandocInfo, projectStyles, render, exportDocx }
+module.exports = { BBT, PASSAGE_ID_FILTER, CROSSREF_FILTER, citePicker, citeKeys, exportBibliography, findPandoc, pandocInfo, projectStyles, render, exportDocx }

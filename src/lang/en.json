@@ -216,5 +216,22 @@
   "compileEpub": "E-book (EPUB)",
   "compileMd": "Single Markdown file",
   "compiling": "Compiling the book…",
-  "compileEmpty": "There are no included chapters to compile"
+  "compileEmpty": "There are no included chapters to compile",
+  "tbFigure": "Figure or table (Ctrl+Shift+G) — you can also paste or drop images",
+  "figSearch": "Search figures and tables…",
+  "figInsert": "Insert",
+  "figRef": "Refer",
+  "figInsertTip": "Put the figure or table here",
+  "figRefTip": "Refer to it in the text (\"Figure N\" in the export)",
+  "figNewImage": "+ Image file…",
+  "figNewTable": "+ CSV table…",
+  "figNone": "No figures or tables yet. Paste an image, drop a file onto the text, or add one below.",
+  "figNoMatch": "Nothing matches.",
+  "newFigure": "New figure",
+  "newTable": "New table",
+  "figWord": "Figure",
+  "tblWord": "Table",
+  "csvTable": "CSV table",
+  "assetLabel": "File",
+  "figError": "Could not add the file."
 }

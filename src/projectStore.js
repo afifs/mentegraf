@@ -20,7 +20,7 @@ const ProjectFormat = require('./projectFormat')
 const MANIFEST = 'project.mentegraf'
 const FORMAT = '3.0'
 const MAX_BACKUPS = 10
-const DIRS = ['graph', 'graph/nodes', 'manuscript', 'notes', '.mentegraf', '.mentegraf/backups']
+const DIRS = ['graph', 'graph/nodes', 'manuscript', 'notes', 'assets', '.mentegraf', '.mentegraf/backups']
 
 // ───────── helpers ─────────
 
@@ -53,7 +53,11 @@ function atomicWrite(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   const tmp = file + '.tmp'
   const fd = fs.openSync(tmp, 'w')
-  try { fs.writeSync(fd, text, null, 'utf8'); fs.fsyncSync(fd) } finally { fs.closeSync(fd) }
+  try {
+    if (Buffer.isBuffer(text)) fs.writeSync(fd, text)          // images and other binary files
+    else fs.writeSync(fd, text, null, 'utf8')
+    fs.fsyncSync(fd)
+  } finally { fs.closeSync(fd) }
   // Windows: antivirus or a sync client may hold the file briefly.
   for (let i = 0; ; i++) {
     try { fs.renameSync(tmp, file); return } catch (e) {
@@ -386,9 +390,35 @@ function fragmentStats(dir, paths) {
   return out
 }
 
-// Save As: bring the texts along to the new project folder.
+// ───────── assets (images and CSV tables for figure and table nodes) ─────────
+
+const ASSET_TYPES = { png: 'figure', jpg: 'figure', jpeg: 'figure', gif: 'figure', webp: 'figure', svg: 'figure', csv: 'table' }
+const MAX_ASSET_BYTES = 50 * 1024 * 1024
+
+function assetKind(name) { return ASSET_TYPES[String(path.extname(name || '')).slice(1).toLowerCase()] || null }
+
+// Copy a file (or write bytes) into <project>/assets under a new, unused name.
+// src: { file } or { data, name }. Returns { rel, kind, name } — name without extension, for the caption.
+function importAsset(dir, src) {
+  const original = src.file ? path.basename(src.file) : String(src.name || 'gorsel.png')
+  const ext = path.extname(original).slice(1).toLowerCase()
+  const kind = ASSET_TYPES[ext]
+  if (!kind) throw err('bad-type', 'Only images (PNG, JPG, GIF, WebP, SVG) and CSV tables can be added.')
+  const data = src.file ? fs.readFileSync(src.file) : Buffer.from(src.data)
+  if (!data.length) throw err('empty', 'The file is empty.')
+  if (data.length > MAX_ASSET_BYTES) throw err('too-big', 'The file is larger than 50 MB.')
+  const name = original.slice(0, original.length - ext.length - 1)
+  const base = 'assets/' + slugify(name)
+  let rel = base + '.' + ext, i = 2
+  while (fs.existsSync(path.join(dir, rel))) rel = base + '-' + (i++) + '.' + ext
+  fs.mkdirSync(path.join(dir, 'assets'), { recursive: true })
+  atomicWrite(path.join(dir, rel), data)
+  return { rel, kind, name }
+}
+
+// Save As: bring the texts and assets along to the new project folder.
 function copyTextFolders(fromDir, toDir) {
-  TEXT_DIRS.forEach(d => {
+  TEXT_DIRS.concat(['assets']).forEach(d => {
     const src = path.join(fromDir, d)
     if (fs.existsSync(src)) fs.cpSync(src, path.join(toDir, d), { recursive: true, force: false, errorOnExist: false })
   })
@@ -399,5 +429,5 @@ module.exports = {
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
   TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
-  normalizeManuscript, countWords, fragmentStats
+  normalizeManuscript, countWords, fragmentStats, assetKind, importAsset
 }

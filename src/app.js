@@ -140,7 +140,7 @@ function liveUpdateName(){if(selEle&&selEle.isNode())selEle.data('label',documen
 function openPanel(){document.getElementById('panel').classList.add('open')}
 function closePanel(){document.getElementById('panel').classList.remove('open');selEle=null;cy.elements().deselect();document.getElementById('addBtn').style.display='none';clrHL()}
 
-function selNode(n){clrSel();selEle=n;Writer.updatePanel(n);Binder.updatePanel(n);cy.elements().deselect();n.select();posAB();
+function selNode(n){clrSel();selEle=n;Writer.updatePanel(n);Binder.updatePanel(n);Figures.updatePanel(n);cy.elements().deselect();n.select();posAB();
   document.getElementById('nodeEd').style.display='block';document.getElementById('edgeEd').style.display='none';
   document.getElementById('panTitle').textContent=L('nodeDetail');openPanel();
   var d=n.data();document.getElementById('nName').value=d.label||'';document.getElementById('nDesc').value=d.description||'';document.getElementById('nNotes').value=d.notes||'';document.getElementById('nTags').value=(d.tags||[]).join(', ');
@@ -179,7 +179,7 @@ function doLayout(){cy.layout({name:'cose',animate:true,animationDuration:800,ra
 function toggleTheme(){curTheme=curTheme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',curTheme);localStorage.setItem('mentegraf-theme',curTheme);cy.style().update()}
 
 function getProject(){var nodes=[],edges=[];cy.nodes().forEach(function(n){var d=n.data(),p=n.position();var nd=ProjectFormat.cleanData(d);nd.description=d.description||'';nd.notes=d.notes||'';nd.tags=d.tags||[];nd.x=p.x;nd.y=p.y;nodes.push({data:nd,position:{x:p.x,y:p.y}})});cy.edges().forEach(function(e){var d=e.data();var ed=ProjectFormat.cleanData(d);ed.weight=d.weight||3;ed.edgeType=d.edgeType||'';ed.note=d.note||'';edges.push({data:ed})});return{version:ProjectFormat.CURRENT_VERSION,app:'Mentegraf',manuscript:Binder.get(),lang:curLang,config:{categories:categories,connectionTypes:connTypes,nodeSizing:nodeSizingOn,export:exportSettings},elements:{nodes:nodes,edges:edges}}}
-function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();exportSettings=(data.config&&data.config.export&&typeof data.config.export==='object')?data.config.export:{};Binder.load(data.manuscript);if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;if(data.config.connectionTypes&&data.config.connectionTypes.length){
+function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();exportSettings=(data.config&&data.config.export&&typeof data.config.export==='object')?data.config.export:{};Binder.load(data.manuscript);if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;Figures.ensureTypes();if(data.config.connectionTypes&&data.config.connectionTypes.length){
   connTypes=data.config.connectionTypes;
   var defMap={};DEFAULT_CONN_TYPES.forEach(function(d){defMap[d.id]=d});
   connTypes.forEach(function(ct){var df=defMap[ct.id];if(df){if(!ct.color)ct.color=df.color;if(!ct.marker)ct.marker=df.marker;if(!ct.style)ct.style=df.style}else{if(!ct.color)ct.color='#888';if(!ct.marker)ct.marker='';if(!ct.style)ct.style='solid'}})
@@ -478,6 +478,6 @@ document.addEventListener('DOMContentLoaded',async function(){
   await loadLangs();
 
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
-  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();ExportSettings.bind();Binder.init();doLoad();
+  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();doLoad();
   addStarterNode();
   cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});

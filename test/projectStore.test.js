@@ -249,4 +249,34 @@ test('Save As copies the text folders', () => {
   assert.strictEqual(read(b, 'notes/n.md'), 'note')
 })
 
+console.log('assets')
+
+test('images and CSV files are copied into assets/ with readable, unique names', () => {
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  const src = path.join(tmp(), 'Geri Besleme Döngüsü.PNG'), png = Buffer.from('89504e470d0a1a0a0000', 'hex')
+  fs.writeFileSync(src, png)
+  const a = Store.importAsset(dir, { file: src })
+  assert.deepStrictEqual(a, { rel: 'assets/geri-besleme-dongusu.png', kind: 'figure', name: 'Geri Besleme Döngüsü' })
+  assert.ok(Buffer.compare(fs.readFileSync(path.join(dir, a.rel)), png) === 0, 'bytes copied exactly')
+  assert.strictEqual(Store.importAsset(dir, { file: src }).rel, 'assets/geri-besleme-dongusu-2.png')
+  const csv = Store.importAsset(dir, { data: Buffer.from('a,b\n1,2\n'), name: 'Nüfus.csv' })
+  assert.deepStrictEqual(csv, { rel: 'assets/nufus.csv', kind: 'table', name: 'Nüfus' })
+  const pasted = Store.importAsset(dir, { data: new Uint8Array([137, 80, 78, 71]), name: 'yapistirilan.png' })
+  assert.strictEqual(fs.readFileSync(path.join(dir, pasted.rel)).length, 4, 'pasted bytes written as binary')
+})
+
+test('other file types and empty files are refused', () => {
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  assert.throws(() => Store.importAsset(dir, { data: Buffer.from('x'), name: 'virus.exe' }), e => e.code === 'bad-type')
+  assert.throws(() => Store.importAsset(dir, { data: Buffer.alloc(0), name: 'bos.png' }), e => e.code === 'empty')
+  assert.strictEqual(Store.assetKind('a.SVG'), 'figure'); assert.strictEqual(Store.assetKind('a.txt'), null)
+})
+
+test('Save As brings assets along', () => {
+  const a = path.join(tmp(), 'A'), b = path.join(tmp(), 'B'); Store.writeProject(a, sample())
+  Store.importAsset(a, { data: Buffer.from('a,b\n'), name: 't.csv' })
+  Store.copyTextFolders(a, b)
+  assert.ok(fs.existsSync(path.join(b, 'assets', 't.csv')))
+})
+
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''))

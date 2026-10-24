@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, webUtils } = require('electron')
 
 contextBridge.exposeInMainWorld('mentegraf', {
   onMenuAction: (cb) => ipcRenderer.on('menu-action', (e, action) => cb(action)),
@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('mentegraf', {
   stylesImport: (kind) => ipcRenderer.invoke('styles-import', kind),
   stylesUse: (value) => ipcRenderer.invoke('styles-use', value),
   compileBook: (job) => ipcRenderer.invoke('compile-book', job),
+  assetImport: (kind) => ipcRenderer.invoke('asset-import', kind),
+  assetImportPath: (p) => ipcRenderer.invoke('asset-import-path', p),
+  assetImportData: (name, data) => ipcRenderer.invoke('asset-import-data', name, data),
+  pathForFile: (file) => { try { return webUtils.getPathForFile(file) } catch (e) { return '' } },
+  onProjectBase: (cb) => ipcRenderer.on('project-base', (e, url) => cb(url)),
   onFragmentChanged: (cb) => ipcRenderer.on('fragment-changed', (e, p) => cb(p)),
   setDirty: (dirty) => ipcRenderer.send('set-dirty', !!dirty),
   closeWindow: () => ipcRenderer.send('close-window'),

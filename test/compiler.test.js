@@ -130,5 +130,21 @@ const read = rel => TEXTS[rel] != null ? TEXTS[rel] : null
     assert.ok(r.warnings.some(w => w.startsWith('Zotero')), 'Zotero missing is only a warning')
   })
 
+  await test('figures and CSV tables from assets/ are numbered across chapters', async () => {
+    needPandoc(); Exporter.BBT.port = 1
+    const dir = path.join(tmp(), 'Kitap'); fs.mkdirSync(path.join(dir, 'assets'), { recursive: true }); fs.mkdirSync(path.join(dir, 'exports'))
+    fs.writeFileSync(path.join(dir, 'assets', 'g.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'))
+    fs.writeFileSync(path.join(dir, 'assets', 't.csv'), 'Yıl,Nüfus\n1950,20\n2000,64\n')
+    const items = [
+      { kind: 'node', title: 'Bir', level: 1, text: '# Bir\n\n![Döngü](../assets/g.png){#fig:dongu-aa}\n\nMetin.' },
+      { kind: 'node', title: 'İki', level: 1, text: '# İki\n\n![Grafik](../assets/g.png){#fig:grafik-bb}\n\n![Nüfus](../assets/t.csv){#tbl:nufus-cc}\n\n@fig:dongu-aa, @fig:grafik-bb ve @tbl:nufus-cc.' }]
+    const out = path.join(dir, 'exports', 'k.docx')
+    await C.compileBook({ projectDir: dir, items, title: 'K', format: 'docx', lang: 'tr', outFile: out, readText: read })
+    const txt = plain(out)
+    assert.ok(txt.includes('Şekil 2. Grafik') && txt.includes('Tablo 1. Nüfus') && txt.includes('1950'), txt)
+    assert.ok(txt.includes('Şekil 1, Şekil 2 ve Tablo 1.'), txt)
+    assert.ok(docxEntry(out, 'word/_rels/document.xml.rels').includes('media/'), 'image embedded')
+  })
+
   console.log(passed + ' passed' + (skipped ? ', ' + skipped + ' skipped' : '') + (process.exitCode ? ', some FAILED' : ''))
 })()

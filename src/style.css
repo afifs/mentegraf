@@ -242,3 +242,24 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 /* book plan: compile */
 .bacts .bcomp{margin-left:auto;background:var(--accent);color:var(--bg2);border-color:var(--accent)}
 .bacts .bcomp:hover{filter:brightness(1.08)}
+
+/* figures and tables */
+.fpick{position:absolute;z-index:40;width:340px;max-width:calc(100% - 16px);background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px var(--shadow);padding:8px;display:flex;flex-direction:column;gap:6px}
+.fsearch{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);font:13px 'DM Sans',sans-serif;outline:none}
+.fsearch:focus{border-color:var(--accent)}
+.flist{max-height:260px;overflow:auto}
+.frow{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px}
+.frow:hover{background:var(--hover)}
+.flabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text)}
+.frow button{background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font:11px 'DM Sans',sans-serif;color:var(--text);cursor:pointer}
+.frow button:hover{border-color:var(--accent);color:var(--accent)}
+.fnone{padding:10px 6px;font-size:12px;color:var(--dim);line-height:1.5}
+.fnew{display:flex;gap:6px;border-top:1px solid var(--border);padding-top:6px}
+.fnew button{flex:1;background:var(--bg3);border:0;border-radius:6px;padding:6px;font:12px 'DM Sans',sans-serif;color:var(--text);cursor:pointer}
+.fnew button:hover{background:var(--hover)}
+.nasset img{display:block;max-width:100%;max-height:180px;border:1px solid var(--border);border-radius:6px;background:#fff}
+.nacsv{padding:10px;border:1px dashed var(--border);border-radius:6px;font-size:12px;color:var(--dim);text-align:center}
+.napath{margin-top:4px;font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.naref{font:11px Consolas,monospace;color:var(--accent);user-select:all}
+.pv img{display:block;max-width:100%;margin:1em auto .3em;border-radius:4px}
+.pv p>em:only-child{display:block;text-align:center;font-size:.85em;color:var(--dim)}

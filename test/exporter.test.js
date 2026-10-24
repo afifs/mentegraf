@@ -164,6 +164,27 @@ const TEXT = [
     assert.ok(fs.existsSync(out))
   })
 
+  await test('figure and CSV table: numbered captions, references resolved, image embedded', async () => {
+    if (!Exporter.pandocInfo().ok) skip('Pandoc 2.17+ not installed')
+    Exporter.BBT.port = 1
+    const dir = path.join(tmp(), 'Kitabım')
+    fs.mkdirSync(path.join(dir, 'assets'), { recursive: true }); fs.mkdirSync(path.join(dir, 'manuscript'))
+    // a tiny valid PNG
+    const png = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c4944415408d763f8cfc000000301010018dd8db00000000049454e44ae426082', 'hex')
+    fs.writeFileSync(path.join(dir, 'assets', 'loop.png'), png)
+    fs.writeFileSync(path.join(dir, 'assets', 'nufus.csv'), 'Yıl,Nüfus\n1950,20.9\n2000,67.8\n')
+    const text = '# Giriş\n\n@fig:loop-ab12 ve @tbl:nufus-cd34 bunu gösterir.\n\n![Geri besleme döngüsü](../assets/loop.png){#fig:loop-ab12 width=60%}\n\n![Türkiye nüfusu](../assets/nufus.csv){#tbl:nufus-cd34}\n\n@fig:yok-0000 eksik.\n'
+    const out = path.join(dir, 'a.docx')
+    const r = await Exporter.exportDocx({ projectDir: dir, fragmentPath: 'manuscript/giris.md', text, lang: 'tr', outFile: out })
+    const doc = words(docxEntry(out, 'word/document.xml'))
+    assert.ok(doc.includes('Şekil 1 ve Tablo 1 bunu gösterir'), 'references: ' + doc.slice(0, 200))
+    assert.ok(doc.includes('Şekil 1. Geri besleme döngüsü'), 'figure caption')
+    assert.ok(doc.includes('Tablo 1. Türkiye nüfusu') && doc.includes('1950') && doc.includes('67.8'), 'CSV became a table')
+    assert.ok(docxEntry(out, 'word/media/' ) !== null || fs.readFileSync(out).includes(Buffer.from('word/media/')), 'image embedded')
+    assert.ok(doc.includes('?? eksik') && r.warnings.some(w => w.includes('fig:yok-0000')), 'missing reference reported')
+    assert.deepStrictEqual(Exporter.citeKeys(text), [], 'figure references are not sent to Zotero')
+  })
+
   await test('DOCX into a folder with Turkish letters (Kitabım/dışa aktarım)', async () => {
     if (!Exporter.pandocInfo().ok) skip('Pandoc 2.11+ not installed')
     Exporter.BBT.port = 1

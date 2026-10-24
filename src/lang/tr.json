@@ -216,5 +216,22 @@
   "compileEpub": "E-kitap (EPUB)",
   "compileMd": "Tek Markdown dosyası",
   "compiling": "Kitap derleniyor…",
-  "compileEmpty": "Derlenecek (dahil edilmiş) bölüm yok"
+  "compileEmpty": "Derlenecek (dahil edilmiş) bölüm yok",
+  "tbFigure": "Şekil veya tablo (Ctrl+Shift+G) — görsel yapıştırabilir ya da sürükleyip bırakabilirsiniz",
+  "figSearch": "Şekil ve tablo ara…",
+  "figInsert": "Ekle",
+  "figRef": "Atıf",
+  "figInsertTip": "Şekli ya da tabloyu buraya koy",
+  "figRefTip": "Metinde ona atıf yap (dışa aktarımda \"Şekil N\")",
+  "figNewImage": "+ Görsel dosyası…",
+  "figNewTable": "+ CSV tablo…",
+  "figNone": "Henüz şekil ya da tablo yok. Bir görsel yapıştırın, metnin üzerine bir dosya bırakın ya da aşağıdan ekleyin.",
+  "figNoMatch": "Eşleşen yok.",
+  "newFigure": "Yeni şekil",
+  "newTable": "Yeni tablo",
+  "figWord": "Şekil",
+  "tblWord": "Tablo",
+  "csvTable": "CSV tablo",
+  "assetLabel": "Dosya",
+  "figError": "Dosya eklenemedi."
 }

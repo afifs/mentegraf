@@ -77,6 +77,11 @@ var Writer = (function () {
       CM.highlightSelectionMatches(),
       theme,
       // Typing ] right before an existing ] just steps over it (leaving a citation).
+      // Images pasted or dropped into the text become figure nodes (figures.js).
+      CM.EditorView.domEventHandlers({
+        paste: function (e) { return window.Figures ? Figures.onPaste(e) : false },
+        drop: function (e, v) { return window.Figures ? Figures.onDrop(e, v) : false }
+      }),
       CM.EditorView.inputHandler.of(function (v, from, to, text) {
         if (text !== ']' || from !== to || v.state.sliceDoc(from, from + 1) !== ']') return false
         v.dispatch({ selection: { anchor: from + 1 } })
@@ -95,7 +100,8 @@ var Writer = (function () {
         { key: 'Mod-Shift-f', run: footnote, preventDefault: true },
         { key: 'Mod-Shift-c', run: cite, preventDefault: true },
         { key: 'Mod-Shift-p', run: passageId, preventDefault: true },
-        { key: 'Mod-e', run: function () { togglePreview(); return true }, preventDefault: true }
+        { key: 'Mod-e', run: function () { togglePreview(); return true }, preventDefault: true },
+        { key: 'Mod-Shift-g', run: function () { run('figure'); return true }, preventDefault: true }
       ]),
       CM.keymap.of([].concat(CM.searchKeymap, CM.historyKeymap, CM.defaultKeymap, [CM.indentWithTab])),
       CM.EditorView.updateListener.of(function (u) {
@@ -271,7 +277,7 @@ var Writer = (function () {
     footnote: footnote, cite: cite, passage: passageId
   }
   var TIPS = { bold: 'tbBold', italic: 'tbItalic', heading: 'tbHeading', quote: 'tbQuote', bullet: 'tbBullet',
-    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview', docx: 'tbDocx' }
+    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview', docx: 'tbDocx', figure: 'tbFigure' }
 
   // Export the open text to Word through Pandoc (main process shows the result).
   var exporting = false
@@ -289,6 +295,7 @@ var Writer = (function () {
   function run(name) {
     if (name === 'preview') { togglePreview(); return }
     if (name === 'docx') { exportDocx(); return }
+    if (name === 'figure') { if (window.Figures && current && !previewOn) Figures.openPicker(document.querySelector('#wToolbar button[data-cmd="figure"]')); return }
     if (!view || !current || previewOn || !COMMANDS[name]) return
     COMMANDS[name](view)
     view.focus()
@@ -321,10 +328,15 @@ var Writer = (function () {
 
   function renderPreview() {
     if (!previewOn || !view || !window.MD) return
-    if (!md) md = window.MD()
+    if (!md) {
+      md = window.MD()
+      var defaultValidate = md.validateLink
+      md.validateLink = function (u) { return (window.Figures && Figures.isAssetUrl(u)) || defaultValidate(u) }   // project images only
+    }
     var text = view.state.doc.toString()
       .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '')        // metadata block
       .replace(/[ \t]\^[a-z0-9]{4,12}[ \t]*$/gm, '')         // passage IDs
+    if (window.Figures) text = Figures.previewMarkdown(text)
     var html = md.render(text)
       .replace(/\[([^\[\]<]*@[^\[\]<]*)\]/g, function (all, inner) { return '<span class="pv-cite">[' + inner + ']</span>' })
     $('wPreview').innerHTML = html
@@ -638,6 +650,22 @@ var Writer = (function () {
     updatePanel: updatePanel, dirtyFragments: dirtyFragments, willSave: willSave, markSaved: markSaved,
     hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu,
     // Text of a loaded buffer (including unsaved edits), or null if not loaded.
-    textFor: function (path) { return buffers[path] ? textOf(path) : null }
+    textFor: function (path) { return buffers[path] ? textOf(path) : null },
+    // The open text: { path, nodeId } or null.
+    current: function () { return current ? { path: current.path, nodeId: current.nodeId } : null },
+    // Insert at the cursor; block = on its own paragraph (blank lines around it).
+    insert: function (text, block) {
+      if (!view || !current) return false
+      var st = view.state, r = st.selection.main, ins = text
+      if (block) {
+        var before = st.sliceDoc(Math.max(0, r.from - 2), r.from), after = st.sliceDoc(r.to, r.to + 2)
+        var pre = r.from === 0 || /\n\n$/.test(before) ? '' : /\n$/.test(before) ? '\n' : '\n\n'
+        var post = /^\n\n/.test(after) ? '' : /^\n/.test(after) ? '\n' : '\n\n'
+        ins = pre + text + post
+      }
+      view.dispatch({ changes: { from: r.from, to: r.to, insert: ins }, selection: { anchor: r.from + ins.length }, scrollIntoView: true, userEvent: 'input' })
+      view.focus()
+      return true
+    }
   }
 })()
