@@ -179,3 +179,47 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .cfg-field select:focus{border-color:var(--accent)}
 .cfg-field select:disabled{opacity:.5}
 .cfg-note{font-size:11px;color:var(--dim);margin-top:2px}
+
+/* ═══ BOOK PLAN (binder) ═══ */
+#main{--binder-w:320px}
+#binder{position:absolute;left:0;top:0;bottom:0;width:var(--binder-w);display:none;flex-direction:column;background:var(--bg2);border-right:1px solid var(--border);z-index:16}
+#main.binding #binder{display:flex}
+#main.binding #cy{left:var(--binder-w);right:0;top:0;bottom:0;width:auto;height:auto}
+#main.binding.writing #cy{left:var(--binder-w);right:var(--writer-w)}
+#main.binding.writing.writer-full #writer{width:auto;left:var(--binder-w)}
+#b_binder.on{color:var(--accent);background:var(--bg3)}
+.bh{display:flex;align-items:center;gap:6px;padding:10px 10px 4px}
+.btitle{flex:1;min-width:0;border:1px solid transparent;border-radius:6px;background:none;color:var(--bright);font:600 15px 'DM Sans',sans-serif;padding:4px 6px;outline:none}
+.btitle:hover{border-color:var(--border)}.btitle:focus{border-color:var(--accent);background:var(--input-bg)}
+.bx{background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px}.bx:hover{background:var(--hover);color:var(--text)}
+.bsum{padding:0 16px 8px;font-size:11px;color:var(--dim)}
+.bsum.bflash{color:var(--accent)}
+.bacts{display:flex;gap:6px;padding:0 10px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.bacts .bt{padding:4px 9px;font-size:11px}
+.btree{flex:1;overflow:auto;padding:6px 0}
+.bempty{padding:16px;font-size:12px;color:var(--dim);line-height:1.5}
+.brow{display:flex;align-items:center;gap:5px;min-height:30px;padding-right:6px;cursor:pointer;font-size:13px;border-top:2px solid transparent;border-bottom:2px solid transparent;user-select:none}
+.brow:hover{background:var(--hover)}
+.brow.bfocus{background:var(--bg3)}
+.brow.bsel .blabel{color:var(--accent);font-weight:600}
+.brow.boff{opacity:.45}
+.brow.bdrag{opacity:.3}
+.brow.drop-before{border-top-color:var(--accent)}.brow.drop-after{border-bottom-color:var(--accent)}.brow.drop-inside{background:rgba(197,160,94,.18)}
+.bpart{font-weight:700;text-transform:none;letter-spacing:.01em;margin-top:6px;color:var(--bright)}
+.btog{width:12px;flex-shrink:0;color:var(--dim);font-size:10px;text-align:center}
+.bnum{color:var(--dim);font-size:11px;min-width:18px;flex-shrink:0}
+.blabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.bedit{flex:1;min-width:0;font:inherit;padding:2px 4px;border:1px solid var(--accent);border-radius:4px;background:var(--input-bg);color:var(--text)}
+.bstat{flex-shrink:0;max-width:96px;font:11px 'DM Sans',sans-serif;border:0;border-radius:10px;padding:2px 6px;cursor:pointer;color:#fff;outline:none;appearance:none;-webkit-appearance:none;text-align:center}
+.bstat option{color:var(--text);background:var(--bg2)}
+.bstat.st-idea{background:#8f8a7e}.bstat.st-draft{background:#c08a3e}.bstat.st-revision{background:#4f7fa8}.bstat.st-done{background:#4f8f5e}
+.bwords{flex-shrink:0;font-size:11px;color:var(--dim);min-width:40px;text-align:right}
+.bwords.bdone{color:#4f8f5e;font-weight:600}
+.binc,.brm{flex-shrink:0;background:none;border:0;color:var(--dim);cursor:pointer;font-size:11px;padding:2px 3px;border-radius:3px;opacity:0}
+.brow:hover .binc,.brow:hover .brm,.binc.off{opacity:1}
+.binc:hover,.brm:hover{background:var(--hover);color:var(--text)}
+.fld.frow{display:flex;gap:10px}.fld.frow>div{flex:1;min-width:0}
+/* a closed node panel must not cover the text pane: hide it once it has slid out */
+#panel:not(.open){visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+#panel.open{visibility:visible}
+.fld.frow select,.fld.frow input{width:100%}

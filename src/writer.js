@@ -102,6 +102,7 @@ var Writer = (function () {
         if (!u.docChanged) return
         updateStatus()
         schedulePreview()
+        if (window.Binder) Binder.textChanged()
         if (!loading && typeof setDirty === 'function') setDirty(true)
       })
     ]
@@ -633,6 +634,8 @@ var Writer = (function () {
   return {
     init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull, run: run, togglePreview: togglePreview, exportDocx: exportDocx,
     updatePanel: updatePanel, dirtyFragments: dirtyFragments, willSave: willSave, markSaved: markSaved,
-    hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu
+    hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu,
+    // Text of a loaded buffer (including unsaved edits), or null if not loaded.
+    textFor: function (path) { return buffers[path] ? textOf(path) : null }
   }
 })()

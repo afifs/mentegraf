@@ -43,7 +43,7 @@ async function loadLangs() {
 var curLang='tr';
 function L(k){var d=LANG_DATA[curLang]||LANG_DATA.tr||{};return d[k]||k}
 function applyLang(){curLang=localStorage.getItem('mentegraf-lang')||'tr';if(window.mentegraf&&window.mentegraf.setLang)window.mentegraf.setLang(curLang);document.querySelectorAll('[data-l]').forEach(function(el){var v=L(el.dataset.l);if(v)el.textContent=v});document.querySelectorAll('[data-lp]').forEach(function(el){var v=L(el.dataset.lp);if(v)el.placeholder=v});rebuildETS()}
-function toggleLang(){curLang=curLang==='tr'?'en':'tr';localStorage.setItem('mentegraf-lang',curLang);applyLang();buildTF();if(selEle&&selEle.isNode())selNode(selEle);if(window.mentegraf&&window.mentegraf.setLang)window.mentegraf.setLang(curLang)}
+function toggleLang(){curLang=curLang==='tr'?'en':'tr';localStorage.setItem('mentegraf-lang',curLang);applyLang();Binder.render();buildTF();if(selEle&&selEle.isNode())selNode(selEle);if(window.mentegraf&&window.mentegraf.setLang)window.mentegraf.setLang(curLang)}
 function rebuildETS(){var s=document.getElementById('eType');if(!s)return;var cv=s.value;s.innerHTML='';connTypes.forEach(function(ct){var o=document.createElement('option');o.value=ct.id;o.textContent=(ct.marker?ct.marker+' ':'')+connLabel(ct);o.style.color=ct.color||'';s.appendChild(o)});s.value=cv}
 
 function openSettings(){document.getElementById('cfgSizing').checked = NodeSizing.getOptions(cy).enabled;document.getElementById('settingsModal').style.display='flex';renderCfgCats();renderCfgConns();ExportSettings.open()}
@@ -63,7 +63,7 @@ function setDirty(v){v=!!v;if(isDirty===v)return;isDirty=v;if(window.mentegraf&&
 function addStarterNode(){if(cy.nodes().length)return;var c=catById('book')||categories[0];cy.add({data:{id:ProjectFormat.newId('n'),label:L('bookTitle'),type:c.id,color:c.color,description:'',notes:'',tags:[]},position:{x:400,y:300}})}
 // New Project: empty the existing graph and restore default settings. init() is not
 // re-run: it is a one-time setup (it would rebuild Cytoscape and lose #dragCanvas).
-function resetForNewProject(){initConfig();exportSettings={};nodeSizingOn=true;NodeSizing.enable(cy);multiClear();clrSel();Writer.reset();cy.elements().remove();cy.style().update();buildTF();rebuildETS();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}
+function resetForNewProject(){initConfig();exportSettings={};Binder.load(null);nodeSizingOn=true;NodeSizing.enable(cy);multiClear();clrSel();Writer.reset();cy.elements().remove();cy.style().update();buildTF();rebuildETS();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}
 function resetHistory(){undoStack=[JSON.stringify(getProject())];redoStack=[];updateUB()}
 function snapshot(){var s=JSON.stringify(getProject());if(undoStack.length>0&&undoStack[undoStack.length-1]===s)return;undoStack.push(s);setDirty(true);if(undoStack.length>maxUndo)undoStack.shift();redoStack=[];updateUB()}
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());loadProject(JSON.parse(undoStack[undoStack.length-1]),true);setDirty(true);updateUB()}
@@ -140,7 +140,7 @@ function liveUpdateName(){if(selEle&&selEle.isNode())selEle.data('label',documen
 function openPanel(){document.getElementById('panel').classList.add('open')}
 function closePanel(){document.getElementById('panel').classList.remove('open');selEle=null;cy.elements().deselect();document.getElementById('addBtn').style.display='none';clrHL()}
 
-function selNode(n){clrSel();selEle=n;Writer.updatePanel(n);cy.elements().deselect();n.select();posAB();
+function selNode(n){clrSel();selEle=n;Writer.updatePanel(n);Binder.updatePanel(n);cy.elements().deselect();n.select();posAB();
   document.getElementById('nodeEd').style.display='block';document.getElementById('edgeEd').style.display='none';
   document.getElementById('panTitle').textContent=L('nodeDetail');openPanel();
   var d=n.data();document.getElementById('nName').value=d.label||'';document.getElementById('nDesc').value=d.description||'';document.getElementById('nNotes').value=d.notes||'';document.getElementById('nTags').value=(d.tags||[]).join(', ');
@@ -176,8 +176,8 @@ function clrHL(){cy.batch(function(){cy.elements().removeClass('dim hl hle')})}
 function doLayout(){cy.layout({name:'cose',animate:true,animationDuration:800,randomize:false,nodeDimensionsIncludeLabels:true,idealEdgeLength:function(){return 130},nodeRepulsion:function(){return 8000},gravity:.35,numIter:2000,padding:50}).run()}
 function toggleTheme(){curTheme=curTheme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',curTheme);localStorage.setItem('mentegraf-theme',curTheme);cy.style().update()}
 
-function getProject(){var nodes=[],edges=[];cy.nodes().forEach(function(n){var d=n.data(),p=n.position();var nd=ProjectFormat.cleanData(d);nd.description=d.description||'';nd.notes=d.notes||'';nd.tags=d.tags||[];nd.x=p.x;nd.y=p.y;nodes.push({data:nd,position:{x:p.x,y:p.y}})});cy.edges().forEach(function(e){var d=e.data();var ed=ProjectFormat.cleanData(d);ed.weight=d.weight||3;ed.edgeType=d.edgeType||'';ed.note=d.note||'';edges.push({data:ed})});return{version:ProjectFormat.CURRENT_VERSION,app:'Mentegraf',lang:curLang,config:{categories:categories,connectionTypes:connTypes,nodeSizing:nodeSizingOn,export:exportSettings},elements:{nodes:nodes,edges:edges}}}
-function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();exportSettings=(data.config&&data.config.export&&typeof data.config.export==='object')?data.config.export:{};if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;if(data.config.connectionTypes&&data.config.connectionTypes.length){
+function getProject(){var nodes=[],edges=[];cy.nodes().forEach(function(n){var d=n.data(),p=n.position();var nd=ProjectFormat.cleanData(d);nd.description=d.description||'';nd.notes=d.notes||'';nd.tags=d.tags||[];nd.x=p.x;nd.y=p.y;nodes.push({data:nd,position:{x:p.x,y:p.y}})});cy.edges().forEach(function(e){var d=e.data();var ed=ProjectFormat.cleanData(d);ed.weight=d.weight||3;ed.edgeType=d.edgeType||'';ed.note=d.note||'';edges.push({data:ed})});return{version:ProjectFormat.CURRENT_VERSION,app:'Mentegraf',manuscript:Binder.get(),lang:curLang,config:{categories:categories,connectionTypes:connTypes,nodeSizing:nodeSizingOn,export:exportSettings},elements:{nodes:nodes,edges:edges}}}
+function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();exportSettings=(data.config&&data.config.export&&typeof data.config.export==='object')?data.config.export:{};Binder.load(data.manuscript);if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;if(data.config.connectionTypes&&data.config.connectionTypes.length){
   connTypes=data.config.connectionTypes;
   var defMap={};DEFAULT_CONN_TYPES.forEach(function(d){defMap[d.id]=d});
   connTypes.forEach(function(ct){var df=defMap[ct.id];if(df){if(!ct.color)ct.color=df.color;if(!ct.marker)ct.marker=df.marker;if(!ct.style)ct.style=df.style}else{if(!ct.color)ct.color='#888';if(!ct.marker)ct.marker='';if(!ct.style)ct.style='solid'}})
@@ -185,7 +185,7 @@ function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catc
   nodeSizingOn=data.config.nodeSizing!==false;                    // ← NEW
   nodeSizingOn?NodeSizing.enable(cy):NodeSizing.disable(cy);      // ← NEW
 }if(data.elements&&data.elements.nodes)data.elements.nodes.forEach(function(n){var c=catById(n.data.type);if(c)n.data.color=c.color});cy.elements().remove();cy.add([].concat(data.elements.nodes||[]).concat(data.elements.edges||[]));if(data.elements.nodes)data.elements.nodes.forEach(function(n){if(n.data.x!==undefined)cy.getElementById(n.data.id).position({x:n.data.x,y:n.data.y})});cy.fit(null,50);nid=1;cy.nodes().forEach(function(n){var id=parseInt(n.id().replace('n',''));if(!isNaN(id)&&id>=nid)nid=id+1});buildTF();rebuildETS();uStats();clrSel();if(!noSnap)snapshot()}
-async function doSave(){var data=getProject(),saved=JSON.stringify(data),frags=Writer.dirtyFragments(),ok=false;if(window.mentegraf){Writer.willSave(frags);ok=await window.mentegraf.saveData(data,frags);if(ok)showMsg(L('saved'))}else{localStorage.setItem('mentegraf-project',saved);ok=true;showMsg(L('saved'))}if(ok){Writer.markSaved(frags);setDirty(JSON.stringify(getProject())!==saved||Writer.hasUnsaved())}return ok}
+async function doSave(){var data=getProject(),saved=JSON.stringify(data),frags=Writer.dirtyFragments(),ok=false;if(window.mentegraf){Writer.willSave(frags);ok=await window.mentegraf.saveData(data,frags);if(ok)showMsg(L('saved'))}else{localStorage.setItem('mentegraf-project',saved);ok=true;showMsg(L('saved'))}if(ok){Writer.markSaved(frags);Binder.refreshCounts();setDirty(JSON.stringify(getProject())!==saved||Writer.hasUnsaved())}return ok}
 
 function doImport(ev){var f=ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var d=JSON.parse(e.target.result);if(d.elements){loadProject(d);showMsg(f.name+' '+L('loaded'))}}catch(err){alert('Error: '+err.message)}};r.readAsText(f);ev.target.value=''}
 function doLoad(){if(window.mentegraf)return;var raw=localStorage.getItem('mentegraf-project');if(raw){try{loadProject(JSON.parse(raw))}catch(e){}}}
@@ -476,6 +476,6 @@ document.addEventListener('DOMContentLoaded',async function(){
   await loadLangs();
 
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
-  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();ExportSettings.bind();doLoad();
+  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();ExportSettings.bind();Binder.init();doLoad();
   addStarterNode();
   cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});

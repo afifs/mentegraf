@@ -63,6 +63,35 @@ function atomicWrite(file, text) {
   }
 }
 
+// ───────── manuscript (book structure) ─────────
+//
+// { title, items: [ { id, kind: 'part', title, children: [...] },
+//                   { id, kind: 'node', node: <node id>, include: true, children: [...] } ] }
+// Parts only at the top level; nodes nest at most three levels (part > chapter > section).
+function normalizeManuscript(m, nodeIds) {
+  const seen = new Set()
+  const walk = (list, depth) => (Array.isArray(list) ? list : []).map(it => {
+    if (!it || typeof it !== 'object') return null
+    if (it.kind === 'part') {
+      if (depth > 0) return null
+      return { id: String(it.id || ''), kind: 'part', title: String(it.title || ''), children: walk(it.children, depth + 1) }
+    }
+    if (it.kind !== 'node' || it.node == null) return null
+    const id = String(it.node)
+    if (seen.has(id) || (nodeIds && !nodeIds[id])) return null
+    seen.add(id)
+    return { id, kind: 'node', node: id, include: it.include !== false, children: depth >= 2 ? [] : walk(it.children, depth + 1) }
+  }).filter(Boolean)
+  const src = m && typeof m === 'object' ? m : {}
+  return { title: typeof src.title === 'string' ? src.title : '', items: walk(src.items, 0) }
+}
+
+// Words in a text, as the editor counts them (metadata block excluded).
+function countWords(text) {
+  const body = String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '')
+  return (body.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length
+}
+
 // ───────── pure mapping (no file system; unit-tested) ─────────
 
 // In-memory project -> file texts.
@@ -89,11 +118,13 @@ function toFiles(project) {
     nodes[d.id] = stable(d)
   })
   const edges = p.elements.edges.map(e => e.data).sort(byId)
-  return { manifest: stable(manifest), edges: stable(edges), layout: stable(layout), nodes }
+  const ids = {}; Object.keys(nodes).forEach(id => { ids[id] = true })
+  const manuscript = normalizeManuscript(p.manuscript, ids)
+  return { manifest: stable(manifest), edges: stable(edges), layout: stable(layout), manuscript: stable(manuscript), nodes }
 }
 
 // File texts -> { project, warnings }. nodeFiles: [{ name, text }].
-function fromFiles({ manifestText, edgesText, layoutText, nodeFiles }) {
+function fromFiles({ manifestText, edgesText, layoutText, manuscriptText, nodeFiles }) {
   let m
   try { m = JSON.parse(manifestText) } catch (e) { throw err('not-a-project', 'The project file is not valid JSON.') }
   if (!m || typeof m !== 'object' || !m.format) throw err('not-a-project', 'This file is not a Mentegraf folder project.')
@@ -149,6 +180,12 @@ function fromFiles({ manifestText, edgesText, layoutText, nodeFiles }) {
     },
     elements: { nodes, edges: edgeData.map(d => ({ data: d })) }
   }
+  let manuscript = null
+  if (manuscriptText) {
+    try { manuscript = JSON.parse(manuscriptText) } catch (e) { warnings.push({ kind: 'unreadable', file: 'graph/manuscript.json' }) }
+  }
+  const ids = {}; nodes.forEach(n => { ids[n.data.id] = true })
+  project.manuscript = normalizeManuscript(manuscript, ids)
   const migrated = ProjectFormat.migrate(project).data
   const dropped = project.elements.edges.length - migrated.elements.edges.length
   if (dropped > 0) warnings.push({ kind: 'dangling', count: dropped })
@@ -187,6 +224,7 @@ function readProject(dir) {
     manifestText,
     edgesText: readOrNull(path.join(dir, 'graph', 'edges.json')),
     layoutText: readOrNull(path.join(dir, 'graph', 'layout.json')),
+    manuscriptText: readOrNull(path.join(dir, 'graph', 'manuscript.json')),
     nodeFiles
   })
   // Conflict copies of edges/layout/manifest.
@@ -229,6 +267,7 @@ function writeProject(dir, project) {
   Object.keys(f.nodes).forEach(id => { want['graph/nodes/' + safeName(id) + '.json'] = f.nodes[id] })
   want['graph/edges.json'] = f.edges
   want['graph/layout.json'] = f.layout
+  want['graph/manuscript.json'] = f.manuscript
   want[MANIFEST] = f.manifest
 
   const changed = Object.keys(want).filter(rel => readOrNull(path.join(dir, rel)) !== want[rel])
@@ -338,6 +377,15 @@ function writeFragments(dir, list) {
   return written
 }
 
+// Word counts of texts on disk: { path: words } (missing or invalid paths are left out).
+function fragmentStats(dir, paths) {
+  const out = {}
+  ;(paths || []).forEach(rel => {
+    try { const r = readFragment(dir, rel); if (r.exists) out[rel] = countWords(r.text) } catch (e) { /* skip */ }
+  })
+  return out
+}
+
 // Save As: bring the texts along to the new project folder.
 function copyTextFolders(fromDir, toDir) {
   TEXT_DIRS.forEach(d => {
@@ -350,5 +398,6 @@ module.exports = {
   MANIFEST, FORMAT,
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
-  TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders
+  TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
+  normalizeManuscript, countWords, fragmentStats
 }

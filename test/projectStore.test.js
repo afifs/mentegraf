@@ -165,6 +165,42 @@ test('export settings are kept in the manifest', () => {
   assert.deepStrictEqual(Store.readProject(old).project.config.export, {})
 })
 
+console.log('manuscript')
+
+test('book structure is saved in graph/manuscript.json and read back', () => {
+  const dir = path.join(tmp(), 'Book'), p = sample()
+  p.manuscript = { title: 'Bilişimsel Düşünme', items: [
+    { id: 'part-a', kind: 'part', title: 'Temeller', children: [
+      { id: 'n-book', kind: 'node', node: 'n-book', include: true, children: [{ id: 'n1', kind: 'node', node: 'n1', include: false, children: [] }] }] }] }
+  Store.writeProject(dir, p)
+  const back = Store.readProject(dir).project.manuscript
+  assert.deepStrictEqual(back, p.manuscript)
+  assert.deepStrictEqual(JSON.parse(read(dir, 'graph/manuscript.json')), p.manuscript)
+})
+
+test('book structure: missing nodes, duplicates, nested parts and too-deep items are dropped', () => {
+  const m = Store.normalizeManuscript({ items: [
+    { kind: 'node', node: 'a', children: [{ kind: 'part', title: 'nested part' }, { kind: 'node', node: 'b', children: [{ kind: 'node', node: 'c', children: [{ kind: 'node', node: 'd' }] }] }] },
+    { kind: 'node', node: 'a' }, { kind: 'node', node: 'gone' }, 'junk' ] }, { a: true, b: true, c: true, d: true })
+  assert.deepStrictEqual(m, { title: '', items: [{ id: 'a', kind: 'node', node: 'a', include: true, children: [
+    { id: 'b', kind: 'node', node: 'b', include: true, children: [{ id: 'c', kind: 'node', node: 'c', include: true, children: [] }] }] }] })
+  assert.deepStrictEqual(Store.normalizeManuscript(null), { title: '', items: [] })
+})
+
+test('older projects without a book structure open with an empty one', () => {
+  const dir = path.join(tmp(), 'Book')
+  Store.writeProject(dir, sample())
+  fs.unlinkSync(path.join(dir, 'graph/manuscript.json'))
+  assert.deepStrictEqual(Store.readProject(dir).project.manuscript, { title: '', items: [] })
+})
+
+test('word counts of texts on disk', () => {
+  const dir = path.join(tmp(), 'Book')
+  Store.writeProject(dir, sample())
+  Store.writeFragments(dir, [{ path: 'manuscript/a.md', text: '---\nmentegraf-node: x\n---\n\n# Giriş\n\nÇağdaş düşünce, 1948\'de.' }])
+  assert.deepStrictEqual(Store.fragmentStats(dir, ['manuscript/a.md', 'notes/missing.md', '../x.md']), { 'manuscript/a.md': 4 })
+})
+
 console.log('text fragments')
 
 test('slugs handle Turkish letters', () => {

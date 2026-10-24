@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('mentegraf', {
   saveData: (data, fragments) => ipcRenderer.invoke('save-data', data, fragments),
   fragmentNewPath: (label, type, nodeId, taken) => ipcRenderer.invoke('fragment-new-path', label, type, nodeId, taken),
   fragmentRead: (p) => ipcRenderer.invoke('fragment-read', p),
+  fragmentStats: (paths) => ipcRenderer.invoke('fragment-stats', paths),
   citePick: () => ipcRenderer.invoke('cite-pick'),
   exportDocx: (p, text, settings) => ipcRenderer.invoke('export-docx', p, text, settings),
   stylesList: () => ipcRenderer.invoke('styles-list'),

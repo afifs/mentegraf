@@ -231,6 +231,11 @@ ipcMain.handle('fragment-new-path', (event, label, type, nodeId, taken) => {
   try { return { path: ProjectStore.newFragmentPath(currentDir, label, type, nodeId, taken) } } catch (e) { return { error: 'failed', message: e.message } }
 })
 
+ipcMain.handle('fragment-stats', (event, paths) => {
+  if (!currentDir) return { counts: {} }
+  try { return { counts: ProjectStore.fragmentStats(currentDir, Array.isArray(paths) ? paths.slice(0, 2000) : []) } } catch (e) { return { counts: {} } }
+})
+
 ipcMain.handle('fragment-read', (event, rel) => {
   if (!currentDir) return { error: 'untitled', message: '' }
   try { return ProjectStore.readFragment(currentDir, rel) } catch (e) { return { error: 'failed', message: e.message } }
