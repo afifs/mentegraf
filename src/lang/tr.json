@@ -249,5 +249,8 @@
   "lensClear": "Filtreyi kaldır",
   "lensCount": "%n düğüm, %t metin",
   "lensNone": "Bu filtreye uyan düğüm yok.",
-  "classesKeys": "Tıkla: filtrele · Çift tık: yeniden adlandır · Sürükle: taşı"
+  "classesKeys": "Tıkla: filtrele · Çift tık: yeniden adlandır · Sürükle: taşı",
+  "figNoFile": "Bu şeklin henüz görseli yok.",
+  "figNoTable": "Bu tablonun henüz CSV dosyası yok.",
+  "figChange": "Değiştir"
 }

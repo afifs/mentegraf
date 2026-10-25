@@ -249,5 +249,8 @@
   "lensClear": "Clear filter",
   "lensCount": "%n nodes, %t texts",
   "lensNone": "No nodes match this filter.",
-  "classesKeys": "Click: filter · Double-click: rename · Drag: move"
+  "classesKeys": "Click: filter · Double-click: rename · Drag: move",
+  "figNoFile": "This figure has no image yet.",
+  "figNoTable": "This table has no CSV file yet.",
+  "figChange": "Replace"
 }

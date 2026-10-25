@@ -262,7 +262,9 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .napath{margin-top:4px;font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .naref{font:11px Consolas,monospace;color:var(--accent);user-select:all}
 .pv img{display:block;max-width:100%;margin:1em auto .3em;border-radius:4px}
-.pv p>em:only-child{display:block;text-align:center;font-size:.85em;color:var(--dim)}
+.pv p.pv-cap{text-align:center;font-size:.85em;color:var(--dim)}
+.nanone{font-size:12px;color:var(--dim);margin-bottom:6px}
+.nachange{background:none;border:0;color:var(--accent);cursor:pointer;font:11px 'DM Sans',sans-serif;padding:0 0 0 6px}
 
 /* ═══ CLASSIFICATION ═══ */
 #classes{position:absolute;left:0;top:0;bottom:0;width:var(--binder-w);display:none;flex-direction:column;background:var(--bg2);border-right:1px solid var(--border);z-index:16}

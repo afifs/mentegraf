@@ -369,6 +369,7 @@ var Writer = (function () {
       .replace(/[ \t]\^[a-z0-9]{4,12}[ \t]*$/gm, '')         // passage IDs
     if (window.Figures) text = Figures.previewMarkdown(text)
     var html = md.render(text)
+    if (window.Figures) html = Figures.markCaptions(html)
       .replace(/\[([^\[\]<]*@[^\[\]<]*)\]/g, function (all, inner) { return '<span class="pv-cite">[' + inner + ']</span>' })
     $('wPreview').innerHTML = html
   }

@@ -192,6 +192,9 @@ var Figures = (function () {
     if (!/^assets\//.test(rel)) return null
     return base + rel.split('/').map(encodeURIComponent).join('/')
   }
+  var CAP = '\u2063'                      // invisible separator: marks figure captions in the preview
+  // Preview HTML: give figure captions their own class (plain italic paragraphs stay as they are).
+  function markCaptions(html) { return String(html).split('<p><em>' + CAP).join('<p class="pv-cap"><em>').split(CAP).join('') }
   function isAssetUrl(u) { return !!(base && typeof u === 'string' && u.indexOf(base + 'assets/') === 0) }
 
   // Markdown for the read-only preview: numbered captions, images from the project, CSV placeholders,
@@ -204,25 +207,59 @@ var Figures = (function () {
       var label = csv ? TBL + ' ' + (++nt) : FIG + ' ' + (++nf)
       if (id) nums[id] = label
       if (csv) return '> **' + label + '.** ' + cap + '  \n> _' + L('csvTable') + ': ' + src.split('/').pop() + '_'
-      return '![' + cap + '](' + (assetUrl(src) || src) + ')\n\n_' + label + '. ' + cap + '_'
+      return '![' + cap + '](' + (assetUrl(src) || src) + ')\n\n_' + CAP + label + '. ' + cap + '_'
     })
     return out.replace(/@((?:fig|tbl):[A-Za-z0-9_.:-]*[A-Za-z0-9_])/g, function (all, id) { return nums[id] || all })
+  }
+
+  function isFigType(n) { return n && n.length && n.isNode && n.isNode() && (n.data('type') === 'figure' || n.data('type') === 'table') }
+
+  // Give a figure/table node a file (or a new one): a node made in the map, or one whose file changes.
+  async function attachFile(n) {
+    if (!isFigType(n) || !api() || !api().assetImport) return null
+    var kind = n.data('type')
+    var r = await api().assetImport(kind)
+    if (!r || r.canceled) return null
+    if (r.error) { alert(r.error === 'untitled' ? L('saveFirst') : L('figError') + '\n\n' + (r.message || '')); return null }
+    if (r.kind !== kind) { alert(L('figError')); return null }
+    n.data('asset', r.rel)
+    if (!n.data('figId')) n.data('figId', (kind === 'table' ? 'tbl:' : 'fig:') + slug(n.data('label')) + '-' + tail(n.id()))
+    snapshot()
+    updatePanel(n)
+    return r.rel
   }
 
   function updatePanel(n) {
     var fld = $('nAssetFld'), box = $('nAsset')
     if (!fld) return
-    if (!isAssetNode(n)) { fld.style.display = 'none'; box.innerHTML = ''; return }
-    fld.style.display = ''
-    var rel = n.data('asset'), url = assetUrl(rel)
-    var thumb = n.data('type') === 'figure' && url ? '<img src="' + esc(url) + '" alt="">' : '<div class="nacsv">' + esc(L('csvTable')) + '</div>'
-    box.innerHTML = thumb + '<div class="napath">' + esc(rel) + '</div><div class="naref" title="' + esc(L('figRefTip')) + '">@' + esc(n.data('figId')) + '</div>'
+    var html = ''
+    if (isFigType(n)) {
+      var rel = n.data('asset'), url = rel ? assetUrl(rel) : null
+      if (!rel) {
+        html = '<div class="nanone">' + esc(L(n.data('type') === 'table' ? 'figNoTable' : 'figNoFile')) + '</div>' +
+          '<button class="bt naattach" data-act="attach">' + esc(L(n.data('type') === 'table' ? 'figNewTable' : 'figNewImage')) + '</button>'
+      } else {
+        var thumb = n.data('type') === 'figure' && url ? '<img src="' + esc(url) + '" alt="">' : '<div class="nacsv">' + esc(L('csvTable')) + '</div>'
+        html = thumb + '<div class="napath">' + esc(rel) + ' <button class="nachange" data-act="attach">' + esc(L('figChange')) + '</button></div>' +
+          '<div class="naref" title="' + esc(L('figRefTip')) + '">@' + esc(n.data('figId')) + '</div>'
+      }
+    }
+    fld.style.display = html ? '' : 'none'
+    if (box._html !== html) { box.innerHTML = html; box._html = html }   // unchanged: keep the image (no reload/flicker)
   }
 
   function init() {
     if (bound) return
     bound = true
     ensureTypes()
+    var box = $('nAsset')
+    if (box) box.addEventListener('click', function (e) {
+      if (e.target.closest('[data-act="attach"]') && window.selEle) attachFile(selEle)
+    })
+    // Changing a node's type to Şekil/Tablo in the panel shows the file field at once.
+    if (window.cy) cy.on('data', 'node', function (e) {
+      if (window.selEle && selEle.isNode && selEle.isNode() && selEle.id() === e.target.id()) updatePanel(e.target)
+    })
     if (api() && api().onProjectBase) api().onProjectBase(function (url) {
       base = url || null
       if (window.selEle && selEle.isNode && selEle.isNode()) updatePanel(selEle)
@@ -232,7 +269,7 @@ var Figures = (function () {
   return {
     init: init, ensureTypes: ensureTypes, openPicker: openPicker, closePicker: closePicker,
     onPaste: onPaste, onDrop: onDrop, addAsset: addAsset, insertNode: insertNode, insertRef: insertRef,
-    previewMarkdown: previewMarkdown, isAssetUrl: isAssetUrl, updatePanel: updatePanel,
+    previewMarkdown: previewMarkdown, markCaptions: markCaptions, isAssetUrl: isAssetUrl, updatePanel: updatePanel, attachFile: attachFile,
     _setBase: function (u) { base = u }, _slug: slug
   }
 })()
