@@ -112,7 +112,7 @@ var Work = (function () {
       (counts.missing ? ' · ' + L('queueMissing').replace('%n', counts.missing) : '') +
       (window.Classify && Classify.active() ? ' · ' + L('queueFiltered') : '')
     if (!items.length) { box.innerHTML = '<div class="cnone">' + esc(L('queueEmpty')) + '</div>'; return }
-    var RANK = { contested: 0, open: 1, draft: 2, supported: 3, answered: 4, dropped: 5 }
+    var RANK = { contested: 0, open: 1, draft: 2, supported: 3, thesis: 3, answered: 4, beyond: 4, dropped: 5 }
     box.innerHTML = keys.map(function (k) {
       var g = k ? node(k) : null
       var list = groups[k].sort(function (a, b) {
@@ -125,7 +125,7 @@ var Work = (function () {
           var icon = it.kind === 'task' ? '<input type="checkbox"' + (it.done ? ' checked' : '') + '>' : '<span class="qicon q-' + it.kind + '">' + (it.kind === 'claim' ? '◆' : '?') + '</span>'
           var badge = it.missing ? '<span class="qbad">' + esc(L('queueGone')) + '</span>'
             : it.kind === 'claim' ? '<span class="qst" style="color:' + Argue.STATUS_COLOR[it.status] + '">' + esc(L('as_' + it.status)) + '</span>'
-              : it.kind === 'question' && it.done ? '<span class="qst">' + esc(L('as_answered')) + '</span>' : ''
+              : it.kind === 'question' && it.done ? '<span class="qst">' + esc(L('as_' + it.status)) + '</span>' : ''
           var where = it.kind === 'task' && it.node !== it.group ? '<span class="qwhere">' + esc(it.node.data('label')) + '</span>' : ''
           return '<div class="qitem' + (it.done ? ' done' : '') + '" data-kind="' + it.kind + '" data-node="' + esc(it.node.id()) + '"' + (it.task ? ' data-task="' + esc(it.task.id) + '"' : '') + (it.passage ? ' data-passage="' + esc(it.passage) + '"' : '') + '>' +
             icon + '<span class="qtext">' + esc(it.text) + where + '</span>' + badge + '</div>'
@@ -172,7 +172,7 @@ var Work = (function () {
   }
 
   function relations(c) {
-    var out = { supports: [], contradicts: [], source: [] }
+    var out = { supports: [], contradicts: [], source: [], answers: [] }
     c.connectedEdges().forEach(function (e) {
       var t = e.data('edgeType')
       if (out[t]) out[t].push(e.source().id() === c.id() ? e.target() : e.source())
@@ -208,7 +208,11 @@ var Work = (function () {
     })
     lines.push('## ' + L('briefQuestions') + ' (' + qs.length + ')', '')
     if (!qs.length) lines.push(L('briefNone'), '')
-    qs.forEach(function (q) { lines.push('- ' + (Argue.statusOf(q) === 'answered' ? '~~' + q.data('label') + '~~' : q.data('label'))) })
+    qs.forEach(function (q) {
+      var st = Argue.statusOf(q)
+      lines.push('- ' + q.data('label') + (st === 'open' ? '' : ' _(' + L('as_' + st) + ')_'))
+      relations(q).answers.forEach(function (a) { lines.push('  - ↳ ' + a.data('label')) })
+    })
     if (qs.length) lines.push('')
     var tasks = Argue.tasksOf(n).map(function (t) { return t }).concat([].concat.apply([], args.map(function (a) { return Argue.tasksOf(a) })))
     lines.push('## ' + L('tasksLabel') + ' (' + tasks.filter(function (t) { return !t.done }).length + ')', '')

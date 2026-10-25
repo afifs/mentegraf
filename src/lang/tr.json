@@ -303,5 +303,7 @@
   "briefClaims": "İddialar",
   "briefQuestions": "Sorular",
   "briefLinked": "Bağlantılı",
-  "briefNone": "—"
+  "briefNone": "—",
+  "as_thesis": "Tez",
+  "as_beyond": "Kitabın ötesinde"
 }

@@ -18,11 +18,14 @@ var Argue = (function () {
   var CONN = [
     { id: 'supports', tr: 'Destekliyor', en: 'Supports', color: '#5b9a68', marker: '✓', style: 'solid' },
     { id: 'contradicts', tr: 'Çelişiyor', en: 'Contradicts', color: '#d46a6a', marker: '✕', style: 'dashed' },
-    { id: 'source', tr: 'Kaynak', en: 'Source', color: '#8a8f98', marker: '❝', style: 'dotted' }
+    { id: 'source', tr: 'Kaynak', en: 'Source', color: '#8a8f98', marker: '❝', style: 'dotted' },
+    { id: 'answers', tr: 'Yanıtlıyor', en: 'Answers', color: '#7a68b3', marker: '↳', style: 'solid' }
   ]
-  var STATUS = { claim: ['draft', 'supported', 'contested', 'dropped'], question: ['open', 'answered'] }
+  // Tez: the author's own proposal (argued, not sourced) — not a to-do.
+  // Kitabın ötesinde: a question deliberately left open (out of this book's scope) — not a to-do.
+  var STATUS = { claim: ['draft', 'supported', 'thesis', 'contested', 'dropped'], question: ['open', 'answered', 'beyond'] }
   var DEFAULT = { claim: 'draft', question: 'open' }
-  var STATUS_COLOR = { draft: '#9a9488', supported: '#4f8f5e', contested: '#c08a3e', dropped: '#b0aaa0', open: '#7a68b3', answered: '#4f8f5e' }
+  var STATUS_COLOR = { draft: '#9a9488', supported: '#4f8f5e', contested: '#c08a3e', dropped: '#b0aaa0', open: '#7a68b3', answered: '#4f8f5e', thesis: '#3f7fa8', beyond: '#9a8fb8' }
 
   var version = 0, bound = false, versionTimer = null
 

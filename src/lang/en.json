@@ -303,5 +303,7 @@
   "briefClaims": "Claims",
   "briefQuestions": "Questions",
   "briefLinked": "Connected",
-  "briefNone": "—"
+  "briefNone": "—",
+  "as_thesis": "Thesis",
+  "as_beyond": "Beyond the book"
 }

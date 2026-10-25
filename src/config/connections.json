@@ -7,5 +7,6 @@
   {"id":"parallel","tr":"Paralel","en":"Parallel","color":"#9a8cc4","marker":"∥","style":"dotted"},
   {"id":"discusses","tr":"Tartışıyor","en":"Discusses","color":"#c4956b","marker":"◇","style":"solid"},
   {"id":"supports","tr":"Destekliyor","en":"Supports","color":"#5b9a68","marker":"✓","style":"solid"},
-  {"id":"source","tr":"Kaynak","en":"Source","color":"#8a8f98","marker":"❝","style":"dotted"}
+  {"id":"source","tr":"Kaynak","en":"Source","color":"#8a8f98","marker":"❝","style":"dotted"},
+  {"id":"answers","tr":"Yanıtlıyor","en":"Answers","color":"#7a68b3","marker":"↳","style":"solid"}
 ]
