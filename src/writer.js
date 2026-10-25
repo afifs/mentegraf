@@ -112,6 +112,7 @@ var Writer = (function () {
         updateStatus()
         schedulePreview()
         if (window.Binder) Binder.textChanged()
+        if (window.TextSearch) TextSearch.textChanged()
         if (!loading && typeof setDirty === 'function') setDirty(true)
       })
     ]
@@ -683,6 +684,23 @@ var Writer = (function () {
     hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu,
     // Text of a loaded buffer (including unsaved edits), or null if not loaded.
     textFor: function (path) { return buffers[path] ? textOf(path) : null },
+    // Select a found word and bring it to the middle of the pane (search results).
+    reveal: function (line, col, len) {
+      if (!view || !current) return false
+      if (previewOn) togglePreview()
+      var doc = view.state.doc
+      if (!(line >= 1 && line <= doc.lines)) return false
+      var l = doc.line(line), from = Math.min(l.to, l.from + (col || 0)), to = Math.min(l.to, from + (len || 0))
+      view.dispatch({ selection: { anchor: from, head: to }, effects: CM.EditorView.scrollIntoView(from, { y: 'center' }) })
+      view.focus()
+      return true
+    },
+    // The selected words in the open text ('' when nothing is selected).
+    selectionText: function () {
+      if (!view || !current) return ''
+      var r = view.state.selection.main
+      return view.state.sliceDoc(r.from, r.to).trim()
+    },
     // Re-mark lens lines after the lens changed.
     refreshLens: function () { if (view) view.dispatch({}) },
     // The open text: { path, nodeId } or null.

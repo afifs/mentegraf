@@ -178,6 +178,7 @@ var Classify = (function () {
       version++
       if (window.Binder) Binder.render()
       if (window.Writer && Writer.refreshLens) Writer.refreshLens()
+      if (window.TextSearch) TextSearch.lensChanged()
     }
   }
 

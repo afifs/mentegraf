@@ -420,6 +420,78 @@ function fragmentStats(dir, paths) {
   return out
 }
 
+// ───────── search in texts ─────────
+//
+// Case- and accent-tolerant: "dusunme" finds "Düşünme"; ı/i/I/İ are the same letter.
+// Folding works letter by letter, so positions in the folded text are positions in the original.
+const FOLD = { 'ı': 'i', 'İ': 'i', 'I': 'i', 'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ö': 'o', 'Ö': 'o', 'ş': 's', 'Ş': 's', 'ü': 'u', 'Ü': 'u', '’': "'", '‘': "'" }
+function foldChar(ch) {
+  if (FOLD[ch]) return FOLD[ch]
+  const l = ch.toLowerCase()
+  if (l.length !== 1) return ch
+  const n = l.normalize('NFD')
+  return n.length > 1 && /[̀-ͯ]/.test(n.slice(1)) ? n[0] : l
+}
+function foldText(s) { let out = ''; for (let i = 0; i < s.length; i++) out += foldChar(s[i]); return out }
+
+// All .md files under manuscript/ and notes/, as project-relative paths.
+function listTexts(dir) {
+  const out = []
+  const walk = (abs, rel, depth) => {
+    let entries = []
+    try { entries = fs.readdirSync(abs, { withFileTypes: true }) } catch (e) { return }
+    entries.forEach(e => {
+      if (e.name.startsWith('.')) return
+      if (e.isDirectory() && depth < 6) walk(path.join(abs, e.name), rel + '/' + e.name, depth + 1)
+      else if (e.isFile() && /\.md$/i.test(e.name) && !isConflictName(e.name)) out.push(rel + '/' + e.name)
+    })
+  }
+  if (dir) TEXT_DIRS.forEach(d => walk(path.join(dir, d), d, 0))
+  return out.sort()
+}
+
+// query: words to find (as a phrase). opts: { overrides: { path: text } (unsaved editor texts),
+// only: [paths] (limit to these), limit: total hits }. Returns { files: [{ path, count, hits }], total, truncated }.
+// A hit: { line (1-based), col, len, before, match, after } — a short window of the line around the match.
+function searchTexts(dir, query, opts) {
+  opts = opts || {}
+  const q = foldText(String(query || '').replace(/\s+/g, ' ').trim())
+  if (q.length < 2) return { files: [], total: 0, truncated: false }
+  const overrides = opts.overrides && typeof opts.overrides === 'object' ? opts.overrides : {}
+  let paths = listTexts(dir)
+  Object.keys(overrides).forEach(p => { if (paths.indexOf(p) < 0) paths.push(p) })
+  if (Array.isArray(opts.only)) { const set = new Set(opts.only); paths = paths.filter(p => set.has(p)) }
+  const limit = opts.limit || 300
+  const files = []
+  let total = 0, truncated = false
+  paths.forEach(rel => {
+    let text = typeof overrides[rel] === 'string' ? overrides[rel] : null
+    if (text == null && dir) { try { const r = readFragment(dir, rel); text = r.exists ? r.text : null } catch (e) { text = null } }
+    if (text == null) return
+    const lines = text.replace(/\r\n?/g, '\n').split('\n')
+    let start = 0                                            // skip the metadata block
+    if (lines[0] === '---') { const end = lines.indexOf('---', 1); if (end > 0) start = end + 1 }
+    const hits = []
+    let count = 0
+    for (let i = start; i < lines.length; i++) {
+      const line = lines[i], f = foldText(line)
+      let at = f.indexOf(q)
+      while (at >= 0) {
+        count++
+        if (total < limit) {
+          total++
+          const from = Math.max(0, at - 50), to = Math.min(line.length, at + q.length + 70)
+          hits.push({ line: i + 1, col: at, len: q.length, before: (from > 0 ? '…' : '') + line.slice(from, at), match: line.slice(at, at + q.length), after: line.slice(at + q.length, to) + (to < line.length ? '…' : '') })
+        } else truncated = true
+        at = f.indexOf(q, at + q.length)
+      }
+    }
+    if (count) files.push({ path: rel, count, hits })
+  })
+  files.sort((a, b) => b.count - a.count || (a.path < b.path ? -1 : 1))
+  return { files, total: files.reduce((s, f) => s + f.count, 0), truncated }
+}
+
 // ───────── assets (images and CSV tables for figure and table nodes) ─────────
 
 const ASSET_TYPES = { png: 'figure', jpg: 'figure', jpeg: 'figure', gif: 'figure', webp: 'figure', svg: 'figure', csv: 'table' }
@@ -459,5 +531,5 @@ module.exports = {
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
   TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
-  normalizeManuscript, normalizeClassification, countWords, fragmentStats, assetKind, importAsset
+  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, assetKind, importAsset
 }

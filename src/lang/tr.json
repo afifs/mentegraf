@@ -252,5 +252,16 @@
   "classesKeys": "Tıkla: filtrele · Çift tık: yeniden adlandır · Sürükle: taşı",
   "figNoFile": "Bu şeklin henüz görseli yok.",
   "figNoTable": "Bu tablonun henüz CSV dosyası yok.",
-  "figChange": "Değiştir"
+  "figChange": "Değiştir",
+  "searchPh": "Metinlerde ara… (Ctrl+Shift+H)",
+  "searchInLens": "Yalnızca filtredeki metinler",
+  "searchCount": "%n eşleşme, %t metin",
+  "searchMore": "ilk 300 gösteriliyor",
+  "searchNone": "Eşleşme yok.",
+  "searchShort": "En az 2 harf yazın.",
+  "searchNoNode": "Bu metin bir düğüme bağlı değil.",
+  "searchLink": "Bağla",
+  "searchLinkTip": "Bu metnin düğümünü seçili düğüme bağla: %s",
+  "searchLinked": "bağlı",
+  "searchLinkedTip": "Seçili düğüme zaten bağlı: %s"
 }

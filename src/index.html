@@ -89,6 +89,7 @@
     <!-- CLASSIFICATION (categories and tags) -->
     <div id="classes">
       <div class="bh"><span class="ctitle" data-l="classesLabel">Sınıflandırma</span><button class="bx" onclick="Classify.toggle()" aria-label="close">✕</button></div>
+      <div class="ssearch"><input id="sQuery" type="search" data-lp="searchPh" aria-label="search in texts" autocomplete="off" spellcheck="false"><label id="sLensRow" class="slens" style="display:none"><input type="checkbox" id="sInLens" checked> <span data-l="searchInLens">Yalnızca filtredeki metinler</span></label></div>
       <div class="bacts"><button class="bt" onclick="Classify.addRoot()" data-l="addCat">+ Kategori</button><button class="bt" onclick="Classify.addChild()" data-l="addSubcat">+ Alt kategori</button></div>
       <div class="cscroll">
         <div class="csec" data-l="catsTitle">Kategoriler</div>
@@ -98,6 +99,7 @@
         <div id="cTags" class="ctags"></div>
       </div>
       <div id="cResults" class="cresults" style="display:none"></div>
+      <div id="sResults" class="cresults sresults"></div>
       <div class="bhint" data-l="classesKeys">Tıkla: filtrele · Çift tık: yeniden adlandır · Sürükle: taşı</div>
     </div>
 
@@ -266,6 +268,7 @@
 <script src="writer.js"></script>
 <script src="figures.js"></script>
 <script src="classify.js"></script>
+<script src="search.js"></script>
 <script src="exportSettings.js"></script>
 <script src="binder.js"></script>
 <script src="nodeSizing.js"></script>

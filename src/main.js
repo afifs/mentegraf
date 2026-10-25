@@ -52,6 +52,7 @@ const MENU_LABELS = {
     pandocOld: 'Pandoc sürümü çok eski (%s). pandoc.org adresinden güncel sürümü kurun.',
     importStyleTitle: 'Kaynak gösterme biçimi seçin (.csl)', importTemplateTitle: 'Word şablonu seçin (.docx)',
     compileTitle: 'Kitabı derle', compileDone: 'Kitap derlendi.',
+    textSearch: 'Metinlerde ara',
     assetFigureTitle: 'Görsel seçin', assetTableTitle: 'Tablo için CSV dosyası seçin', imagesLabel: 'Görseller'
   },
   en: {
@@ -85,6 +86,7 @@ const MENU_LABELS = {
     pandocOld: 'Pandoc %s is too old. Install the current version from pandoc.org.',
     importStyleTitle: 'Choose a citation style (.csl)', importTemplateTitle: 'Choose a Word template (.docx)',
     compileTitle: 'Compile the book', compileDone: 'The book was compiled.',
+    textSearch: 'Search in texts',
     assetFigureTitle: 'Choose an image', assetTableTitle: 'Choose a CSV file for the table', imagesLabel: 'Images'
   }
 }
@@ -321,6 +323,18 @@ ipcMain.handle('fragment-new-path', (event, label, type, nodeId, taken) => {
   try { return { path: ProjectStore.newFragmentPath(currentDir, label, type, nodeId, taken) } } catch (e) { return { error: 'failed', message: e.message } }
 })
 
+// Search in all texts; open editor texts come along so unsaved changes are found too.
+ipcMain.handle('text-search', (event, query, opts) => {
+  const o = opts && typeof opts === 'object' ? opts : {}
+  try {
+    return ProjectStore.searchTexts(currentDir || null, String(query || '').slice(0, 200), {
+      overrides: o.overrides && typeof o.overrides === 'object' ? o.overrides : {},
+      only: Array.isArray(o.only) ? o.only.slice(0, 5000) : undefined,
+      limit: 300
+    })
+  } catch (e) { return { files: [], total: 0, truncated: false, error: e.message } }
+})
+
 ipcMain.handle('fragment-stats', (event, paths) => {
   if (!currentDir) return { counts: {} }
   try { return { counts: ProjectStore.fragmentStats(currentDir, Array.isArray(paths) ? paths.slice(0, 2000) : []) } } catch (e) { return { counts: {} } }
@@ -534,6 +548,7 @@ function buildMenu() {
       submenu: [
         { label: L.relayout, accelerator: 'CmdOrCtrl+R', click: () => mainWindow.webContents.send('menu-action', 'relayout') },
         { label: L.fitAll, accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('menu-action', 'fit') },
+        { label: L.textSearch, accelerator: 'CmdOrCtrl+Shift+H', click: () => mainWindow.webContents.send('menu-action', 'text-search') },
         { type: 'separator' },
         { label: L.devTools, accelerator: 'F12', click: () => mainWindow.webContents.toggleDevTools() },
         { type: 'separator' },

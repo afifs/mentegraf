@@ -471,13 +471,13 @@ function doExportCSV(){
 function showMsg(t){var m=document.getElementById('ml');m.innerHTML='<span style="color:var(--accent)">✓ '+t+'</span>';setTimeout(function(){m.textContent=''},2000)}
 function uStats(){var vn=cy?cy.nodes().filter(function(n){return!n.hasClass('filtered-out')}).length:0;var ve=cy?cy.edges().filter(function(e){return!e.hasClass('filtered-out')}).length:0;document.getElementById('stats').textContent=vn+' / '+ve}
 
-if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new')resetForNewProject();if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
+if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new')resetForNewProject();if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo();if(a==='text-search')TextSearch.open()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
 
 document.addEventListener('DOMContentLoaded',async function(){
   await loadConfigs();
   await loadLangs();
 
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
-  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();Classify.init();doLoad();
+  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();Classify.init();TextSearch.init();doLoad();
   addStarterNode();
   cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});

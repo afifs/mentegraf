@@ -252,5 +252,16 @@
   "classesKeys": "Click: filter · Double-click: rename · Drag: move",
   "figNoFile": "This figure has no image yet.",
   "figNoTable": "This table has no CSV file yet.",
-  "figChange": "Replace"
+  "figChange": "Replace",
+  "searchPh": "Search in texts… (Ctrl+Shift+H)",
+  "searchInLens": "Only texts in the filter",
+  "searchCount": "%n matches, %t texts",
+  "searchMore": "showing the first 300",
+  "searchNone": "No matches.",
+  "searchShort": "Type at least 2 letters.",
+  "searchNoNode": "This text is not attached to a node.",
+  "searchLink": "Link",
+  "searchLinkTip": "Link this text's node to the selected node: %s",
+  "searchLinked": "linked",
+  "searchLinkedTip": "Already linked to the selected node: %s"
 }

@@ -224,6 +224,43 @@ test('older projects open with no categories; a node without categories has no c
   assert.ok(back.elements.nodes.every(n => !('cats' in n.data)))
 })
 
+console.log('search')
+
+test('search is case- and accent-tolerant and treats ı/i/I/İ alike', () => {
+  assert.strictEqual(Store.foldText('İSTANBUL Işık Düşünme ÇAĞ'), 'istanbul isik dusunme cag')
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  Store.writeFragments(dir, [
+    { path: 'manuscript/a.md', text: '---\nmentegraf-node: x\n---\n\n# Bilişimsel Düşünme\n\nDüşünmek ve düşünme. İnsan düşünür.' },
+    { path: 'notes/b.md', text: 'Hiç düşünme yok burada? Var: DÜŞÜNME.' },
+    { path: 'notes/c.md', text: 'Başka bir şey.' }])
+  const r = Store.searchTexts(dir, 'dusunme')
+  assert.deepStrictEqual(r.files.map(f => [f.path, f.count]), [['manuscript/a.md', 3], ['notes/b.md', 2]])
+  assert.strictEqual(r.total, 5)
+  const h = r.files[0].hits[0]
+  assert.deepStrictEqual([h.line, h.col, h.len, h.match], [5, 13, 7, 'Düşünme'])
+  assert.strictEqual(Store.searchTexts(dir, 'insan').files[0].hits[0].match, 'İnsan')
+})
+
+test('search: the metadata block is skipped; unsaved texts and "only" are honoured; short queries do nothing', () => {
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  Store.writeFragments(dir, [{ path: 'manuscript/a.md', text: '---\nmentegraf-node: wiener\n---\n\nWiener burada.' }, { path: 'notes/b.md', text: 'Wiener orada.' }])
+  assert.deepStrictEqual(Store.searchTexts(dir, 'wiener').files.map(f => f.hits[0].line), [5, 1])
+  const r = Store.searchTexts(dir, 'wiener', { overrides: { 'notes/b.md': 'Artık yok.', 'notes/new.md': 'Yeni Wiener notu.' } })
+  assert.deepStrictEqual(r.files.map(f => f.path), ['manuscript/a.md', 'notes/new.md'])
+  assert.deepStrictEqual(Store.searchTexts(dir, 'wiener', { only: ['notes/b.md'] }).files.map(f => f.path), ['notes/b.md'])
+  assert.strictEqual(Store.searchTexts(dir, 'w').total, 0)
+  assert.strictEqual(Store.searchTexts(null, 'wiener', { overrides: { 'notes/x.md': 'wiener' } }).total, 1)
+})
+
+test('search: long lines are cut around the match; many hits are capped but counted', () => {
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  Store.writeFragments(dir, [{ path: 'notes/long.md', text: 'x'.repeat(200) + ' hedef ' + 'y'.repeat(200) + '\n' + 'hedef '.repeat(400) }])
+  const r = Store.searchTexts(dir, 'hedef', { limit: 50 })
+  const h = r.files[0].hits[0]
+  assert.ok(h.before.startsWith('…') && h.after.endsWith('…') && h.before.length <= 51 && h.match === 'hedef')
+  assert.strictEqual(r.total, 401); assert.strictEqual(r.files[0].hits.length, 50); assert.ok(r.truncated)
+})
+
 test('word counts of texts on disk', () => {
   const dir = path.join(tmp(), 'Book')
   Store.writeProject(dir, sample())
