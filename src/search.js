@@ -37,7 +37,12 @@ var TextSearch = (function () {
     var opts = { overrides: overrides }
     if (onlyInLens()) {
       var only = []
-      cy.nodes().forEach(function (n) { if (n.data('fragment') && Classify.matches(n.id())) only.push(n.data('fragment')) })
+      cy.nodes().forEach(function (n) {
+        if (!Classify.matches(n.id())) return
+        if (n.data('fragment')) only.push(n.data('fragment'))
+        var m = /^(.+\.md)#/.exec(String(n.data('passage') || ''))   // a claim in the filter: search its text too
+        if (m) only.push(m[1])
+      })
       opts.only = only
     }
     var my = ++seq

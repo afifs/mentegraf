@@ -240,8 +240,9 @@ var Binder = (function () {
 
   function toggle() {
     var main = $('main')
-    if (main.classList.contains('classing')) {          // the classification pane is showing: switch to the plan
+    if (main.classList.contains('classing') || main.classList.contains('queueing')) {   // another pane is showing: switch to the plan
       if (window.Classify) Classify.leave()
+      if (window.Work) Work.leave()
       main.classList.add('binding')
     } else main.classList.toggle('binding')
     try { localStorage.setItem('mentegraf-binder', isOpen() ? '1' : '0') } catch (e) { /* ignore */ }

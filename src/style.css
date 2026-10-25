@@ -362,3 +362,39 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .ntrm{background:none;border:0;color:var(--dim);cursor:pointer;opacity:0;font-size:11px}
 .ntask:hover .ntrm{opacity:1}
 #nTaskInput{width:100%}
+
+/* work queue and chapter brief */
+#queue{position:absolute;left:0;top:0;bottom:0;width:var(--binder-w);display:none;flex-direction:column;background:var(--bg2);border-right:1px solid var(--border);z-index:16}
+#main.binding.queueing #binder,#main.binding.queueing #classes{display:none}
+#main.binding.queueing #queue{display:flex}
+#b_queue.on{color:var(--accent);background:var(--bg3)}
+.qkinds{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:2px 10px 6px}
+.qkinds button{background:var(--bg3);border:1px solid transparent;border-radius:12px;padding:2px 10px;font:12px 'DM Sans',sans-serif;color:var(--dim);cursor:pointer}
+.qkinds button.on{border-color:var(--accent);color:var(--text)}
+.qdone{margin-left:auto;font-size:11px;color:var(--dim);display:flex;align-items:center;gap:4px;cursor:pointer}
+.qlist{flex:1;min-height:0;overflow:auto;padding-bottom:10px}
+.qgroup{padding:4px 0 6px;border-bottom:1px solid var(--border)}
+.qgh{display:flex;align-items:center;gap:7px;padding:6px 12px 3px;font-size:13px;font-weight:600;cursor:pointer}
+.qgh:not([data-node]){cursor:default}
+.qgname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.qbrief{background:none;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:11px 'DM Sans',sans-serif;color:var(--text);cursor:pointer;font-weight:400}
+.qbrief:hover{border-color:var(--accent);color:var(--accent)}
+.qitem{display:flex;align-items:flex-start;gap:7px;padding:4px 12px 4px 26px;font-size:12.5px;line-height:1.4;cursor:pointer;color:var(--text)}
+.qitem:hover{background:var(--hover)}
+.qitem.done .qtext{text-decoration:line-through;color:var(--dim)}
+.qitem input{margin-top:2px;flex:none;width:auto}
+.qicon{flex:none;width:13px;text-align:center;font-weight:700}
+.q-claim{color:#c0683f}.q-question{color:#7a68b3}
+.qtext{flex:1;min-width:0}
+.qwhere{display:block;font-size:11px;color:var(--dim)}
+.qst{flex:none;font-size:11px;color:var(--dim)}
+.qbad{flex:none;font-size:11px;color:#b2543a}
+.txrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.briefmodal{width:min(720px,92vw);max-height:86vh}
+.bmh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bmh h2{flex:1;margin:0}
+.pv.briefbody{font-size:14px;line-height:1.55;color:var(--text);padding:4px 6px;max-width:none}
+.briefbody p,.briefbody h1,.briefbody h2,.briefbody ul{max-width:none;margin-left:0;margin-right:0}
+.briefbody h1{font-size:22px;margin:4px 0 8px}
+.briefbody h2{font-size:15px;margin:18px 0 6px;color:var(--accent)}
+.briefbody ul{padding-left:20px}

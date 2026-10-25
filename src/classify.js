@@ -179,12 +179,23 @@ var Classify = (function () {
       if (window.Binder) Binder.render()
       if (window.Writer && Writer.refreshLens) Writer.refreshLens()
       if (window.TextSearch) TextSearch.lensChanged()
+      if (window.Work) Work.schedule()
     }
   }
 
   function scheduleLens() { clearTimeout(lensTimer); lensTimer = setTimeout(function () { applyLens(); render() }, 60) }
 
   function active() { return lens ? JSON.parse(JSON.stringify(lens)) : null }
+  // Passages (^ids) in a text whose claims/questions are in the lens: { id: true }.
+  function lensPassages(path) {
+    var out = {}
+    if (!hits || !window.cy || !path) return out
+    Object.keys(hits).forEach(function (id) {
+      var m = /^(.+\.md)#([a-z0-9]{4,12})$/i.exec(String(cy.getElementById(id).data('passage') || ''))
+      if (m && m[1] === path) out[m[2]] = true
+    })
+    return out
+  }
   function matches(nodeId) { return !hits || !!hits[nodeId] }
 
   // Words to highlight in the open text: names of matching nodes (not the text's own node).
@@ -205,7 +216,7 @@ var Classify = (function () {
 
   function toggle() {
     var m = $('main')
-    if (paneOpen()) { m.classList.remove('binding', 'classing'); remember(false) } else { m.classList.add('binding', 'classing'); remember(true); render() }
+    if (paneOpen()) { m.classList.remove('binding', 'classing'); remember(false) } else { if (window.Work) Work.leave(); m.classList.add('binding', 'classing'); remember(true); render() }
     syncButtons()
     setTimeout(function () { if (window.cy) cy.resize() }, 30)
   }
@@ -221,6 +232,7 @@ var Classify = (function () {
     var m = $('main'), cls = $('b_classes'), bnd = $('b_binder')
     if (cls) cls.classList.toggle('on', paneOpen())
     if (bnd) bnd.classList.toggle('on', m.classList.contains('binding') && !m.classList.contains('classing'))
+    if (window.Work) Work.syncButtons()
   }
 
   function typeColor(n) { var t = typeof catById === 'function' ? catById(n.data('type')) : null; return t ? t.color : '#999' }
@@ -424,7 +436,7 @@ var Classify = (function () {
   return {
     init: init, load: load, get: get, render: render, toggle: toggle, leave: leave, syncButtons: syncButtons,
     addRoot: addRoot, addChild: addChild, updatePanel: updatePanel,
-    active: active, matches: matches, lensTerms: lensTerms, version: function () { return version },
+    active: active, matches: matches, lensTerms: lensTerms, lensPassages: lensPassages, version: function () { return version },
     setLens: setLens, assign: assign, path: path,
     _move: move, _add: add, _remove: remove, _normalize: normalize
   }

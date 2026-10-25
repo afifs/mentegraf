@@ -145,7 +145,15 @@ var Writer = (function () {
     var line = CM.Decoration.line({ class: 'cm-lensline' }), word = CM.Decoration.mark({ class: 'cm-lensword' })
     function find(v) {
       var terms = window.Classify && current ? Classify.lensTerms(current.nodeId) : []
-      if (!terms.length) return CM.Decoration.none
+      var pass = window.Classify && current && Classify.lensPassages ? Classify.lensPassages(current.path) : {}
+      if (!terms.length && !Object.keys(pass).length) return CM.Decoration.none
+      // whole paragraphs whose claim is in the filter
+      var marked = {}, doc = v.state.doc
+      if (Object.keys(pass).length) for (var i = 1; i <= doc.lines; i++) {
+        var pm = /\s\^([a-z0-9]{4,12})\s*$/.exec(doc.line(i).text)
+        if (pm && pass[pm[1]]) { var a = i; while (a > 1 && doc.line(a - 1).text.trim()) a--; for (var k = a; k <= i; k++) marked[k] = true }
+      }
+      if (!terms.length) terms = ['\u0000\u0000']
       var re = new RegExp('(^|[^\\p{L}\\p{N}])(' + terms.map(function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }).join('|') + ')(?![\\p{L}\\p{N}])', 'giu')
       var ranges = []
       v.visibleRanges.forEach(function (r) {
@@ -153,7 +161,7 @@ var Writer = (function () {
           var l = v.state.doc.lineAt(pos), m, hit = false
           re.lastIndex = 0
           while ((m = re.exec(l.text))) { hit = true; var s = l.from + m.index + m[1].length; ranges.push(word.range(s, s + m[2].length)); if (!m[0].length) re.lastIndex++ }
-          if (hit) ranges.push(line.range(l.from))
+          if (hit || marked[l.number]) ranges.push(line.range(l.from))
           pos = l.to + 1
         }
       })

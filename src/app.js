@@ -140,7 +140,7 @@ function liveUpdateName(){if(selEle&&selEle.isNode())selEle.data('label',documen
 function openPanel(){document.getElementById('panel').classList.add('open')}
 function closePanel(){document.getElementById('panel').classList.remove('open');selEle=null;cy.elements().deselect();document.getElementById('addBtn').style.display='none';clrHL()}
 
-function selNode(n){clrSel();selEle=n;Writer.updatePanel(n);Binder.updatePanel(n);Figures.updatePanel(n);Classify.updatePanel(n);Argue.updatePanel(n);cy.elements().deselect();n.select();posAB();
+function selNode(n){clrSel();selEle=n;Writer.updatePanel(n);Binder.updatePanel(n);Figures.updatePanel(n);Classify.updatePanel(n);Argue.updatePanel(n);Work.updatePanel(n);cy.elements().deselect();n.select();posAB();
   document.getElementById('nodeEd').style.display='block';document.getElementById('edgeEd').style.display='none';
   document.getElementById('panTitle').textContent=L('nodeDetail');openPanel();
   var d=n.data();document.getElementById('nName').value=d.label||'';document.getElementById('nDesc').value=d.description||'';document.getElementById('nNotes').value=d.notes||'';document.getElementById('nTags').value=(d.tags||[]).join(', ');
@@ -479,6 +479,6 @@ document.addEventListener('DOMContentLoaded',async function(){
   await loadLangs();
 
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
-  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();Classify.init();TextSearch.init();Argue.init();doLoad();
+  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();Classify.init();TextSearch.init();Argue.init();Work.init();doLoad();
   addStarterNode();
   cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});

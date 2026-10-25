@@ -45,6 +45,7 @@
   <div class="lsep"></div>
   <button class="lb" onclick="Binder.toggle()" id="b_binder"><svg viewBox="0 0 24 24"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v16h2V4H6zm4 0v16h8V4h-8zm2 3h4v2h-4V7z"/></svg><span class="tip" data-l="binderLabel">Kitap planı</span></button>
   <button class="lb" onclick="Classify.toggle()" id="b_classes"><svg viewBox="0 0 24 24"><path d="M3 4h7v6H3zM14 4h7v3h-7zM14 9h7v3h-7zM6.5 10v9H14M6.5 14.5H14M14 13h7v3h-7zM14 17.5h7v3h-7z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span class="tip" data-l="classesLabel">Sınıflandırma</span></button>
+  <button class="lb" onclick="Work.toggle()" id="b_queue"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="18" r="1.4" fill="currentColor"/></svg><span class="tip" data-l="queueLabel">İş listesi</span></button>
   <button class="lb" onclick="doLayout()"><svg viewBox="0 0 24 24"><path d="M12 22q-1.25 0-2.125-0.875t-0.875-2.125q0-0.125 0.0125-0.275t0.037500000000000006-0.275l-2.075-1.175q-0.4 0.35000000000000003-0.9 0.5375t-1.075 0.1875q-1.25 0-2.125-0.875t-0.875-2.125q0-1.25 0.875-2.125t2.125-0.875q0.6000000000000001 0 1.125 0.225t0.9500000000000001 0.625l2.975-1.5q-0.07500000000000001-0.5750000000000001 0.0625-1.125t0.48750000000000004-1.0250000000000001l-0.8500000000000001-1.3q-0.17500000000000002 0.05-0.36250000000000004 0.07500000000000001t-0.3875 0.025q-1.25 0-2.125-0.875t-0.875-2.125q0-1.25 0.875-2.125t2.125-0.875q1.25 0 2.125 0.875t0.875 2.125q0 0.5-0.1625 0.9625T11.4 6.800000000000001l0.875 1.3q0.2-0.05 0.375-0.07500000000000001t0.375-0.025q0.42500000000000004 0 0.8 0.1t0.7250000000000001 0.30000000000000004l1.6500000000000001-1.35q-0.1-0.25-0.15000000000000002-0.5125000000000001t-0.05-0.5375q0-1.25 0.875-2.125t2.125-0.875q1.25 0 2.125 0.875t0.875 2.125q0 1.25-0.875 2.125t-2.125 0.875q-0.42500000000000004 0-0.8-0.1125T17.475 8.575l-1.6500000000000001 1.375q0.1 0.25 0.15000000000000002 0.5125000000000001t0.05 0.5375q0 1.25-0.875 2.125t-2.125 0.875q-0.6000000000000001 0-1.1375-0.225T10.925 13.149999999999999l-2.95 1.475q0.05 0.225 0.037500000000000006 0.45t-0.0625 0.45l2.1 1.2000000000000002q0.4-0.35000000000000003 0.8875000000000001-0.5375T12 16q1.25 0 2.125 0.875t0.875 2.125q0 1.25-0.875 2.125t-2.125 0.875ZM5 16q0.42500000000000004 0 0.7125-0.28750000000000003T6 15q0-0.42500000000000004-0.28750000000000003-0.7125T5 14q-0.42500000000000004 0-0.7125 0.28750000000000003T4 15q0 0.42500000000000004 0.28750000000000003 0.7125T5 16Zm4-10q0.42500000000000004 0 0.7125-0.28750000000000003T10 5q0-0.42500000000000004-0.28750000000000003-0.7125T9 4q-0.42500000000000004 0-0.7125 0.28750000000000003T8 5q0 0.42500000000000004 0.28750000000000003 0.7125T9 6Zm3 14q0.42500000000000004 0 0.7125-0.28750000000000003T13 19q0-0.42500000000000004-0.28750000000000003-0.7125T12 18q-0.42500000000000004 0-0.7125 0.28750000000000003T11 19q0 0.42500000000000004 0.28750000000000003 0.7125T12 20Zm1-8q0.42500000000000004 0 0.7125-0.28750000000000003T14 11q0-0.42500000000000004-0.28750000000000003-0.7125T13 10q-0.42500000000000004 0-0.7125 0.28750000000000003T12 11q0 0.42500000000000004 0.28750000000000003 0.7125T13 12Zm6-5q0.42500000000000004 0 0.7125-0.28750000000000003T20 6q0-0.42500000000000004-0.28750000000000003-0.7125T19 5q-0.42500000000000004 0-0.7125 0.28750000000000003T18 6q0 0.42500000000000004 0.28750000000000003 0.7125T19 7Z"/></svg><span class="tip" data-l="layoutLabel">Layout</span></button>
   <button class="lb" onclick="cy.fit(null,50)"><svg viewBox="0 0 24 24"><path d="M20 9v-3H17v-2h3q0.8250000000000001 0 1.4125 0.5875T22 6v3h-2Zm-18 0v-3q0-0.8250000000000001 0.5875-1.4125T4 4h3v2H4v3H2Zm15 11v-2h3v-3h2v3q0 0.8250000000000001-0.5875 1.4125T20 20H17Zm-13 0q-0.8250000000000001 0-1.4125-0.5875T2 18v-3h2v3h3v2H4Zm2-4v-8h12v8H6Zm2-2h8v-4H8v4Zm0 0v-4 4Z"/></svg><span class="tip" data-l="fitLabel">Fit</span></button>
   <div class="lsep"></div>
@@ -103,6 +104,14 @@
       <div class="bhint" data-l="classesKeys">Tıkla: filtrele · Çift tık: yeniden adlandır · Sürükle: taşı</div>
     </div>
 
+    <!-- WORK QUEUE -->
+    <div id="queue">
+      <div class="bh"><span class="ctitle" data-l="queueLabel">İş listesi</span><button class="bx" onclick="Work.toggle()" aria-label="close">✕</button></div>
+      <div class="qkinds" id="qKinds"><button data-kind="question" data-l="queueQuestions">Sorular</button><button data-kind="task" data-l="tasksLabel">Görevler</button><button data-kind="claim" data-l="queueClaims">İddialar</button><label class="qdone"><input type="checkbox" id="qDone"> <span data-l="queueShowDone">Bitenler</span></label></div>
+      <div class="bsum" id="qSum"></div>
+      <div id="qList" class="qlist"></div>
+    </div>
+
     <!-- WRITING PANE -->
     <div id="writer">
       <div id="writerResize"></div>
@@ -128,7 +137,7 @@
           <div class="fld" id="nCats"><label data-l="catsTitle">Kategoriler</label><div id="nCatChips" class="cchips"></div><div class="cpick"><input id="nCatInput" aria-label="categories" data-lp="catsPh" autocomplete="off"><div id="nCatSug" class="csugs" style="display:none"></div></div></div>
           <div class="fld" id="nAssetFld" style="display:none"><label data-l="assetLabel">Dosya</label><div id="nAsset" class="nasset"></div></div>
           <div class="fld" id="nTasksFld" style="display:none"><label data-l="tasksLabel">Görevler</label><div id="nTasks" class="ntasks"></div><input id="nTaskInput" data-lp="taskPh" aria-label="new task" autocomplete="off"></div>
-          <div class="fld"><label data-l="textLabel">Metin</label><div class="txrow"><button class="bt" id="nTextBtn" onclick="Writer.openForNode(selEle)"></button><span id="nTextPath"></span></div></div>
+          <div class="fld"><label data-l="textLabel">Metin</label><div class="txrow"><button class="bt" id="nTextBtn" onclick="Writer.openForNode(selEle)"></button><button class="bt" id="nBriefBtn" style="display:none" onclick="Work.openBrief(selEle)" data-l="briefBtn">Özet</button><span id="nTextPath"></span></div></div>
           <div class="fld frow"><div><label data-l="statusLabel">Durum</label><select id="nStatus" aria-label="status"></select></div><div><label data-l="targetLabel">Hedef (kelime)</label><input id="nTarget" type="number" min="0" step="500" aria-label="target"></div></div>
           <div class="br"><button class="bt bp" onclick="saveNode()" data-l="saveLabel">Kaydet</button><button class="bt bd" onclick="delSel()" data-l="deleteLabel">Sil</button></div>
           <div class="cs"><div class="ctt" data-l="connections">Bağlantılar</div><div id="connList"></div></div>
@@ -150,6 +159,13 @@
   <span id="multiCount">0 seçili</span>
   <button onclick="multiDelete()">Sil</button>
   <button onclick="multiClear()">Bırak</button>
+</div>
+
+<div class="modal-overlay" id="briefModal">
+  <div class="modal briefmodal">
+    <div class="bmh"><h2 data-l="briefTitle">Bölüm özeti</h2><button class="bt" id="briefCopy" onclick="Work.copyBrief()" data-l="briefCopy">Markdown olarak kopyala</button><button class="bt bg" onclick="Work.closeBrief()">✕</button></div>
+    <div id="briefBody" class="pv briefbody"></div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="exportModal">
@@ -272,6 +288,7 @@
 <script src="classify.js"></script>
 <script src="search.js"></script>
 <script src="argue.js"></script>
+<script src="queue.js"></script>
 <script src="exportSettings.js"></script>
 <script src="binder.js"></script>
 <script src="nodeSizing.js"></script>
