@@ -339,3 +339,26 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .sline{flex:none;min-width:22px;text-align:right;color:var(--dim);font-size:11px;padding-top:1px}
 .stext{min-width:0;word-break:break-word}
 .shit mark{background:rgba(197,160,94,.35);color:inherit;border-radius:2px;padding:0 1px}
+
+/* argument layer */
+.argpop{position:absolute;left:50%;transform:translateX(-50%);z-index:45;width:min(460px,calc(100% - 24px));background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px var(--shadow);padding:10px;display:flex;flex-direction:column;gap:8px}
+.aptitle{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.aptext{width:100%;resize:vertical;min-height:60px;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);font:14px 'DM Sans',sans-serif;line-height:1.45;outline:none}
+.aptext:focus{border-color:var(--accent)}
+.apbar{display:flex;align-items:center;gap:6px}
+.aphint{flex:1;font-size:11px;color:var(--dim)}
+.argmenu kbd{margin-left:auto;padding-left:14px;font:11px 'DM Sans',sans-serif;color:var(--dim)}
+.nargpass{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12px}
+.appath{color:var(--dim);font-size:11px}
+.apnone{color:var(--dim);font-size:12px}
+.apwarn{color:#b2543a;font-size:12px}
+.ntasks{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+.ntask{display:flex;align-items:flex-start;gap:7px;font-size:13px;line-height:1.4;padding:2px 0}
+.ntask input[type=checkbox]{width:auto !important;flex:none;margin:3px 0 0;padding:0}
+.ntask.done .nttext{text-decoration:line-through;color:var(--dim)}
+.nttext{flex:1}
+.nttext[data-passage]{cursor:pointer}
+.nttext[data-passage]:hover{color:var(--accent)}
+.ntrm{background:none;border:0;color:var(--dim);cursor:pointer;opacity:0;font-size:11px}
+.ntask:hover .ntrm{opacity:1}
+#nTaskInput{width:100%}

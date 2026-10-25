@@ -63,7 +63,9 @@ var Writer = (function () {
       '.cm-cite, .cm-cite span': { color: '#3f8f86 !important', fontFamily: "'DM Sans', sans-serif", fontSize: '0.85em' },
       '.cm-pid': { color: 'var(--dim)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.72em' },
       '.cm-lensline': { backgroundColor: 'rgba(197,160,94,0.13)', boxShadow: 'inset 3px 0 0 #c5a05e' },
-      '.cm-lensword': { borderBottom: '2px solid #c5a05e' }
+      '.cm-lensword': { borderBottom: '2px solid #c5a05e' },
+      '.cm-pid-arg': { cursor: 'pointer', color: '#c0683f !important' },
+      '.cm-pid-arg::after': { content: 'attr(data-arg)', marginLeft: '4px', padding: '0 5px', borderRadius: '8px', background: 'rgba(192,104,63,0.14)', color: '#a0532f', fontFamily: "'DM Sans', sans-serif", fontSize: '11px' }
     })
     extensions = [
       CM.history(),
@@ -75,6 +77,7 @@ var Writer = (function () {
       markPlugin(/\[[^\][\n]*@[^\][\n]*\]/g, 'cm-cite'),
       markPlugin(/\s\^[a-z0-9]{4,12}$/g, 'cm-pid'),
       lensPlugin(),
+      argPlugin(),
       CM.syntaxHighlighting(hl),
       CM.search({ top: true }),
       CM.highlightSelectionMatches(),
@@ -83,7 +86,13 @@ var Writer = (function () {
       // Images pasted or dropped into the text become figure nodes (figures.js).
       CM.EditorView.domEventHandlers({
         paste: function (e) { return window.Figures ? Figures.onPaste(e) : false },
-        drop: function (e, v) { return window.Figures ? Figures.onDrop(e, v) : false }
+        drop: function (e, v) { return window.Figures ? Figures.onDrop(e, v) : false },
+        mousedown: function (e) {
+          var b = e.target.closest && e.target.closest('.cm-pid-arg')
+          if (!b || !window.Argue || !current) return false
+          Argue.onBadge(current.path, b.getAttribute('data-pid'))
+          return true
+        }
       }),
       CM.EditorView.inputHandler.of(function (v, from, to, text) {
         if (text !== ']' || from !== to || v.state.sliceDoc(from, from + 1) !== ']') return false
@@ -104,7 +113,10 @@ var Writer = (function () {
         { key: 'Mod-Shift-c', run: cite, preventDefault: true },
         { key: 'Mod-Shift-p', run: passageId, preventDefault: true },
         { key: 'Mod-e', run: function () { togglePreview(); return true }, preventDefault: true },
-        { key: 'Mod-Shift-g', run: function () { run('figure'); return true }, preventDefault: true }
+        { key: 'Mod-Shift-g', run: function () { run('figure'); return true }, preventDefault: true },
+        { key: 'Mod-Shift-k', run: function () { run('claim'); return true }, preventDefault: true },
+        { key: 'Mod-Shift-u', run: function () { run('question'); return true }, preventDefault: true },
+        { key: 'Mod-Shift-t', run: function () { run('task'); return true }, preventDefault: true }
       ]),
       CM.keymap.of([].concat(CM.searchKeymap, CM.historyKeymap, CM.defaultKeymap, [CM.indentWithTab])),
       CM.EditorView.updateListener.of(function (u) {
@@ -151,6 +163,37 @@ var Writer = (function () {
       constructor(v) { this.ver = window.Classify ? Classify.version() : 0; this.decorations = find(v) }
       update(u) {
         var ver = window.Classify ? Classify.version() : 0
+        if (u.docChanged || u.viewportChanged || ver !== this.ver) { this.ver = ver; this.decorations = find(u.view) }
+      }
+    }, { decorations: function (v) { return v.decorations } })
+  }
+
+  // Passages with claims, questions or open tasks: a small marker after their ^id.
+  function argPlugin() {
+    function find(v) {
+      var info = window.Argue && current ? Argue.passageInfo(current.path) : {}
+      if (!Object.keys(info).length) return CM.Decoration.none
+      var ranges = []
+      v.visibleRanges.forEach(function (r) {
+        for (var pos = r.from; pos <= r.to;) {
+          var l = v.state.doc.lineAt(pos), m = /\s\^([a-z0-9]{4,12})\s*$/.exec(l.text)
+          if (m && info[m[1]]) {
+            var i = info[m[1]], badge = [], tip = []
+            if (i.claims.length) { badge.push('◆' + i.claims.length); tip = tip.concat(i.claims.map(function (s) { return '◆ ' + s })) }
+            if (i.questions.length) { badge.push('?' + i.questions.length); tip = tip.concat(i.questions.map(function (s) { return '? ' + s })) }
+            if (i.tasks.length) { badge.push('☐' + i.tasks.length); tip = tip.concat(i.tasks.map(function (s) { return '☐ ' + s })) }
+            var from = l.from + m.index + 1
+            ranges.push(CM.Decoration.mark({ class: 'cm-pid-arg', attributes: { 'data-arg': badge.join(' '), 'data-pid': m[1], title: tip.join('\n') } }).range(from, from + m[1].length + 1))
+          }
+          pos = l.to + 1
+        }
+      })
+      return CM.Decoration.set(ranges, true)
+    }
+    return CM.ViewPlugin.fromClass(class {
+      constructor(v) { this.ver = window.Argue ? Argue.version() : 0; this.decorations = find(v) }
+      update(u) {
+        var ver = window.Argue ? Argue.version() : 0
         if (u.docChanged || u.viewportChanged || ver !== this.ver) { this.ver = ver; this.decorations = find(u.view) }
       }
     }, { decorations: function (v) { return v.decorations } })
@@ -285,22 +328,42 @@ var Writer = (function () {
 
   // Tag the paragraph under the cursor with ^id (kept if it already has one)
   // and copy its link (path#id) for use elsewhere.
-  function passageId(v) {
-    if (!current) return false
-    var st = v.state, line = st.doc.lineAt(st.selection.main.head)
-    if (!line.text.trim() || /^---\s*$/.test(line.text)) { flash(L('passageNeedsText')); return true }
+  // The ^id of the paragraph at the cursor, added if missing; null when there is no text there.
+  function passageFor(v) {
+    var st = v.state, line = st.doc.lineAt(st.selection.main.from)
+    if (!line.text.trim() || /^---\s*$/.test(line.text)) return null
     var n = line.number
     while (n < st.doc.lines && st.doc.line(n + 1).text.trim()) n++
     var last = st.doc.line(n), m = /\s\^([a-z0-9]{4,12})\s*$/.exec(last.text), id
-    if (m) id = m[1]
-    else {
-      var doc = st.doc.toString()
-      do { id = randomId() } while (doc.indexOf('^' + id) >= 0)
-      v.dispatch({ changes: { from: last.to, insert: ' ^' + id }, userEvent: 'input' })
-    }
+    if (m) return m[1]
+    var doc = st.doc.toString()
+    do { id = randomId() } while (doc.indexOf('^' + id) >= 0)
+    v.dispatch({ changes: { from: last.to, insert: ' ^' + id }, userEvent: 'input' })
+    return id
+  }
+
+  function passageId(v) {
+    if (!current) return false
+    var id = passageFor(v)
+    if (!id) { flash(L('passageNeedsText')); return true }
     try { navigator.clipboard.writeText(current.path + '#' + id) } catch (e) { /* ignore */ }
     flash(L('passageCopied').replace('%s', '^' + id))
     return true
+  }
+
+  // The paragraph at the cursor as plain words (for a claim's first wording): its first sentence.
+  function paragraphText() {
+    if (!view || !current) return ''
+    var st = view.state, line = st.doc.lineAt(st.selection.main.head)
+    if (!line.text.trim()) return ''
+    var a = line.number, b = line.number
+    while (a > 1 && st.doc.line(a - 1).text.trim()) a--
+    while (b < st.doc.lines && st.doc.line(b + 1).text.trim()) b++
+    var text = st.sliceDoc(st.doc.line(a).from, st.doc.line(b).to)
+      .replace(/\s\^[a-z0-9]{4,12}\s*$/, '').replace(/\[\^[^\]]+\]/g, '').replace(/\[@[^\]]*\]/g, '')
+      .replace(/^#+\s*|^>\s*|^[-*]\s+|^\d+\.\s+/gm, '').replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim()
+    var m = /^(.{20,}?[.!?…])(\s|$)/.exec(text)
+    return (m ? m[1] : text).slice(0, 240)
   }
 
   var COMMANDS = {
@@ -308,8 +371,9 @@ var Writer = (function () {
     bullet: linePrefix('bullet'), number: linePrefix('number'), link: link,
     footnote: footnote, cite: cite, passage: passageId
   }
+  var ARG = { claim: 1, question: 1, task: 1 }
   var TIPS = { bold: 'tbBold', italic: 'tbItalic', heading: 'tbHeading', quote: 'tbQuote', bullet: 'tbBullet',
-    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview', docx: 'tbDocx', figure: 'tbFigure' }
+    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview', docx: 'tbDocx', figure: 'tbFigure', argue: 'tbArgue' }
 
   // Export the open text to Word through Pandoc (main process shows the result).
   var exporting = false
@@ -328,6 +392,8 @@ var Writer = (function () {
     if (name === 'preview') { togglePreview(); return }
     if (name === 'docx') { exportDocx(); return }
     if (name === 'figure') { if (window.Figures && current && !previewOn) Figures.openPicker(document.querySelector('#wToolbar button[data-cmd="figure"]')); return }
+    if (name === 'argue') { if (window.Argue && current && !previewOn) Argue.menu(document.querySelector('#wToolbar button[data-cmd="argue"]')); return }
+    if (ARG[name]) { if (window.Argue && current && !previewOn) Argue.capture(name); return }
     if (!view || !current || previewOn || !COMMANDS[name]) return
     COMMANDS[name](view)
     view.focus()
@@ -684,6 +750,29 @@ var Writer = (function () {
     hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu,
     // Text of a loaded buffer (including unsaved edits), or null if not loaded.
     textFor: function (path) { return buffers[path] ? textOf(path) : null },
+    // Argument capture (argue.js).
+    ensurePassage: function () { return view && current ? passageFor(view) : null },
+    paragraphText: paragraphText,
+    flash: function (t) { flash(t) },
+    focus: function () { if (view && current && !previewOn) view.focus() },
+    refreshArgs: function () { if (view) view.dispatch({}) },
+    cursorCoords: function () { if (!view || !current) return null; try { return view.coordsAtPos(view.state.selection.main.head) } catch (e) { return null } },
+    // Select the paragraph that ends with ^id and bring it into view.
+    revealPassage: function (id) {
+      if (!view || !current) return false
+      if (previewOn) togglePreview()
+      var doc = view.state.doc, re = new RegExp('\\s\\^' + id + '\\s*$')
+      for (var i = 1; i <= doc.lines; i++) {
+        var l = doc.line(i)
+        if (!re.test(l.text)) continue
+        var a = i; while (a > 1 && doc.line(a - 1).text.trim()) a--
+        var from = doc.line(a).from
+        view.dispatch({ selection: { anchor: from, head: l.to - (l.text.length - l.text.replace(/\s\^[a-z0-9]{4,12}\s*$/, '').length) }, effects: CM.EditorView.scrollIntoView(from, { y: 'center' }) })
+        view.focus()
+        return true
+      }
+      return false
+    },
     // Select a found word and bring it to the middle of the pane (search results).
     reveal: function (line, col, len) {
       if (!view || !current) return false
