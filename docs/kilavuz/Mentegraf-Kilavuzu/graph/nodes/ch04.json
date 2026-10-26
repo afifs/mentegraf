@@ -1,0 +1,13 @@
+{
+  "id": "ch04",
+  "label": "Metin bölmesi",
+  "type": "chapter",
+  "description": "Her düğümün metni, araç çubuğu, önizleme, dışarıda düzenleme.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/04-metin-bolmesi.md",
+  "status": "revision",
+  "cats": [
+    "cat-yazma"
+  ]
+}

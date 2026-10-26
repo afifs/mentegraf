@@ -1,0 +1,13 @@
+{
+  "id": "ch05",
+  "label": "Dipnot, atıf ve pasaj",
+  "type": "chapter",
+  "description": "Adlı dipnotlar, Zotero atıfları, pasaj kimlikleri.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/05-dipnot-atif-pasaj.md",
+  "status": "revision",
+  "cats": [
+    "cat-yazma"
+  ]
+}

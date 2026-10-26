@@ -1,0 +1,13 @@
+{
+  "id": "a-disari",
+  "label": "Yazar alıştığı editörde yazmayı sürdürebilmeli; Mentegraf dışarıdaki değişiklikleri izler.",
+  "type": "claim",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "argStatus": "supported",
+  "passage": "manuscript/04-metin-bolmesi.md#disari",
+  "cats": [
+    "cat-yazma"
+  ]
+}

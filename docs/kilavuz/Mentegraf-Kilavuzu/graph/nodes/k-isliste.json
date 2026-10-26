@@ -1,0 +1,11 @@
+{
+  "id": "k-isliste",
+  "label": "İş listesi",
+  "type": "concept",
+  "description": "Açık sorular, görevler, karara bağlanmamış iddialar ve kopan pasajlar.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-arguman"
+  ]
+}

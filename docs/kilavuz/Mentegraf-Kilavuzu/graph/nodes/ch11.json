@@ -1,0 +1,13 @@
+{
+  "id": "ch11",
+  "label": "İş listesi ve bölüm özeti",
+  "type": "chapter",
+  "description": "Yapılacakları toplayan liste ve bölüm başına özet.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/11-is-listesi-ozet.md",
+  "status": "revision",
+  "cats": [
+    "cat-arguman"
+  ]
+}

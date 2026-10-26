@@ -1,0 +1,14 @@
+{
+  "id": "a-pasaj",
+  "label": "Bir pasajın adresi içeriği değil kimliğidir; paragraf yeniden yazılsa da bağ korunur.",
+  "type": "claim",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "argStatus": "thesis",
+  "passage": "manuscript/05-dipnot-atif-pasaj.md#pasaj",
+  "cats": [
+    "cat-yazma",
+    "cat-arguman"
+  ]
+}

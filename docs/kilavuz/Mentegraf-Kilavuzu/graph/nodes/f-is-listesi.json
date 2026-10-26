@@ -1,0 +1,13 @@
+{
+  "id": "f-is-listesi",
+  "label": "Ekran görüntüsü: İş listesi",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/is-listesi.png",
+  "figId": "fig:is-listesi",
+  "cats": [
+    "cat-arguman"
+  ]
+}

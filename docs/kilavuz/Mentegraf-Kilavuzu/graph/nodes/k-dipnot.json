@@ -1,0 +1,11 @@
+{
+  "id": "k-dipnot",
+  "label": "Dipnot",
+  "type": "concept",
+  "description": "Adlı etiketlerle tutulan, derlemede numaralanan notlar.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma"
+  ]
+}

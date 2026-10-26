@@ -1,0 +1,22 @@
+{
+  "id": "ch01",
+  "label": "Mentegraf nedir?",
+  "type": "chapter",
+  "description": "Mentegraf'ın amacı, ana ekranı ve temel ilkeleri.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/01-mentegraf-nedir.md",
+  "status": "revision",
+  "cats": [
+    "cat-harita"
+  ],
+  "tasks": [
+    {
+      "id": "t-1",
+      "text": "Ekran görüntülerini her sürümde yenile",
+      "done": false,
+      "passage": null,
+      "created": "2026-10-26"
+    }
+  ]
+}

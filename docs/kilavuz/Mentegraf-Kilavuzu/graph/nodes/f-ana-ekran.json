@@ -1,0 +1,13 @@
+{
+  "id": "f-ana-ekran",
+  "label": "Ekran görüntüsü: Ana ekran",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/ana-ekran.png",
+  "figId": "fig:ana-ekran",
+  "cats": [
+    "cat-harita"
+  ]
+}

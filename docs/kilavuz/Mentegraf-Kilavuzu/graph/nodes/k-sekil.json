@@ -1,0 +1,11 @@
+{
+  "id": "k-sekil",
+  "label": "Şekil",
+  "type": "concept",
+  "description": "Görsel; haritada düğüm, metinde ![…](…){#fig:…}.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma"
+  ]
+}

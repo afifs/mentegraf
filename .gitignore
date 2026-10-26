@@ -5,3 +5,6 @@ out/
 *.mentegraf
 package-lock.json
 /qodana.yaml
+
+# the manual is a Mentegraf project: keep its project file
+!docs/**/project.mentegraf

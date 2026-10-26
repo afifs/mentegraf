@@ -1,0 +1,13 @@
+{
+  "id": "f-kitap-plani",
+  "label": "Ekran görüntüsü: Kitap planı",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/kitap-plani.png",
+  "figId": "fig:kitap-plani",
+  "cats": [
+    "cat-kitap"
+  ]
+}

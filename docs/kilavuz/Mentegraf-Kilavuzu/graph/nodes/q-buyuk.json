@@ -1,0 +1,13 @@
+{
+  "id": "q-buyuk",
+  "label": "Harita yüzlerce iddiaya ulaştığında okunabilir kalır mı, yoksa liste ve özet görünümleri mi asıl arayüz olur?",
+  "type": "question",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "argStatus": "open",
+  "cats": [
+    "cat-harita",
+    "cat-arguman"
+  ]
+}

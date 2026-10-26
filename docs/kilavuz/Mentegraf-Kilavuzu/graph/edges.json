@@ -1,0 +1,698 @@
+[
+  {
+    "id": "e-k1",
+    "source": "ch01",
+    "target": "k-dugum",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k10",
+    "source": "ch05",
+    "target": "k-markdown",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k11",
+    "source": "ch05",
+    "target": "k-dipnot",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k12",
+    "source": "ch05",
+    "target": "k-atif",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k13",
+    "source": "ch05",
+    "target": "k-pasaj",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k14",
+    "source": "ch10",
+    "target": "k-pasaj",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k15",
+    "source": "ch04",
+    "target": "k-onizleme",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k16",
+    "source": "ch06",
+    "target": "k-sekil",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k17",
+    "source": "ch06",
+    "target": "k-tablo",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k18",
+    "source": "ch07",
+    "target": "k-plan",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k19",
+    "source": "ch08",
+    "target": "k-derleme",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k2",
+    "source": "ch03",
+    "target": "k-dugum",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k20",
+    "source": "ch05",
+    "target": "k-csl",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k21",
+    "source": "ch08",
+    "target": "k-csl",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k22",
+    "source": "ch08",
+    "target": "k-sablon",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k23",
+    "source": "ch09",
+    "target": "k-kategori",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k24",
+    "source": "ch09",
+    "target": "k-etiket",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k25",
+    "source": "ch09",
+    "target": "k-filtre",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k26",
+    "source": "ch09",
+    "target": "k-arama",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k27",
+    "source": "ch10",
+    "target": "k-iddia",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k28",
+    "source": "ch10",
+    "target": "k-soru",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k29",
+    "source": "ch10",
+    "target": "k-gorev",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k3",
+    "source": "ch03",
+    "target": "k-baglanti",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k30",
+    "source": "ch11",
+    "target": "k-gorev",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k31",
+    "source": "ch11",
+    "target": "k-isliste",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k32",
+    "source": "ch11",
+    "target": "k-ozet",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k33",
+    "source": "ch04",
+    "target": "t-pandoc",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k34",
+    "source": "ch08",
+    "target": "t-pandoc",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k35",
+    "source": "ch05",
+    "target": "t-zotero",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k36",
+    "source": "ch08",
+    "target": "t-zotero",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k37",
+    "source": "ch02",
+    "target": "t-seafile",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k38",
+    "source": "ch04",
+    "target": "t-typora",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k39",
+    "source": "k-pasaj",
+    "target": "k-iddia",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k4",
+    "source": "ch03",
+    "target": "k-tur",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k40",
+    "source": "k-pasaj",
+    "target": "k-gorev",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k41",
+    "source": "k-iddia",
+    "target": "k-isliste",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k42",
+    "source": "k-soru",
+    "target": "k-isliste",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k43",
+    "source": "k-gorev",
+    "target": "k-isliste",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k44",
+    "source": "k-iddia",
+    "target": "k-ozet",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k45",
+    "source": "k-kategori",
+    "target": "k-filtre",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k46",
+    "source": "k-etiket",
+    "target": "k-filtre",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k47",
+    "source": "k-filtre",
+    "target": "k-arama",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k48",
+    "source": "k-plan",
+    "target": "k-derleme",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k49",
+    "source": "k-dipnot",
+    "target": "k-derleme",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k5",
+    "source": "ch09",
+    "target": "k-tur",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k50",
+    "source": "k-atif",
+    "target": "k-csl",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k51",
+    "source": "t-pandoc",
+    "target": "k-derleme",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k52",
+    "source": "t-zotero",
+    "target": "k-atif",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k53",
+    "source": "k-markdown",
+    "target": "k-metin",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k54",
+    "source": "k-sekil",
+    "target": "k-dugum",
+    "weight": 3,
+    "edgeType": "parallel",
+    "note": ""
+  },
+  {
+    "id": "e-k55",
+    "source": "k-tablo",
+    "target": "k-dugum",
+    "weight": 3,
+    "edgeType": "parallel",
+    "note": ""
+  },
+  {
+    "id": "e-k56",
+    "source": "k-dugum",
+    "target": "k-baglanti",
+    "weight": 3,
+    "edgeType": "parallel",
+    "note": ""
+  },
+  {
+    "id": "e-k57",
+    "source": "k-tur",
+    "target": "k-dugum",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k58",
+    "source": "k-klasor",
+    "target": "t-seafile",
+    "weight": 3,
+    "edgeType": "influences",
+    "note": ""
+  },
+  {
+    "id": "e-k59",
+    "source": "k-yedek",
+    "target": "k-klasor",
+    "weight": 3,
+    "edgeType": "builds_on",
+    "note": ""
+  },
+  {
+    "id": "e-k6",
+    "source": "ch02",
+    "target": "k-klasor",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k60",
+    "source": "t-typora",
+    "target": "k-metin",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k61",
+    "source": "ch01",
+    "target": "f-ana-ekran",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k62",
+    "source": "ch04",
+    "target": "f-metin-bolmesi",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k63",
+    "source": "ch07",
+    "target": "f-kitap-plani",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k64",
+    "source": "ch09",
+    "target": "f-siniflandirma",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k65",
+    "source": "ch09",
+    "target": "f-arama",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k66",
+    "source": "ch10",
+    "target": "f-iddia",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k67",
+    "source": "ch11",
+    "target": "f-is-listesi",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k68",
+    "source": "ch11",
+    "target": "f-ozet",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k69",
+    "source": "ch01",
+    "target": "a-kendi",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k7",
+    "source": "ch02",
+    "target": "k-yedek",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k70",
+    "source": "a-kendi",
+    "target": "k-dugum",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k71",
+    "source": "ch01",
+    "target": "a-metin",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k72",
+    "source": "a-metin",
+    "target": "k-markdown",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k73",
+    "source": "a-metin",
+    "target": "t-typora",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k74",
+    "source": "ch04",
+    "target": "a-disari",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k75",
+    "source": "a-disari",
+    "target": "t-typora",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k76",
+    "source": "a-disari",
+    "target": "k-metin",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k77",
+    "source": "ch05",
+    "target": "a-pasaj",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k78",
+    "source": "a-pasaj",
+    "target": "k-pasaj",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k79",
+    "source": "ch10",
+    "target": "a-tus",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k8",
+    "source": "ch04",
+    "target": "k-metin",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  },
+  {
+    "id": "e-k80",
+    "source": "a-tus",
+    "target": "k-iddia",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k81",
+    "source": "a-tus",
+    "target": "k-gorev",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k82",
+    "source": "ch11",
+    "target": "a-kopma",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k83",
+    "source": "a-kopma",
+    "target": "k-isliste",
+    "weight": 3,
+    "edgeType": "source",
+    "note": ""
+  },
+  {
+    "id": "e-k84",
+    "source": "a-tus",
+    "target": "a-kopma",
+    "weight": 3,
+    "edgeType": "supports",
+    "note": ""
+  },
+  {
+    "id": "e-k85",
+    "source": "a-metin",
+    "target": "a-disari",
+    "weight": 3,
+    "edgeType": "supports",
+    "note": ""
+  },
+  {
+    "id": "e-k86",
+    "source": "ch03",
+    "target": "q-buyuk",
+    "weight": 3,
+    "edgeType": "contains",
+    "note": ""
+  },
+  {
+    "id": "e-k87",
+    "source": "a-kopma",
+    "target": "q-buyuk",
+    "weight": 3,
+    "edgeType": "answers",
+    "note": "Kısmen: harita değil iş listesi bakımı yönetir."
+  },
+  {
+    "id": "e-k9",
+    "source": "ch04",
+    "target": "k-markdown",
+    "weight": 3,
+    "edgeType": "discusses",
+    "note": ""
+  }
+]

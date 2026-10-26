@@ -1,0 +1,11 @@
+{
+  "id": "k-arama",
+  "label": "Metinlerde arama",
+  "type": "concept",
+  "description": "Bütün metinlerde aksan ve büyük-küçük harf duyarsız arama.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-duzen"
+  ]
+}

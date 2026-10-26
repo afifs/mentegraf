@@ -1,0 +1,11 @@
+{
+  "id": "k-tur",
+  "label": "Düğüm türü",
+  "type": "term",
+  "description": "Bir düğümün ne olduğu; rengi ve simgesini belirler.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-harita"
+  ]
+}

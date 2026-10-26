@@ -1,0 +1,11 @@
+{
+  "id": "k-klasor",
+  "label": "Proje klasörü",
+  "type": "concept",
+  "description": "Her düğüm bir dosya; eşitlemeye ve sürüm takibine uygun.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-dosya"
+  ]
+}

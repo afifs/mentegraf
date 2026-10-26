@@ -1,0 +1,12 @@
+{
+  "id": "t-typora",
+  "label": "Typora / Obsidian",
+  "type": "document",
+  "description": "Metinleri Mentegraf dışında düzenlemek için editörler.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-dis",
+    "cat-yazma"
+  ]
+}

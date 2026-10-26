@@ -1,0 +1,11 @@
+{
+  "id": "k-markdown",
+  "label": "Markdown",
+  "type": "term",
+  "description": "Metinlerin saklandığı düz metin biçimi (Pandoc Markdown).",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma"
+  ]
+}

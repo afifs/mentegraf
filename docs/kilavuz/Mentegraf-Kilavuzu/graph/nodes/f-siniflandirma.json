@@ -1,0 +1,13 @@
+{
+  "id": "f-siniflandirma",
+  "label": "Ekran görüntüsü: Sınıflandırma bölmesi",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/siniflandirma.png",
+  "figId": "fig:siniflandirma",
+  "cats": [
+    "cat-duzen"
+  ]
+}

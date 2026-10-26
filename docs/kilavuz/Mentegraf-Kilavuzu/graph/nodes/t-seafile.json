@@ -1,0 +1,12 @@
+{
+  "id": "t-seafile",
+  "label": "Seafile",
+  "type": "document",
+  "description": "Proje klasörünü bilgisayarlar arasında eşitleyen araç (Nextcloud, Git de olur).",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-dis",
+    "cat-dosya"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "k-iddia",
+  "label": "İddia",
+  "type": "concept",
+  "description": "Kitabın ileri sürdüğü önerme; durumu ve pasajı vardır.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-arguman"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "k-atif",
+  "label": "Atıf",
+  "type": "concept",
+  "description": "Zotero anahtarıyla yazılan, seçilen stile göre biçimlenen kaynak gösterme.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma"
+  ]
+}

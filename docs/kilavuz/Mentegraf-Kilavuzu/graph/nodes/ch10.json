@@ -1,0 +1,13 @@
+{
+  "id": "ch10",
+  "label": "Argüman katmanı",
+  "type": "chapter",
+  "description": "İddia, soru, görev; yakalama; işaretler; anlamlı bağlantılar.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/10-arguman.md",
+  "status": "revision",
+  "cats": [
+    "cat-arguman"
+  ]
+}

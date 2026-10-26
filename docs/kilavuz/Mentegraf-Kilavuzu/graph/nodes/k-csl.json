@@ -1,0 +1,11 @@
+{
+  "id": "k-csl",
+  "label": "Atıf stili (CSL)",
+  "type": "term",
+  "description": "Atıf ve kaynakça biçimini belirleyen stil dosyası.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-aktarim"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "k-soru",
+  "label": "Soru",
+  "type": "concept",
+  "description": "Kitabın sorduğu ya da açık bıraktığı soru.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-arguman"
+  ]
+}

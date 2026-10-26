@@ -1,0 +1,13 @@
+{
+  "id": "ch06",
+  "label": "Şekiller ve tablolar",
+  "type": "chapter",
+  "description": "Görseller ve CSV tablolar düğüm olarak; numaralama ve atıf.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/06-sekil-tablo.md",
+  "status": "revision",
+  "cats": [
+    "cat-yazma"
+  ]
+}

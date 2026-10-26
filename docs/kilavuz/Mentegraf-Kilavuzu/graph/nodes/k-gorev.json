@@ -1,0 +1,11 @@
+{
+  "id": "k-gorev",
+  "label": "Görev",
+  "type": "concept",
+  "description": "Bir metne ve pasaja bağlı yapılacak iş; düğüm değildir.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-arguman"
+  ]
+}

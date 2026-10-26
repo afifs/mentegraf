@@ -1,0 +1,131 @@
+{
+  "title": "Mentegraf Kılavuzu",
+  "items": [
+    {
+      "id": "part-1",
+      "kind": "part",
+      "title": "Başlarken",
+      "children": [
+        {
+          "id": "ch01",
+          "kind": "node",
+          "node": "ch01",
+          "include": true,
+          "children": []
+        },
+        {
+          "id": "ch02",
+          "kind": "node",
+          "node": "ch02",
+          "include": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "part-2",
+      "kind": "part",
+      "title": "Harita",
+      "children": [
+        {
+          "id": "ch03",
+          "kind": "node",
+          "node": "ch03",
+          "include": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "part-3",
+      "kind": "part",
+      "title": "Yazmak",
+      "children": [
+        {
+          "id": "ch04",
+          "kind": "node",
+          "node": "ch04",
+          "include": true,
+          "children": []
+        },
+        {
+          "id": "ch05",
+          "kind": "node",
+          "node": "ch05",
+          "include": true,
+          "children": []
+        },
+        {
+          "id": "ch06",
+          "kind": "node",
+          "node": "ch06",
+          "include": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "part-4",
+      "kind": "part",
+      "title": "Kitap",
+      "children": [
+        {
+          "id": "ch07",
+          "kind": "node",
+          "node": "ch07",
+          "include": true,
+          "children": []
+        },
+        {
+          "id": "ch08",
+          "kind": "node",
+          "node": "ch08",
+          "include": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "part-5",
+      "kind": "part",
+      "title": "Düşünmek",
+      "children": [
+        {
+          "id": "ch09",
+          "kind": "node",
+          "node": "ch09",
+          "include": true,
+          "children": []
+        },
+        {
+          "id": "ch10",
+          "kind": "node",
+          "node": "ch10",
+          "include": true,
+          "children": []
+        },
+        {
+          "id": "ch11",
+          "kind": "node",
+          "node": "ch11",
+          "include": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "part-6",
+      "kind": "part",
+      "title": "Ekler",
+      "children": [
+        {
+          "id": "ch12",
+          "kind": "node",
+          "node": "ch12",
+          "include": true,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

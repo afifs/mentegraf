@@ -1,0 +1,11 @@
+{
+  "id": "k-baglanti",
+  "label": "Bağlantı",
+  "type": "concept",
+  "description": "İki düğüm arasındaki ilişki; türü, notu ve gücü vardır.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-harita"
+  ]
+}

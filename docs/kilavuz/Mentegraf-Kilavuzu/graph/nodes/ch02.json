@@ -1,0 +1,13 @@
+{
+  "id": "ch02",
+  "label": "Proje klasörü ve kaydetme",
+  "type": "chapter",
+  "description": "Klasör biçimi, kaydetme, yedekler, kurtarma, ayarlar.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/02-proje-klasoru.md",
+  "status": "revision",
+  "cats": [
+    "cat-dosya"
+  ]
+}

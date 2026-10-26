@@ -1,0 +1,13 @@
+{
+  "id": "f-metin-bolmesi",
+  "label": "Ekran görüntüsü: Metin bölmesi",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/metin-bolmesi.png",
+  "figId": "fig:metin-bolmesi",
+  "cats": [
+    "cat-yazma"
+  ]
+}

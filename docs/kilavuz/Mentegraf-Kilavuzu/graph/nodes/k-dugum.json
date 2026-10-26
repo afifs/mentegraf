@@ -1,0 +1,11 @@
+{
+  "id": "k-dugum",
+  "label": "Düğüm",
+  "type": "concept",
+  "description": "Haritanın temel birimi: kavram, kişi, kitap, bölüm…",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-harita"
+  ]
+}

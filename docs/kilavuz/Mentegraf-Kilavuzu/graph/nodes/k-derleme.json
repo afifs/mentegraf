@@ -1,0 +1,11 @@
+{
+  "id": "k-derleme",
+  "label": "Derleme",
+  "type": "concept",
+  "description": "Plandaki bölümleri DOCX, EPUB ya da tek Markdown dosyasına birleştirme.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-aktarim"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "a-kopma",
+  "label": "Harita metinden koptuğunda yazar bunu aramadan görmeli.",
+  "type": "claim",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "argStatus": "thesis",
+  "passage": "manuscript/11-is-listesi-ozet.md#kopma",
+  "cats": [
+    "cat-arguman"
+  ]
+}

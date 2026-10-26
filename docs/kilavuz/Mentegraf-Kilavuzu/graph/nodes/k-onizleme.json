@@ -1,0 +1,11 @@
+{
+  "id": "k-onizleme",
+  "label": "Önizleme",
+  "type": "concept",
+  "description": "Metnin dizgi hâli: dipnotlar, numaralı şekiller.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "k-yedek",
+  "label": "Yedek ve kurtarma",
+  "type": "concept",
+  "description": "Güvenli yazma, otomatik yedekler, 30 saniyelik kurtarma dosyası.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-dosya"
+  ]
+}

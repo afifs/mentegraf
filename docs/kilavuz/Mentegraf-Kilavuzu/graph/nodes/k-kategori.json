@@ -1,0 +1,11 @@
+{
+  "id": "k-kategori",
+  "label": "Kategori",
+  "type": "concept",
+  "description": "Yazarın kendi konu ağacındaki yer; bir düğüm birden çok kategoride olabilir.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-duzen"
+  ]
+}

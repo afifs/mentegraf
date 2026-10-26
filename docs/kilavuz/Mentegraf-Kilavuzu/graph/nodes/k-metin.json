@@ -1,0 +1,11 @@
+{
+  "id": "k-metin",
+  "label": "Metin",
+  "type": "concept",
+  "description": "Bir düğüme ait Markdown dosyası.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "k-filtre",
+  "label": "Filtre",
+  "type": "concept",
+  "description": "Bir kategori ya da etikete göre haritayı, planı ve metni süzme.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-duzen"
+  ]
+}

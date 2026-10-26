@@ -1,0 +1,11 @@
+{
+  "id": "k-sablon",
+  "label": "Word şablonu",
+  "type": "term",
+  "description": "Word çıktısının biçimlerini veren reference.docx.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-aktarim"
+  ]
+}

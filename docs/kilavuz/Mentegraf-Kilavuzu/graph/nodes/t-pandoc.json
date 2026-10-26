@@ -1,0 +1,11 @@
+{
+  "id": "t-pandoc",
+  "label": "Pandoc",
+  "type": "document",
+  "description": "Belge dönüştürücü; Word ve EPUB derlemesi için gerekir (2.17+).",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-dis"
+  ]
+}

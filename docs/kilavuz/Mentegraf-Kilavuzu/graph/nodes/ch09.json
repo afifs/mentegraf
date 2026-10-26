@@ -1,0 +1,13 @@
+{
+  "id": "ch09",
+  "label": "Sınıflandırma ve arama",
+  "type": "chapter",
+  "description": "Kategori ağacı, etiketler, filtre, metinlerde arama.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/09-siniflandirma-arama.md",
+  "status": "revision",
+  "cats": [
+    "cat-duzen"
+  ]
+}

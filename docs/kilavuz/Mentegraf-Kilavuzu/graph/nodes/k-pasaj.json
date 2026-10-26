@@ -1,0 +1,12 @@
+{
+  "id": "k-pasaj",
+  "label": "Pasaj",
+  "type": "concept",
+  "description": "Metin içinde adresi olan blok: paragrafın sonundaki ^kimlik.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma",
+    "cat-arguman"
+  ]
+}

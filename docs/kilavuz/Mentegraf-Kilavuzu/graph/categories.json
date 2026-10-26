@@ -1,0 +1,49 @@
+{
+  "categories": [
+    {
+      "id": "cat-harita",
+      "name": "Harita",
+      "parent": null
+    },
+    {
+      "id": "cat-yazma",
+      "name": "Yazma",
+      "parent": null
+    },
+    {
+      "id": "cat-kitap",
+      "name": "Kitap",
+      "parent": null
+    },
+    {
+      "id": "cat-duzen",
+      "name": "Düzen ve arama",
+      "parent": null
+    },
+    {
+      "id": "cat-arguman",
+      "name": "Argüman",
+      "parent": null
+    },
+    {
+      "id": "cat-altyapi",
+      "name": "Altyapı",
+      "parent": null
+    },
+    {
+      "id": "cat-dosya",
+      "name": "Dosyalar ve güvenlik",
+      "parent": "cat-altyapi"
+    },
+    {
+      "id": "cat-dis",
+      "name": "Dış araçlar",
+      "parent": "cat-altyapi"
+    },
+    {
+      "id": "cat-aktarim",
+      "name": "Dışa aktarım",
+      "parent": "cat-kitap"
+    }
+  ]
+}

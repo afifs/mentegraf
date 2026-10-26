@@ -1,0 +1,13 @@
+{
+  "id": "f-iddia",
+  "label": "Ekran görüntüsü: İddia yakalama",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/iddia.png",
+  "figId": "fig:iddia",
+  "cats": [
+    "cat-arguman"
+  ]
+}

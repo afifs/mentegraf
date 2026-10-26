@@ -1,0 +1,13 @@
+{
+  "id": "f-arama",
+  "label": "Ekran görüntüsü: Metinlerde arama",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/arama.png",
+  "figId": "fig:arama",
+  "cats": [
+    "cat-duzen"
+  ]
+}

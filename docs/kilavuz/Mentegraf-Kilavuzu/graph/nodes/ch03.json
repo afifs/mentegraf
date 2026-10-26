@@ -1,0 +1,13 @@
+{
+  "id": "ch03",
+  "label": "Harita: düğümler ve bağlantılar",
+  "type": "chapter",
+  "description": "Düğüm ve bağlantı kurmak, odaklanmak, türler ve filtreler.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/03-harita.md",
+  "status": "revision",
+  "cats": [
+    "cat-harita"
+  ]
+}

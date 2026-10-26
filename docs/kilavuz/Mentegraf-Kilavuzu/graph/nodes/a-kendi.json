@@ -1,0 +1,13 @@
+{
+  "id": "a-kendi",
+  "label": "Bir araç en iyi kendisiyle anlatılır: kılavuz, anlattığı her özelliği kullanarak yazıldı.",
+  "type": "claim",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "argStatus": "thesis",
+  "passage": "manuscript/01-mentegraf-nedir.md#ilke1",
+  "cats": [
+    "cat-harita"
+  ]
+}

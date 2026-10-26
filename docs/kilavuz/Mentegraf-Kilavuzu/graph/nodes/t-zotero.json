@@ -1,0 +1,11 @@
+{
+  "id": "t-zotero",
+  "label": "Zotero + Better BibTeX",
+  "type": "document",
+  "description": "Kaynak yöneticisi; atıf seçici ve içe aktarma için.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-dis"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "k-plan",
+  "label": "Kitap planı",
+  "type": "concept",
+  "description": "Kısım, bölüm ve alt bölümlerden oluşan okuma sırası.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-kitap"
+  ]
+}

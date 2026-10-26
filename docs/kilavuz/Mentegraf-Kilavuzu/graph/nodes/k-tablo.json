@@ -1,0 +1,11 @@
+{
+  "id": "k-tablo",
+  "label": "Tablo",
+  "type": "concept",
+  "description": "CSV dosyası; dışa aktarımda gerçek tabloya dönüşür.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-yazma"
+  ]
+}

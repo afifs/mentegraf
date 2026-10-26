@@ -1,0 +1,19 @@
+{
+  "id": "ch12",
+  "label": "Ek A — Kısayollar",
+  "type": "chapter",
+  "description": "Bütün klavye kısayolları.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/12-kisayollar.md",
+  "status": "revision",
+  "tasks": [
+    {
+      "id": "t-3",
+      "text": "Kısayol tablosunu macOS (Cmd) için de ver",
+      "done": false,
+      "passage": null,
+      "created": "2026-10-26"
+    }
+  ]
+}

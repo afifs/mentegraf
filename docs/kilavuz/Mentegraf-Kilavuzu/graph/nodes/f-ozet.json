@@ -1,0 +1,13 @@
+{
+  "id": "f-ozet",
+  "label": "Ekran görüntüsü: Bölüm özeti",
+  "type": "figure",
+  "description": "",
+  "notes": "",
+  "tags": [],
+  "asset": "assets/ozet.png",
+  "figId": "fig:ozet",
+  "cats": [
+    "cat-arguman"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "ch07",
+  "label": "Kitap planı",
+  "type": "chapter",
+  "description": "Kısımlar, bölümler, durum, hedef, derlemeye dahil etme.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/07-kitap-plani.md",
+  "status": "revision",
+  "cats": [
+    "cat-kitap"
+  ]
+}

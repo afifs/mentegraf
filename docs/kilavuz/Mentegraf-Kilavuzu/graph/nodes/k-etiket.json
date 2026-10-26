@@ -1,0 +1,11 @@
+{
+  "id": "k-etiket",
+  "label": "Etiket",
+  "type": "concept",
+  "description": "Düz, geçici işaret.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-duzen"
+  ]
+}

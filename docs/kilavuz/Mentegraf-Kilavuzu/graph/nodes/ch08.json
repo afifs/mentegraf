@@ -1,0 +1,22 @@
+{
+  "id": "ch08",
+  "label": "Derleme ve dışa aktarım",
+  "type": "chapter",
+  "description": "DOCX, EPUB, Markdown; stil ve şablon; haritanın dışa aktarımı; Zotero.",
+  "notes": "",
+  "tags": [],
+  "fragment": "manuscript/08-derleme.md",
+  "status": "revision",
+  "cats": [
+    "cat-aktarim"
+  ],
+  "tasks": [
+    {
+      "id": "t-2",
+      "text": "Pandoc kurulumunu Windows ve macOS için adım adım ekle",
+      "done": false,
+      "passage": null,
+      "created": "2026-10-26"
+    }
+  ]
+}

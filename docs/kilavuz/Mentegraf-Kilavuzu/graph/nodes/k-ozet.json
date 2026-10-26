@@ -1,0 +1,11 @@
+{
+  "id": "k-ozet",
+  "label": "Bölüm özeti",
+  "type": "concept",
+  "description": "Bir bölüm hakkında haritanın bildiği her şey, tek sayfada.",
+  "notes": "",
+  "tags": [],
+  "cats": [
+    "cat-arguman"
+  ]
+}
