@@ -92,7 +92,8 @@ const MENU_LABELS = {
 }
 
 function labels() { return MENU_LABELS[currentLang] || MENU_LABELS.tr }
-function send(channel, ...args) { if (mainWindow) mainWindow.webContents.send(channel, ...args) }
+function windowAlive() { return !!(mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) }
+function send(channel, ...args) { if (windowAlive()) mainWindow.webContents.send(channel, ...args) }
 
 // Tell the renderer where the project folder is, so it can show images from assets/.
 let lastBase
@@ -102,7 +103,7 @@ function sendProjectBase(force) {
 }
 
 function updateTitle() {
-  if (!mainWindow) return
+  if (!windowAlive()) return
   sendProjectBase()
   mainWindow.setTitle('Mentegraf' + (currentDir ? ' — ' + path.basename(currentDir) : '') + (isDirty ? ' •' : ''))
 }
@@ -584,6 +585,12 @@ function createWindow() {
     })
     if (choice === 0) mainWindow.webContents.send('menu-action', 'save-then-close')
     else if (choice === 1) { clearRecovery(); forceClose = true; mainWindow.close() }
+  })
+  // After closing, a text watcher or timer may still fire (saving writes the texts): stop them all.
+  mainWindow.on('closed', () => {
+    unwatchTexts()
+    Object.keys(textTimers).forEach(k => clearTimeout(textTimers[k]))
+    mainWindow = null
   })
   buildMenu()
 }
