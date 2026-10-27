@@ -287,6 +287,22 @@ test('new text paths: chapters in manuscript/, others in notes/, never reused', 
   assert.strictEqual(Store.newFragmentPath(dir, 'Wiener', 'person', 'n1', []), 'notes/wiener-n1-2.md', 'existing file counts as taken')
 })
 
+test('backups: newest kept, older thinned to one per 10 minutes', () => {
+  const name = (h, m, s) => 'backup-20261027-' + String(h).padStart(2, '0') + String(m).padStart(2, '0') + String(s || 0).padStart(2, '0') + '.json'
+  // one save a minute from 10:00 to 11:59 (auto-save)
+  const all = []; for (let i = 0; i < 120; i++) all.push(name(10 + Math.floor(i / 60), i % 60))
+  const drop = new Set(Store.backupsToDrop(all, 20)), kept = all.filter(n => !drop.has(n))
+  assert.strictEqual(kept.length, 14)
+  assert.deepStrictEqual(kept.slice(-3), [name(11, 57), name(11, 58), name(11, 59)], 'the newest three stay')
+  assert.ok(kept.includes(name(10, 0)) || kept.includes(name(10, 7)), 'the oldest hour is still covered')
+  for (let i = 1; i < kept.length - 3; i++) assert.ok(all.indexOf(kept[i]) - all.indexOf(kept[i - 1]) >= 10, 'older ones are 10 minutes apart')
+  // few saves: nothing dropped
+  assert.deepStrictEqual(Store.backupsToDrop([name(9, 0), name(9, 1), name(12, 0)], 20), [])
+  // cap
+  const days = []; for (let i = 0; i < 40; i++) days.push('backup-2026' + String(1001 + i).slice(-4) + '-090000.json')
+  assert.strictEqual(days.length - Store.backupsToDrop(days, 20).length, 20)
+})
+
 test('write and read texts; unchanged texts are not rewritten; old versions kept', () => {
   const dir = path.join(tmp(), 'Book')
   Store.writeProject(dir, sample())

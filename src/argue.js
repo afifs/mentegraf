@@ -179,6 +179,9 @@ var Argue = (function () {
 
   // ───────── node panel ─────────
 
+  // The node that owns a text (its chapter or section), for the brief.
+  function ownerOfPath(path) { var o = null; if (path && window.cy) cy.nodes().forEach(function (x) { if (!o && x.data('fragment') === path) o = x }); return o }
+
   function updatePanel(n) {
     var fld = $('nArgFld'), tfld = $('nTasksFld')
     if (!fld || !tfld) return
@@ -197,7 +200,8 @@ var Argue = (function () {
       var p = splitPassage(node.data('passage')), box = $('nArgPassage')
       if (!p) box.innerHTML = '<span class="apnone">' + esc(L('passageNone')) + '</span>'
       else {
-        box.innerHTML = '<button class="bt" data-act="goto">' + esc(L('passageGo')) + '</button><span class="appath" title="' + esc(node.data('passage')) + '">' + esc(p.path.split('/').pop()) + ' ^' + esc(p.id) + '</span><span class="apwarn" style="display:none">' + esc(L('passageMissing')) + '</span>'
+        box.innerHTML = '<button class="bt" data-act="goto">' + esc(L('passageGo')) + '</button><span class="appath" title="' + esc(node.data('passage')) + '">' + esc(p.path.split('/').pop()) + ' ^' + esc(p.id) + '</span><span class="apwarn" style="display:none">' + esc(L('passageMissing')) + '</span>' +
+          (ownerOfPath(p.path) ? '<button class="bt" data-act="brief" title="' + esc(L('briefTitle')) + '">' + esc(L('briefBtn')) + '</button>' : '')
         var want = node.id()
         passageExists(node.data('passage')).then(function (ok) {
           if (window.selEle && selEle.id && selEle.id() === want) { var w = box.querySelector('.apwarn'); if (w) w.style.display = ok ? 'none' : '' }
@@ -221,6 +225,7 @@ var Argue = (function () {
     })
     $('nArgPassage').addEventListener('click', function (e) {
       if (e.target.closest('[data-act="goto"]') && isArg(window.selEle)) goToPassage(selEle.data('passage'))
+      if (e.target.closest('[data-act="brief"]') && isArg(window.selEle) && window.Work) { var bp = splitPassage(selEle.data('passage')), o = bp && ownerOfPath(bp.path); if (o) Work.openBrief(o) }
     })
     $('nTasks').addEventListener('click', function (e) {
       var row = e.target.closest('.ntask'); if (!row || !window.selEle) return

@@ -1,8 +1,8 @@
 {
   "id": "k-yedek",
-  "label": "Yedek ve kurtarma",
+  "label": "Yedek, kurtarma ve otomatik kayıt",
   "type": "concept",
-  "description": "Güvenli yazma, otomatik yedekler, 30 saniyelik kurtarma dosyası.",
+  "description": "Güvenli yazma, seyreltilen yedekler (en yeni üçü + on dakikada bir), 30 saniyelik kurtarma dosyası, dakikada bir otomatik kayıt.",
   "notes": "",
   "tags": [],
   "cats": [

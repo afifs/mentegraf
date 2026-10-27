@@ -71,7 +71,7 @@
 <div class="hero">
     <div class="app-icon"><img src="icon.ico" alt="Mentegraf"></div>
     <h1 data-i18n="about.title">About Mentegraf</h1>
-    <div class="version" data-i18n="about.version">Version 2.0.0</div>
+    <div class="version" data-i18n="about.version">Version 2.3.0</div>
 </div>
 
 <div class="content">
@@ -218,7 +218,9 @@
         });
     }
 
-    loadLocale(lang, function(s) { window._s = s; apply(); });
+    loadLocale(lang, function(s) { window._s = s; apply(); showVersion(); });
+    // The version comes from package.json (passed by the main process), not from the language files.
+    function showVersion() { var v = params.get('v'), el = document.querySelector('.version'); if (v && el) el.textContent = (lang === 'tr' ? 'Sürüm ' : 'Version ') + v }
 </script>
 </body>
 </html>

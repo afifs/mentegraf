@@ -69,6 +69,12 @@ function snapshot(){var s=JSON.stringify(getProject());if(undoStack.length>0&&un
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());loadProject(JSON.parse(undoStack[undoStack.length-1]),true);setDirty(true);updateUB()}
 function redo(){if(!redoStack.length)return;var s=redoStack.pop();undoStack.push(s);loadProject(JSON.parse(s),true);setDirty(true);updateUB()}
 function updateUB(){document.getElementById('b_undo').classList.toggle('disabled',undoStack.length<2);document.getElementById('b_redo').classList.toggle('disabled',!redoStack.length)}
+// Auto-save: every minute and when the window loses focus, if something changed and the
+// project already has a folder. Waits while the author is typing. Can be turned off (File menu).
+var autoSaveOn=(function(){try{return localStorage.getItem('mentegraf-autosave')!=='0'}catch(e){return true}})(),autoSaveTick=null,lastKeyAt=0,AUTOSAVE_MS=60000
+function setAutoSave(on,quiet){autoSaveOn=!!on;try{localStorage.setItem('mentegraf-autosave',autoSaveOn?'1':'0')}catch(e){}if(window.mentegraf&&window.mentegraf.setAutoSave)window.mentegraf.setAutoSave(autoSaveOn);if(!quiet)showMsg(L(autoSaveOn?'autoSaveOn':'autoSaveOff'))}
+async function autoSaveNow(){if(!autoSaveOn||!isDirty||saving||!window.mentegraf||!window.mentegraf.saveData)return;if(Date.now()-lastKeyAt<3000){setTimeout(autoSaveNow,3000);return}var ok=await doSave({auto:true});if(ok){var ind=document.getElementById('autoSaveInd');ind.title=L('autoSaved');ind.style.opacity='1';setTimeout(function(){ind.style.opacity='0'},1500)}}
+function startRealAutoSave(){clearInterval(autoSaveTick);autoSaveTick=setInterval(autoSaveNow,AUTOSAVE_MS);document.addEventListener('keydown',function(){lastKeyAt=Date.now()},true);window.addEventListener('blur',function(){lastKeyAt=0;autoSaveNow()});setAutoSave(autoSaveOn,true)}
 function startAutoSave(){if(autoSaveTimer)clearInterval(autoSaveTimer);autoSaveTimer=setInterval(function(){if(window.mentegraf&&window.mentegraf.writeRecovery){if(!isDirty)return;window.mentegraf.writeRecovery(Object.assign(getProject(),{unsavedFragments:Writer.dirtyFragments()}))}else localStorage.setItem('mentegraf-project',JSON.stringify(getProject()));var ind=document.getElementById('autoSaveInd');ind.style.opacity='1';setTimeout(function(){ind.style.opacity='0'},1500)},30000)}
 
 function init(){
@@ -188,7 +194,10 @@ function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catc
   nodeSizingOn=data.config.nodeSizing!==false;                    // ← NEW
   nodeSizingOn?NodeSizing.enable(cy):NodeSizing.disable(cy);      // ← NEW
 }if(data.elements&&data.elements.nodes)data.elements.nodes.forEach(function(n){var c=catById(n.data.type);if(c)n.data.color=c.color});cy.elements().remove();cy.add([].concat(data.elements.nodes||[]).concat(data.elements.edges||[]));if(data.elements.nodes)data.elements.nodes.forEach(function(n){if(n.data.x!==undefined)cy.getElementById(n.data.id).position({x:n.data.x,y:n.data.y})});cy.fit(null,50);nid=1;cy.nodes().forEach(function(n){var id=parseInt(n.id().replace('n',''));if(!isNaN(id)&&id>=nid)nid=id+1});buildTF();rebuildETS();uStats();clrSel();if(!noSnap)snapshot()}
-async function doSave(){var data=getProject(),saved=JSON.stringify(data),frags=Writer.dirtyFragments(),ok=false;if(window.mentegraf){Writer.willSave(frags);ok=await window.mentegraf.saveData(data,frags);if(ok)showMsg(L('saved'))}else{localStorage.setItem('mentegraf-project',saved);ok=true;showMsg(L('saved'))}if(ok){Writer.markSaved(frags);Binder.refreshCounts();setDirty(JSON.stringify(getProject())!==saved||Writer.hasUnsaved())}return ok}
+// Save the project. opts.auto: an automatic save (no dialog for an untitled project, no message).
+var saving=null
+async function doSave(opts){opts=opts||{};if(saving)return saving;saving=saveOnce(opts);try{return await saving}finally{saving=null}}
+async function saveOnce(opts){var data=getProject(),saved=JSON.stringify(data),frags=Writer.dirtyFragments(),ok=false;if(window.mentegraf){Writer.willSave(frags);ok=await window.mentegraf.saveData(data,frags,{auto:!!opts.auto});if(ok==='untitled')return false;if(ok&&!opts.auto)showMsg(L('saved'))}else{localStorage.setItem('mentegraf-project',saved);ok=true;if(!opts.auto)showMsg(L('saved'))}if(ok){Writer.markSaved(frags);Binder.refreshCounts();setDirty(JSON.stringify(getProject())!==saved||Writer.hasUnsaved())}return !!ok}
 
 function doImport(ev){var f=ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var d=JSON.parse(e.target.result);if(d.elements){loadProject(d);showMsg(f.name+' '+L('loaded'))}}catch(err){alert('Error: '+err.message)}};r.readAsText(f);ev.target.value=''}
 function doLoad(){if(window.mentegraf)return;var raw=localStorage.getItem('mentegraf-project');if(raw){try{loadProject(JSON.parse(raw))}catch(e){}}}
@@ -472,7 +481,7 @@ function doExportCSV(){
 function showMsg(t){var m=document.getElementById('ml');m.innerHTML='<span style="color:var(--accent)">✓ '+t+'</span>';setTimeout(function(){m.textContent=''},2000)}
 function uStats(){var vn=cy?cy.nodes().filter(function(n){return!n.hasClass('filtered-out')}).length:0;var ve=cy?cy.edges().filter(function(e){return!e.hasClass('filtered-out')}).length:0;document.getElementById('stats').textContent=vn+' / '+ve}
 
-if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='new')resetForNewProject();if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo();if(a==='text-search')TextSearch.open()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
+if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='toggle-autosave')setAutoSave(!autoSaveOn);if(a==='new')resetForNewProject();if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo();if(a==='text-search')TextSearch.open()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
 
 document.addEventListener('DOMContentLoaded',async function(){
   await loadConfigs();
@@ -481,4 +490,4 @@ document.addEventListener('DOMContentLoaded',async function(){
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
   curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();Classify.init();TextSearch.init();Argue.init();Work.init();doLoad();
   addStarterNode();
-  cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});
+  cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();startRealAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});

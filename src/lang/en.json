@@ -26,6 +26,9 @@
   "strength": "Strength (1-5)",
   "search": "Search...",
   "saved": "Saved",
+  "autoSaveOn": "Auto-save on",
+  "autoSaveOff": "Auto-save off",
+  "autoSaved": "Auto-saved",
   "exported": "Exported",
   "loaded": "Loaded",
   "publish": "Publish",
@@ -40,7 +43,7 @@
   "bookTitle": "Book Title",
   "about": {
     "title": "About Mentegraf",
-    "version": "Version 2.0.0",
+    "version": "Version 2.3.0",
     "description": "Mentegraf is a visual knowledge mapping tool for authors. Plan your book by creating nodes for concepts, people, ideas, and chapters, then visualize the relationships between them.",
     "helpSection": "Usage Tips",
     "techSection": "Built With",
@@ -88,7 +91,7 @@
       },
       "save": {
         "title": "Saving",
-        "desc": "Ctrl+S to save. Auto-save every 30 seconds. Use File → Save As to create a .mentegraf file."
+        "desc": "Ctrl+S to save. With auto-save on (File → Auto-save), changes are saved every minute and when you leave the window. Unsaved changes are also written to a recovery file every 30 seconds; if the program closes unexpectedly, they are offered back on the next start. A project is a folder: File → Save As writes it to a new folder."
       },
       "export": {
         "title": "Exporting",

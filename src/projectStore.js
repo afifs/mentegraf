@@ -19,7 +19,9 @@ const ProjectFormat = require('./projectFormat')
 
 const MANIFEST = 'project.mentegraf'
 const FORMAT = '3.0'
-const MAX_BACKUPS = 10
+const MAX_BACKUPS = 20
+const KEEP_RECENT = 3                       // the newest copies are always kept
+const BACKUP_GAP_MS = 10 * 60 * 1000        // older copies are thinned to one per 10 minutes
 const DIRS = ['graph', 'graph/nodes', 'manuscript', 'notes', 'assets', '.mentegraf', '.mentegraf/backups']
 
 // ───────── helpers ─────────
@@ -275,6 +277,22 @@ function stamp() {
   return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds())
 }
 
+// Which backup files to delete. names: sorted oldest first, each with a stamp YYYYMMDD-HHMMSS.
+// With auto-save every minute, keeping simply the last N would cover only N minutes, so:
+// keep the newest few, then at most one copy per gap, up to max in all.
+function backupsToDrop(names, max) {
+  const when = n => { const m = /(\d{8})-(\d{6})/.exec(n); if (!m) return 0; const d = m[1], t = m[2]
+    return new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), +t.slice(0, 2), +t.slice(2, 4), +t.slice(4, 6)).getTime() }
+  const newestFirst = names.slice().reverse(), keep = new Set()
+  let last = null
+  newestFirst.forEach((n, i) => {
+    if (keep.size >= max) return
+    const t = when(n)
+    if (i < KEEP_RECENT || last === null || last - t >= BACKUP_GAP_MS) { keep.add(n); last = t }
+  })
+  return names.filter(n => !keep.has(n))
+}
+
 // Snapshot the project as it is on disk now, as one importable JSON file.
 function backup(dir) {
   try {
@@ -285,7 +303,7 @@ function backup(dir) {
     while (fs.existsSync(path.join(bdir, name))) name = 'backup-' + stamp() + '-' + (i++) + '.json'
     atomicWrite(path.join(bdir, name), JSON.stringify(current, null, 2))
     const all = fs.readdirSync(bdir).filter(n => /^backup-.*\.json$/.test(n)).sort()
-    all.slice(0, Math.max(0, all.length - MAX_BACKUPS)).forEach(n => fs.unlinkSync(path.join(bdir, n)))
+    backupsToDrop(all, MAX_BACKUPS).forEach(n => fs.unlinkSync(path.join(bdir, n)))
   } catch (e) {
     console.warn('Backup skipped:', e.message)
   }
@@ -345,7 +363,7 @@ function checkNewProjectDir(dir) {
 // ───────── text fragments (Markdown files attached to nodes) ─────────
 
 const TEXT_DIRS = ['manuscript', 'notes']
-const MAX_TEXT_VERSIONS = 5
+const MAX_TEXT_VERSIONS = 10
 const TR_MAP = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'Ç': 'c', 'Ğ': 'g', 'Ö': 'o', 'Ş': 's', 'Ü': 'u' }
 
 function slugify(label) {
@@ -391,7 +409,7 @@ function backupText(dir, rel, oldText) {
     const flat = rel.replace(/\//g, '__').replace(/\.md$/i, '')
     atomicWrite(path.join(bdir, flat + '--' + stamp() + '.md'), oldText)
     const mine = fs.readdirSync(bdir).filter(n => n.startsWith(flat + '--')).sort()
-    mine.slice(0, Math.max(0, mine.length - MAX_TEXT_VERSIONS)).forEach(n => fs.unlinkSync(path.join(bdir, n)))
+    backupsToDrop(mine, MAX_TEXT_VERSIONS).forEach(n => fs.unlinkSync(path.join(bdir, n)))
   } catch (e) {
     console.warn('Text backup skipped:', e.message)
   }
@@ -531,5 +549,6 @@ module.exports = {
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
   TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
-  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, assetKind, importAsset
+  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, assetKind, importAsset,
+  backupsToDrop
 }

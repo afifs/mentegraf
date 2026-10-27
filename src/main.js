@@ -18,12 +18,13 @@ let mainWindow
 let currentDir = null      // folder of the open project; null = untitled
 let isDirty = false
 let forceClose = false
+let autoSaveOn = true                 // mirrors the renderer's setting, for the File menu
 let currentLang = 'tr'
 
 const MENU_LABELS = {
   tr: {
     file: 'Dosya', newProject: 'Yeni Proje', open: 'Aç...', save: 'Kaydet',
-    saveAs: 'Farklı Kaydet...', quit: 'Çıkış',
+    saveAs: 'Farklı Kaydet...', autoSave: 'Otomatik kaydet', quit: 'Çıkış',
     edit: 'Düzenle', addNode: 'Düğüm Ekle', linkMode: 'Bağlantı Modu',
     deleteSelected: 'Seçili Sil', undo: 'Geri Al', redo: 'Yinele',
     view: 'Görünüm', relayout: 'Yeniden Düzenle', fitAll: 'Tümüne Sığdır',
@@ -57,7 +58,7 @@ const MENU_LABELS = {
   },
   en: {
     file: 'File', newProject: 'New Project', open: 'Open...', save: 'Save',
-    saveAs: 'Save As...', quit: 'Quit',
+    saveAs: 'Save As...', autoSave: 'Auto-save', quit: 'Quit',
     edit: 'Edit', addNode: 'Add Node', linkMode: 'Link Mode',
     deleteSelected: 'Delete Selected', undo: 'Undo', redo: 'Redo',
     view: 'View', relayout: 'Relayout', fitAll: 'Fit All',
@@ -480,8 +481,10 @@ async function saveFileAs() {
 }
 
 // Save data from renderer
-ipcMain.handle('save-data', async (event, data, fragments) => {
+ipcMain.handle('save-data', async (event, data, fragments, opts) => {
+  const auto = !!(opts && opts.auto)
   if (!currentDir) {
+    if (auto) return 'untitled'           // auto-save never asks for a folder
     const dir = await chooseNewProjectDir()
     if (!dir) return false
     currentDir = dir
@@ -490,6 +493,7 @@ ipcMain.handle('save-data', async (event, data, fragments) => {
     ProjectStore.writeFragments(currentDir, fragments || [])   // texts first, graph last
     ProjectStore.writeProject(currentDir, data)
   } catch (e) {
+    if (auto) { console.warn('Auto-save failed:', e.message); return false }
     dialog.showErrorBox(labels().saveError, path.basename(currentDir) + '\n\n' + e.message)
     return false
   }
@@ -500,6 +504,7 @@ ipcMain.handle('save-data', async (event, data, fragments) => {
   return true
 })
 
+ipcMain.on('autosave-state', (event, on) => { autoSaveOn = !!on; buildMenu() })
 ipcMain.on('set-dirty', (event, dirty) => { isDirty = !!dirty; updateTitle() })
 ipcMain.on('close-window', () => { forceClose = true; if (mainWindow) mainWindow.close() })
 
@@ -528,6 +533,7 @@ function buildMenu() {
         { label: L.open, accelerator: 'CmdOrCtrl+O', click: openFile },
         { label: L.save, accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('menu-action', 'save') },
         { label: L.saveAs, accelerator: 'CmdOrCtrl+Shift+S', click: saveFileAs },
+        { label: L.autoSave, type: 'checkbox', checked: autoSaveOn, click: () => send('menu-action', 'toggle-autosave') },
         { type: 'separator' },
         { label: L.quit, accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
       ]
@@ -615,7 +621,7 @@ function openAbout() {
   })
   aboutWin.setMenuBarVisibility(false)
   aboutWin.loadFile(path.join(srcPath, 'about.html'), {
-    query: { lang: currentLang }
+    query: { lang: currentLang, v: app.getVersion() }
   })
 }
 

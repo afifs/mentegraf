@@ -175,9 +175,10 @@ var Binder = (function () {
     return t
   }
 
+  var editingPart = false
   function render() {
     var tree = $('bTree')
-    if (!tree || !window.cy) return
+    if (!tree || !window.cy || editingPart) return     // keep the part-title input while it is open
     data.items = prune(data.items)
     var titleInput = $('bTitle')
     if (document.activeElement !== titleInput) titleInput.value = data.title
@@ -302,6 +303,7 @@ var Binder = (function () {
     var f = find(id)
     if (!row || !f) return
     $('bTree')._markup = null              // the input is not part of the cached markup
+    editingPart = true
     var input = document.createElement('input')
     input.className = 'bedit'
     input.value = f.item.title
@@ -311,6 +313,7 @@ var Binder = (function () {
     function finish(save) {
       if (done) return
       done = true
+      editingPart = false
       if (save && input.value.trim() && input.value.trim() !== f.item.title) { f.item.title = input.value.trim(); changed() } else render()
     }
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); e.stopPropagation() })

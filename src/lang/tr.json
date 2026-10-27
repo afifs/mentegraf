@@ -26,6 +26,9 @@
   "strength": "Güç (1-5)",
   "search": "Ara...",
   "saved": "Kaydedildi",
+  "autoSaveOn": "Otomatik kayıt açık",
+  "autoSaveOff": "Otomatik kayıt kapalı",
+  "autoSaved": "Otomatik kaydedildi",
   "exported": "Dışa aktarıldı",
   "loaded": "Yüklendi",
   "publish": "Yayımla",
@@ -40,7 +43,7 @@
   "bookTitle": "Kitap Başlığı",
   "about": {
     "title": "Mentegraf Hakkında",
-    "version": "Sürüm 2.0.0",
+    "version": "Sürüm 2.3.0",
     "description": "Mentegraf, yazarlar için görsel bilgi haritası aracıdır. Kitap planlarken kavramları, kişileri, fikirleri ve bölümleri düğümler olarak oluşturup aralarındaki ilişkileri görselleştirebilirsiniz.",
     "helpSection": "Kullanım İpuçları",
     "techSection": "Teknolojiler",
@@ -88,7 +91,7 @@
       },
       "save": {
         "title": "Kaydetme",
-        "desc": "Ctrl+S ile kaydet. 30 saniyede bir otomatik kayıt yapılır. Dosya → Farklı Kaydet ile .mentegraf dosyası oluşturun."
+        "desc": "Ctrl+S ile kaydet. Otomatik kayıt açıkken (Dosya → Otomatik kaydet) değişiklikler dakikada bir ve pencereden ayrıldığınızda kendiliğinden kaydedilir. Kaydedilmemiş değişiklikler ayrıca 30 saniyede bir kurtarma dosyasına yazılır; program beklenmedik biçimde kapanırsa bir sonraki açılışta geri yüklenir. Proje bir klasördür: Dosya → Farklı Kaydet projeyi yeni bir klasöre yazar."
       },
       "export": {
         "title": "Dışa Aktarma",

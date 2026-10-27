@@ -34,8 +34,10 @@ Bu düzen bilinçli olarak basittir: her şey düz metin, her dosya küçük. Bi
 Mentegraf veri kaybına karşı üç katman tutar:
 
 - **Güvenli yazma.** Her dosya önce geçici bir dosyaya yazılır, sonra eskisinin yerine konur; yazma sırasında elektrik kesilse bile yarım dosya kalmaz.
-- **Yedekler.** Her kayıtta haritanın bir yedeği `.mentegraf/backups` klasörüne alınır; bir metin üzerine yazılmadan önce eski hâlinin son beş sürümü saklanır.
+- **Yedekler.** Her kayıtta haritanın bir yedeği `.mentegraf/backups` klasörüne alınır; bir metnin üzerine yazılmadan önce de eski hâli saklanır. En yeni üç yedek her zaman durur; daha eskiler on dakikada bir olacak biçimde seyreltilir (harita için en çok 20, her metin için en çok 10 sürüm). Böylece otomatik kayıt dakikada bir çalışsa da birkaç saat geriye dönülebilir.
 - **Kurtarma.** Kaydedilmemiş değişiklikler 30 saniyede bir ayrı bir kurtarma dosyasına yazılır. Program beklenmedik biçimde kapanırsa bir sonraki açılışta bu değişiklikleri geri yüklemeyi önerir.
+
+**Otomatik kayıt** açıkken (Dosya → Otomatik kaydet, varsayılan olarak açık) değişiklikler dakikada bir ve pencereden ayrıldığınızda kendiliğinden kaydedilir; siz yazarken birkaç saniye beklenir. Henüz bir klasörü olmayan yeni proje otomatik kaydedilmez, ilk kez Kaydet demeniz gerekir. Kayıt anında sağ üstteki küçük nokta bir an yanar.
 
 Kaydedilmemiş değişiklik varken programı kapatmaya çalışırsanız Mentegraf sorar; metin bölmesinin alt çubuğunda "kaydedilmedi" yazısı da aynı durumu gösterir.
 
