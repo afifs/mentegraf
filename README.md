@@ -2,7 +2,7 @@
 
 <p>
   <a href="https://afifsay.org/" target="_blank">
-    <img src="assets/icon.png" alt="https://www.afifsay.org/" width="100"><br/>
+    <img src="assets/logo.png" alt="Mentegraf" width="220"><br/>
   </a>
     A desktop application for authors, researchers and thinkers who want to map their ideas visually. Create nodes for concepts, people, books, ideas, and chapters, then connect them with typed, weighted edges to reveal the hidden structure of your work.
 </p>
