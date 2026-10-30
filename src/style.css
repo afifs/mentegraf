@@ -398,3 +398,13 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .briefbody h1{font-size:22px;margin:4px 0 8px}
 .briefbody h2{font-size:15px;margin:18px 0 6px;color:var(--accent)}
 .briefbody ul{padding-left:20px}
+
+/* export: node-type picker and glossary */
+.gtypes{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin:8px 0 12px}
+.gtype,.gopt{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 6px;border-radius:6px;cursor:pointer;color:var(--text)}
+.gtype:hover,.gopt:hover{background:var(--badge-bg)}
+.gtype input,.gopt input{width:auto !important;accent-color:var(--accent)}
+.gtype .gcount{margin-left:auto;font-size:11px;color:var(--dim)}
+.gquick{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+.gquick .bt.on{border-color:var(--accent);color:var(--text)}
+.gnote{font-size:12px;color:var(--dim);line-height:1.5;margin:4px 0}

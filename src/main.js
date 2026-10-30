@@ -337,6 +337,17 @@ ipcMain.handle('text-search', (event, query, opts) => {
   } catch (e) { return { files: [], total: 0, truncated: false, error: e.message } }
 })
 
+// Where terms occur in the texts (for the glossary and index export).
+ipcMain.handle('text-mentions', (event, terms, opts) => {
+  const o = opts && typeof opts === 'object' ? opts : {}
+  try {
+    return ProjectStore.mentionCounts(currentDir || null, Array.isArray(terms) ? terms.slice(0, 5000) : [], {
+      overrides: o.overrides && typeof o.overrides === 'object' ? o.overrides : {},
+      only: Array.isArray(o.only) ? o.only.slice(0, 5000) : undefined
+    })
+  } catch (e) { return { counts: {}, error: e.message } }
+})
+
 ipcMain.handle('fragment-stats', (event, paths) => {
   if (!currentDir) return { counts: {} }
   try { return { counts: ProjectStore.fragmentStats(currentDir, Array.isArray(paths) ? paths.slice(0, 2000) : []) } } catch (e) { return { counts: {} } }

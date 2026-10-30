@@ -287,6 +287,19 @@ test('new text paths: chapters in manuscript/, others in notes/, never reused', 
   assert.strictEqual(Store.newFragmentPath(dir, 'Wiener', 'person', 'n1', []), 'notes/wiener-n1-2.md', 'existing file counts as taken')
 })
 
+test('mention counts: folded, at word start, front matter skipped, open texts win', () => {
+  const dir = path.join(tmp(), 'Book')
+  Store.writeProject(dir, sample())
+  Store.writeFragments(dir, [{ path: 'manuscript/a.md', text: '---\nmentegraf-node: x\n---\n# Peirce\n\nPeirce\'ün abdüksiyonu. Kantçı; Kant. Ekant. İHSAN ihsan.\n' }, { path: 'notes/b.md', text: 'Kant\n' }])
+  const r = Store.mentionCounts(dir, ['Peirce', 'Kant', 'ihsan', 'abdüksiyon', 'x'])
+  assert.deepStrictEqual(r.counts.Peirce, { 'manuscript/a.md': 2 })
+  assert.deepStrictEqual(r.counts.Kant, { 'manuscript/a.md': 2, 'notes/b.md': 1 }, 'Kantçı counts, Ekant does not')
+  assert.deepStrictEqual(r.counts.ihsan, { 'manuscript/a.md': 2 })
+  assert.strictEqual(r.counts.x, undefined)
+  const only = Store.mentionCounts(dir, ['Kant'], { only: ['notes/b.md'], overrides: { 'notes/b.md': 'yok' } })
+  assert.deepStrictEqual(only.counts, {})
+})
+
 test('backups: newest kept, older thinned to one per 10 minutes', () => {
   const name = (h, m, s) => 'backup-20261027-' + String(h).padStart(2, '0') + String(m).padStart(2, '0') + String(s || 0).padStart(2, '0') + '.json'
   // one save a minute from 10:00 to 11:59 (auto-save)

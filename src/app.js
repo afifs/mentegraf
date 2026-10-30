@@ -400,11 +400,12 @@ function generateReportCSV(grouped){
 
 function csvEsc(s){if(!s)return '';s=String(s).replace(/\t/g,' ').replace(/\n/g,' | ');return s}
 
-function doExportJSON(){var data=getProject(),blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mentegraf-export.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);closeExport();showMsg(L('exported'))}
+function doExportJSON(){var data=getProject();if(window.exportTypes){var keep={};data.elements.nodes=data.elements.nodes.filter(function(n){var ok=inExport(n.data.type);if(ok)keep[n.data.id]=1;return ok});data.elements.edges=data.elements.edges.filter(function(e){return keep[e.data.source]&&keep[e.data.target]})}var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mentegraf-export.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);closeExport();showMsg(L('exported'))}
 
 /* ═══ OBSIDIAN EXPORT ═══ */
 function doExportObsidian(){
   var proj=getProject();var files=[];
+  if(window.exportTypes){var keepO={};proj.elements.nodes=proj.elements.nodes.filter(function(n){var ok=inExport(n.data.type);if(ok)keepO[n.data.id]=1;return ok});proj.elements.edges=proj.elements.edges.filter(function(e){return keepO[e.data.source]&&keepO[e.data.target]})}
   var nodeMap={};proj.elements.nodes.forEach(function(n){nodeMap[n.data.id]=n.data});
   proj.elements.nodes.forEach(function(n){
     var d=n.data;var cat=catById(d.type);
@@ -445,8 +446,8 @@ function doExportObsidian(){
 /* ═══ SVG EXPORT ═══ */
 function doExportSVG(){
   var nodes=[],edges=[];
-  cy.nodes().forEach(function(n){if(!n.hasClass('filtered-out')){var d=n.data(),p=n.position();nodes.push({label:d.label,color:d.color,x:p.x,y:p.y,r:(n.data('_wsize')||32)/2})}});   // ← r added
-  cy.edges().forEach(function(e){if(!e.hasClass('filtered-out')){var s=e.source().position(),t=e.target().position();edges.push({x1:s.x,y1:s.y,x2:t.x,y2:t.y,w:e.data('weight')||1})}});
+  cy.nodes().forEach(function(n){if(!n.hasClass('filtered-out')&&inExport(n.data('type'))){var d=n.data(),p=n.position();nodes.push({label:d.label,color:d.color,x:p.x,y:p.y,r:(n.data('_wsize')||32)/2})}});   // ← r added
+  cy.edges().forEach(function(e){if(!e.hasClass('filtered-out')&&inExport(e.source().data('type'))&&inExport(e.target().data('type'))){var s=e.source().position(),t=e.target().position();edges.push({x1:s.x,y1:s.y,x2:t.x,y2:t.y,w:e.data('weight')||1})}});
   // Calculate bounds
   var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   nodes.forEach(function(n){minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x);maxY=Math.max(maxY,n.y)});
@@ -467,9 +468,9 @@ function doExportSVG(){
 /* ═══ CSV EXPORT ═══ */
 function doExportCSV(){
   var nodesCSV='id,label,type,description,tags\n';
-  cy.nodes().forEach(function(n){var d=n.data();var cat=catById(d.type);nodesCSV+='"'+d.id+'","'+d.label+'","'+(cat?catLabel(cat):d.type)+'","'+(d.description||'').replace(/"/g,'""')+'","'+(d.tags||[]).join(';')+'"\n'});
+  cy.nodes().forEach(function(n){var d=n.data();if(!inExport(d.type))return;var cat=catById(d.type);nodesCSV+='"'+d.id+'","'+d.label+'","'+(cat?catLabel(cat):d.type)+'","'+(d.description||'').replace(/"/g,'""')+'","'+(d.tags||[]).join(';')+'"\n'});
   var edgesCSV='source,target,type,weight,note\n';
-  cy.edges().forEach(function(e){var d=e.data();edgesCSV+='"'+e.source().data('label')+'","'+e.target().data('label')+'","'+(d.edgeType||'')+'",'+d.weight+',"'+(d.note||'').replace(/"/g,'""')+'"\n'});
+  cy.edges().forEach(function(e){var d=e.data();if(!inExport(e.source().data('type'))||!inExport(e.target().data('type')))return;edgesCSV+='"'+e.source().data('label')+'","'+e.target().data('label')+'","'+(d.edgeType||'')+'",'+d.weight+',"'+(d.note||'').replace(/"/g,'""')+'"\n'});
   var combined='=== NODES ===\n'+nodesCSV+'\n=== EDGES ===\n'+edgesCSV;
   var blob=new Blob([combined],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mentegraf-data.csv';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);

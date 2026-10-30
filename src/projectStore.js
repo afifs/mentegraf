@@ -471,6 +471,40 @@ function listTexts(dir) {
 // query: words to find (as a phrase). opts: { overrides: { path: text } (unsaved editor texts),
 // only: [paths] (limit to these), limit: total hits }. Returns { files: [{ path, count, hits }], total, truncated }.
 // A hit: { line (1-based), col, len, before, match, after } — a short window of the line around the match.
+// How often each term occurs in each text: case- and accent-folded, counted only where the
+// term starts a word. terms: [string]; opts.only: paths to look in; opts.overrides: { path: text }.
+// Returns { counts: { term: { path: n } } } (paths with no occurrence are left out).
+function mentionCounts(dir, terms, opts) {
+  opts = opts || {}
+  const overrides = opts.overrides && typeof opts.overrides === 'object' ? opts.overrides : {}
+  let paths = listTexts(dir)
+  Object.keys(overrides).forEach(p => { if (paths.indexOf(p) < 0) paths.push(p) })
+  if (Array.isArray(opts.only)) { const set = new Set(opts.only); paths = paths.filter(p => set.has(p)) }
+  const wanted = []
+  ;(terms || []).forEach(t => {
+    const q = foldText(String(t || '').replace(/\s+/g, ' ').trim())
+    if (q.length >= 2) wanted.push({ term: String(t), q })
+  })
+  const counts = {}
+  const letter = /[\p{L}\p{N}]/u
+  paths.forEach(rel => {
+    let text = typeof overrides[rel] === 'string' ? overrides[rel] : null
+    if (text == null && dir) { try { const r = readFragment(dir, rel); text = r.exists ? r.text : null } catch (e) { text = null } }
+    if (text == null) return
+    text = text.replace(/\r\n?/g, '\n').replace(/^---\n[\s\S]*?\n---\n/, '')
+    const f = foldText(text)
+    wanted.forEach(w => {
+      let at = f.indexOf(w.q), n = 0
+      while (at >= 0) {
+        if (at === 0 || !letter.test(f[at - 1])) n++
+        at = f.indexOf(w.q, at + w.q.length)
+      }
+      if (n) (counts[w.term] = counts[w.term] || {})[rel] = n
+    })
+  })
+  return { counts }
+}
+
 function searchTexts(dir, query, opts) {
   opts = opts || {}
   const q = foldText(String(query || '').replace(/\s+/g, ' ').trim())
@@ -549,6 +583,6 @@ module.exports = {
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
   TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
-  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, assetKind, importAsset,
+  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, mentionCounts, assetKind, importAsset,
   backupsToDrop
 }

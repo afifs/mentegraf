@@ -175,23 +175,27 @@
         <svg class="eo-icon float-begin" height="24"><use href="#icon-report"></use></svg>
         <div><div class="eo-title" data-l="reportTitle">Kategori Raporu</div><div class="eo-desc" data-l="reportDesc">Seçilen kategorilerin açıklama, not ve bağlantılarını dışa aktar</div></div>
       </div>
-      <div class="export-opt" onclick="doExportJSON()">
+      <div class="export-opt" onclick="Gloss.open()">
+        <svg class="eo-icon" height="24"><use href="#icon-report"></use></svg>
+        <div><div class="eo-title" data-l="glossOpt">Sözlük ve Dizin</div><div class="eo-desc" data-l="glossOptDesc">Terimler ve tanımları ya da kişiler, kurumlar, olaylar; geçtikleri bölümlerle</div></div>
+      </div>
+      <div class="export-opt" onclick="ExportPick.open('json')">
         <svg class="eo-icon" height="24"><use href="#icon-mentegraf"></use></svg>
         <div><div class="eo-title">JSON (Mentegraf)</div><div class="eo-desc">Tam proje dosyası — tekrar import edilebilir</div></div>
       </div>
-      <div class="export-opt" onclick="doPublish()">
+      <div class="export-opt" onclick="ExportPick.open('publish')">
         <svg class="eo-icon" height="24"><use href="#icon-to-web"></use></svg>
         <div class="eo-title">HTML (Publish)</div><div class="eo-desc">D3.js interaktif web sayfası — paylaşılabilir</div>
       </div>
-      <div class="export-opt" onclick="doExportObsidian()">
+      <div class="export-opt" onclick="ExportPick.open('obsidian')">
         <svg class="eo-icon" height="24"><use href="#icon-obsidian"></use></svg>
         <div class="eo-title">Obsidian Vault</div><div class="eo-desc">Her düğüm bir Markdown dosyası, wikilink bağlantılar</div>
       </div>
-      <div class="export-opt" onclick="doExportSVG()">
+      <div class="export-opt" onclick="ExportPick.open('svg')">
         <svg class="eo-icon" height="24"><use href="#icon-file-svg"></use></svg>
         <div class="eo-title">SVG Görsel</div><div class="eo-desc">Vektör görsel — baskı kalitesinde</div>
       </div>
-      <div class="export-opt" onclick="doExportCSV()">
+      <div class="export-opt" onclick="ExportPick.open('csv')">
         <svg class="eo-icon" height="24"><use href="#icon-file-csv"></use></svg>
         <div class="eo-title">CSV</div><div class="eo-desc">Düğüm ve bağlantı tabloları — spreadsheet uyumlu</div>
       </div>
@@ -258,6 +262,42 @@
   </div>
 </div>
 
+<!-- Node types for a map export -->
+<div class="modal-overlay" id="pickModal">
+  <div class="modal" style="width:440px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 id="pickTitle">Düğüm türleri</h2>
+      <button class="bt bg" onclick="ExportPick.close()" aria-label="close">✕</button>
+    </div>
+    <div class="gnote" data-l="pickHelp">Dışa aktarılacak düğüm türlerini seçin. Bağlantılar yalnızca seçilen düğümler arasında kalır.</div>
+    <div class="gquick"><button class="bt bg" onclick="ExportPick.setAll(true)" data-l="pickAll">Tümü</button><button class="bt bg" onclick="ExportPick.setAll(false)" data-l="pickClear">Hiçbiri</button></div>
+    <div id="pickTypes" class="gtypes"></div>
+    <div id="pickNote" class="gnote" style="display:none" data-l="pickJsonNote">Bir kısmını dışa aktarırsanız dosya tam proje olmaz; yalnızca seçilen türleri içerir.</div>
+    <div style="display:flex;gap:8px;margin-top:16px"><button class="bt bp" onclick="ExportPick.run()" data-l="pickGo">Dışa aktar</button><button class="bt bg" onclick="ExportPick.close()" data-l="cancel">İptal</button></div>
+  </div>
+</div>
+
+<!-- Glossary and index -->
+<div class="modal-overlay" id="glossModal">
+  <div class="modal" style="width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 data-l="glossOpt">Sözlük ve Dizin</h2>
+      <button class="bt bg" onclick="Gloss.close()" aria-label="close">✕</button>
+    </div>
+    <div class="gquick"><button class="bt bg" data-preset="terms" onclick="Gloss.preset('terms')" data-l="glossPresetTerms">Terimler ve kavramlar</button><button class="bt bg" data-preset="people" onclick="Gloss.preset('people')" data-l="glossPresetPeople">Kişiler, kurumlar, olaylar</button></div>
+    <div id="glossTypes" class="gtypes"></div>
+    <div class="fld"><label data-l="glossTitleLabel">Başlık</label><input id="glossTitle" aria-label="title"></div>
+    <h3 data-l="glossChaptersFrom">Bölümler</h3>
+    <label class="gopt"><input type="checkbox" id="glossLinks" checked><span data-l="glossFromLinks">Haritada bölüme bağlı olanlar</span></label>
+    <label class="gopt"><input type="checkbox" id="glossText" checked><span data-l="glossFromText">Bölüm metninde geçenler</span></label>
+    <h3 data-l="glossLayout">Düzen</h3>
+    <label class="gopt"><input type="checkbox" id="glossByType"><span data-l="glossByTypeLabel">Türe göre grupla (yoksa alfabetik, harf başlıklarıyla)</span></label>
+    <label class="gopt"><input type="checkbox" id="glossSurname" checked><span data-l="glossSurnameLabel">Kişileri soyadına göre yaz ve sırala (Peirce, Charles Sanders)</span></label>
+    <label class="gopt"><input type="checkbox" id="glossEmpty"><span data-l="glossEmptyLabel">Tanımı ve bölümü olmayanları da al</span></label>
+    <div style="display:flex;gap:8px;margin-top:16px"><button class="bt bp" onclick="Gloss.run('docx')">Word</button><button class="bt bg" onclick="Gloss.run('md')">Markdown</button><button class="bt bg" onclick="Gloss.run('csv')">CSV</button></div>
+  </div>
+</div>
+
 <!-- Settings Modal -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
@@ -290,6 +330,7 @@
 <script src="nodeSizing.js"></script>
 <script src="app.js"></script>
 <script src="publish.js"></script>
+<script src="glossary.js"></script>
 <script src="zotero.js"></script>
 </body>
 </html>
