@@ -408,3 +408,7 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .gquick{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
 .gquick .bt.on{border-color:var(--accent);color:var(--text)}
 .gnote{font-size:12px;color:var(--dim);line-height:1.5;margin:4px 0}
+.qicon.q-audit{color:#b07a2a}
+.qau{flex:none;font-size:11px;color:#9a6a1e}
+.qok{flex:none;border:1px solid var(--border);background:transparent;border-radius:6px;font-size:11px;line-height:1;padding:2px 5px;color:var(--dim);cursor:pointer}
+.qok:hover{color:var(--text);border-color:var(--accent)}

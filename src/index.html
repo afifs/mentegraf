@@ -103,7 +103,7 @@
     <!-- WORK QUEUE -->
     <div id="queue">
       <div class="bh"><span class="ctitle" data-l="queueLabel">İş listesi</span><button class="bx" onclick="Work.toggle()" aria-label="close">✕</button></div>
-      <div class="qkinds" id="qKinds"><button data-kind="question" data-l="queueQuestions">Sorular</button><button data-kind="task" data-l="tasksLabel">Görevler</button><button data-kind="claim" data-l="queueClaims">İddialar</button><label class="qdone"><input type="checkbox" id="qDone"> <span data-l="queueShowDone">Bitenler</span></label></div>
+      <div class="qkinds" id="qKinds"><button data-kind="question" data-l="queueQuestions">Sorular</button><button data-kind="task" data-l="tasksLabel">Görevler</button><button data-kind="claim" data-l="queueClaims">İddialar</button><button data-kind="audit" data-l="queueAudit">Denetim</button><label class="qdone"><input type="checkbox" id="qDone"> <span data-l="queueShowDone">Bitenler</span></label></div>
       <div class="bsum" id="qSum"></div>
       <div id="qList" class="qlist"></div>
     </div>
@@ -331,6 +331,7 @@
 <script src="app.js"></script>
 <script src="publish.js"></script>
 <script src="glossary.js"></script>
+<script src="audit.js"></script>
 <script src="zotero.js"></script>
 </body>
 </html>

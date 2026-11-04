@@ -9,7 +9,7 @@
 var Work = (function () {
   'use strict'
 
-  var bound = false, timer = null, kinds = { question: true, task: true, claim: true }, showDone = false
+  var bound = false, timer = null, kinds = { question: true, task: true, claim: true, audit: true }, showDone = false
   var texts = {}                    // path -> text (for the "passage missing" check), refreshed on render
 
   function $(id) { return document.getElementById(id) }
@@ -84,6 +84,10 @@ var Work = (function () {
         items.push({ kind: 'task', node: n, task: t, group: (p && ownerOf(p.path)) || (n.data('fragment') ? n : null), text: t.text, passage: t.passage, done: t.done, missing: false })
       })
     })
+    if (kinds.audit && window.Audit) Audit.items().forEach(function (a, i) {
+      if (a.done && !showDone) return
+      items.push({ kind: 'audit', sub: a.sub, idx: i, node: a.node, group: a.group, text: a.text, passage: a.passage, done: a.done, missing: false })
+    })
     return items.filter(function (it) { return kinds[it.kind] && (lensOk(it.node) || (it.group && lensOk(it.group))) })
   }
 
@@ -92,6 +96,7 @@ var Work = (function () {
     var paths = {}
     cy.nodes().forEach(function (n) { if (Argue.isArg(n)) { var p = split(n.data('passage')); if (p) paths[p.path] = true } })
     texts = await loadTexts(Object.keys(paths))
+    if (kinds.audit && window.Audit) { try { await Audit.compute() } catch (e) { console.warn('audit', e) } }
     render()
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 250) }
@@ -106,36 +111,48 @@ var Work = (function () {
       var oa = order[a] != null ? order[a] : 1e6, ob = order[b] != null ? order[b] : 1e6
       return oa - ob || String(node(a).data('label')).localeCompare(String(node(b).data('label')), 'tr')
     })
-    var counts = { question: 0, task: 0, claim: 0, missing: 0 }
+    var counts = { question: 0, task: 0, claim: 0, audit: 0, missing: 0 }
     items.forEach(function (it) { if (!it.done) counts[it.kind]++; if (it.missing) counts.missing++ })
     $('qSum').textContent = L('queueSum').replace('%q', counts.question).replace('%t', counts.task).replace('%c', counts.claim) +
       (counts.missing ? ' · ' + L('queueMissing').replace('%n', counts.missing) : '') +
+      (counts.audit ? ' · ' + L('queueAuditSum').replace('%n', counts.audit) : '') +
       (window.Classify && Classify.active() ? ' · ' + L('queueFiltered') : '')
-    if (!items.length) { box.innerHTML = '<div class="cnone">' + esc(L('queueEmpty')) + '</div>'; return }
+    // Only touch the list when it changed: replacing it under the pointer swallows clicks.
+    var put = function (html) { if (box._markup !== html) { box.innerHTML = html; box._markup = html } }
+    if (!items.length) { put('<div class="cnone">' + esc(L('queueEmpty')) + '</div>'); return }
     var RANK = { contested: 0, open: 1, draft: 2, supported: 3, thesis: 3, answered: 4, beyond: 4, dropped: 5 }
-    box.innerHTML = keys.map(function (k) {
+    put(keys.map(function (k) {
       var g = k ? node(k) : null
       var list = groups[k].sort(function (a, b) {
-        return (b.missing - a.missing) || (a.done - b.done) || ({ question: 0, task: 1, claim: 2 }[a.kind] - { question: 0, task: 1, claim: 2 }[b.kind]) || ((RANK[a.status] || 0) - (RANK[b.status] || 0))
+        return (b.missing - a.missing) || (a.done - b.done) || ({ question: 0, task: 1, claim: 2, audit: 3 }[a.kind] - { question: 0, task: 1, claim: 2, audit: 3 }[b.kind]) || ((RANK[a.status] || 0) - (RANK[b.status] || 0))
       })
       return '<div class="qgroup"><div class="qgh"' + (g ? ' data-node="' + esc(g.id()) + '"' : '') + '><span class="cdot" style="background:' + esc(g ? typeColor(g) : '#bbb') + '"></span>' +
         '<span class="qgname">' + esc(g ? g.data('label') : L('queueOther')) + '</span>' +
         (g && g.data('fragment') ? '<button class="qbrief" data-act="brief" title="' + esc(L('briefTitle')) + '">' + esc(L('briefBtn')) + '</button>' : '') + '</div>' +
         list.map(function (it) {
-          var icon = it.kind === 'task' ? '<input type="checkbox"' + (it.done ? ' checked' : '') + '>' : '<span class="qicon q-' + it.kind + '">' + (it.kind === 'claim' ? '◆' : '?') + '</span>'
-          var badge = it.missing ? '<span class="qbad">' + esc(L('queueGone')) + '</span>'
+          var icon = it.kind === 'task' ? '<input type="checkbox"' + (it.done ? ' checked' : '') + '>' : '<span class="qicon q-' + it.kind + '">' + (it.kind === 'claim' ? '◆' : it.kind === 'audit' ? '⚑' : '?') + '</span>'
+          var badge = it.kind === 'audit' ? '<span class="qau" title="' + esc(L('au_' + it.sub + 'Tip')) + '">' + esc(L('au_' + it.sub)) + '</span><button class="qok" data-act="auditok" title="' + esc(L(it.done ? 'au_undoTip' : 'au_okTip')) + '">' + (it.done ? '↺' : '✓') + '</button>'
+            : it.missing ? '<span class="qbad">' + esc(L('queueGone')) + '</span>'
             : it.kind === 'claim' ? '<span class="qst" style="color:' + Argue.STATUS_COLOR[it.status] + '">' + esc(L('as_' + it.status)) + '</span>'
               : it.kind === 'question' && it.done ? '<span class="qst">' + esc(L('as_' + it.status)) + '</span>' : ''
           var where = it.kind === 'task' && it.node !== it.group ? '<span class="qwhere">' + esc(it.node.data('label')) + '</span>' : ''
-          return '<div class="qitem' + (it.done ? ' done' : '') + '" data-kind="' + it.kind + '" data-node="' + esc(it.node.id()) + '"' + (it.task ? ' data-task="' + esc(it.task.id) + '"' : '') + (it.passage ? ' data-passage="' + esc(it.passage) + '"' : '') + '>' +
+          return '<div class="qitem' + (it.done ? ' done' : '') + '" data-kind="' + it.kind + '" data-node="' + esc(it.node.id()) + '"' + (it.task ? ' data-task="' + esc(it.task.id) + '"' : '') + (it.kind === 'audit' ? ' data-audit="' + it.idx + '"' : '') + (it.passage ? ' data-passage="' + esc(it.passage) + '"' : '') + '>' +
             icon + '<span class="qtext">' + esc(it.text) + where + '</span>' + badge + '</div>'
         }).join('') + '</div>'
-    }).join('')
+    }).join(''))
   }
 
   async function openItem(el) {
     var n = node(el.dataset.node)
     if (!n) return
+    if (el.dataset.kind === 'audit') {
+      var a = Audit.items()[+el.dataset.audit]
+      selNode(n)
+      if (a && a.sub === 'early') { await Audit.open(a); return }
+      if (a && a.passage && await Argue.goToPassage(a.passage)) return
+      if (typeof focusNeighborhood === 'function') focusNeighborhood(n)
+      return
+    }
     if (el.dataset.kind !== 'task') selNode(n)
     if (el.dataset.passage && await Argue.goToPassage(el.dataset.passage)) return
     if (el.dataset.kind === 'task') { selNode(n); if (n.data('fragment')) Writer.openForNode(n, { focus: false }) }
@@ -149,13 +166,14 @@ var Work = (function () {
       var head = e.target.closest('.qgh[data-node]')
       if (head) { var g = node(head.dataset.node); selNode(g); if (typeof focusNeighborhood === 'function') focusNeighborhood(g); return }
       var it = e.target.closest('.qitem'); if (!it) return
+      if (e.target.closest('[data-act="auditok"]')) { var a = Audit.items()[+it.dataset.audit]; if (a) Audit.dismiss(a.node, a.sub, !a.done); render(); return }
       if (e.target.matches('input[type=checkbox]')) { Argue.changeTask(node(it.dataset.node), it.dataset.task, { done: e.target.checked }); schedule(); return }
       openItem(it)
     })
     $('qKinds').addEventListener('click', function (e) {
       var b = e.target.closest('[data-kind]'); if (!b) return
       kinds[b.dataset.kind] = !kinds[b.dataset.kind]
-      if (!kinds.question && !kinds.task && !kinds.claim) kinds[b.dataset.kind] = true    // never all off
+      if (!kinds.question && !kinds.task && !kinds.claim && !kinds.audit) kinds[b.dataset.kind] = true    // never all off
       syncKinds(); render()
     })
     $('qDone').addEventListener('change', function () { showDone = this.checked; render() })
