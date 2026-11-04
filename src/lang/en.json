@@ -32,6 +32,8 @@
   "pickGo": "Export",
   "pickNone": "Choose at least one type.",
   "pickJsonNote": "If you export only some types, the file is not a full project; it holds only the chosen types.",
+  "obsRelated": "Related",
+  "obsIndex": "Index",
   "glossOpt": "Glossary and index",
   "glossOptDesc": "Terms with definitions, or people, institutions, events, with the chapters they appear in",
   "glossPresetTerms": "Terms and concepts",

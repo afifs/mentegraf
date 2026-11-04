@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('mentegraf', {
   fragmentStats: (paths) => ipcRenderer.invoke('fragment-stats', paths),
   textSearch: (query, opts) => ipcRenderer.invoke('text-search', query, opts),
   textMentions: (terms, opts) => ipcRenderer.invoke('text-mentions', terms, opts),
+  obsidianExport: (payload) => ipcRenderer.invoke('obsidian-export', payload),
   citePick: () => ipcRenderer.invoke('cite-pick'),
   exportDocx: (p, text, settings) => ipcRenderer.invoke('export-docx', p, text, settings),
   stylesList: () => ipcRenderer.invoke('styles-list'),

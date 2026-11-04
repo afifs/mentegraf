@@ -32,6 +32,8 @@
   "pickGo": "Dışa aktar",
   "pickNone": "En az bir tür seçin.",
   "pickJsonNote": "Bir kısmını dışa aktarırsanız dosya tam proje olmaz; yalnızca seçilen türleri içerir.",
+  "obsRelated": "İlişkili",
+  "obsIndex": "Dizin",
   "glossOpt": "Sözlük ve Dizin",
   "glossOptDesc": "Terimler ve tanımları ya da kişiler, kurumlar, olaylar; geçtikleri bölümlerle",
   "glossPresetTerms": "Terimler ve kavramlar",

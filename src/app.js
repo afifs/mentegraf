@@ -403,7 +403,7 @@ function csvEsc(s){if(!s)return '';s=String(s).replace(/\t/g,' ').replace(/\n/g,
 function doExportJSON(){var data=getProject();if(window.exportTypes){var keep={};data.elements.nodes=data.elements.nodes.filter(function(n){var ok=inExport(n.data.type);if(ok)keep[n.data.id]=1;return ok});data.elements.edges=data.elements.edges.filter(function(e){return keep[e.data.source]&&keep[e.data.target]})}var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mentegraf-export.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);closeExport();showMsg(L('exported'))}
 
 /* ═══ OBSIDIAN EXPORT ═══ */
-function doExportObsidian(){
+function doExportObsidianFile(){
   var proj=getProject();var files=[];
   if(window.exportTypes){var keepO={};proj.elements.nodes=proj.elements.nodes.filter(function(n){var ok=inExport(n.data.type);if(ok)keepO[n.data.id]=1;return ok});proj.elements.edges=proj.elements.edges.filter(function(e){return keepO[e.data.source]&&keepO[e.data.target]})}
   var nodeMap={};proj.elements.nodes.forEach(function(n){nodeMap[n.data.id]=n.data});

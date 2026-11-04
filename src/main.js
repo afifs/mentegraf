@@ -6,6 +6,7 @@ const ProjectStore = require('./projectStore')
 const Exporter = require('./exporter')
 const Styles = require('./styles')
 const Compiler = require('./compiler')
+const Obsidian = require('./obsidian')
 
 // Resolve paths
 const isDev = !app.isPackaged
@@ -31,7 +32,7 @@ const MENU_LABELS = {
     devTools: 'Geliştirici Araçları',
     unsavedTitle: 'Kaydedilmemiş değişiklikler', unsavedMsg: 'Projede kaydedilmemiş değişiklikler var.',
     saveBtn: 'Kaydet', dontSave: 'Kaydetme', cancel: 'İptal', discard: 'Değişiklikleri at',
-    openError: 'Proje açılamadı', saveError: 'Proje kaydedilemedi',
+    openError: 'Proje açılamadı', obsidianTitle: 'Obsidian kasasına aktar', obsidianDone: 'Notlar yazıldı.', obsidianPick: 'Obsidian kasasını seçin', obsidianCounts: 'Yeni: %c · güncellenen: %u · değişmeyen: %s', obsidianOrphans: 'Haritada artık olmayan %n not olduğu gibi bırakıldı.', saveError: 'Proje kaydedilemedi',
     newProjectTitle: 'Yeni proje klasörü', newProjectName: 'Yeni Proje', createBtn: 'Oluştur',
     notEmpty: 'Bu adla dolu bir klasör zaten var. Başka bir ad seçin.',
     notFolder: 'Bu adla bir dosya zaten var. Başka bir ad seçin.',
@@ -65,7 +66,7 @@ const MENU_LABELS = {
     devTools: 'Developer Tools',
     unsavedTitle: 'Unsaved changes', unsavedMsg: 'The project has unsaved changes.',
     saveBtn: 'Save', dontSave: "Don't Save", cancel: 'Cancel', discard: 'Discard changes',
-    openError: 'Could not open project', saveError: 'Could not save project',
+    openError: 'Could not open project', obsidianTitle: 'Export to an Obsidian vault', obsidianDone: 'Notes written.', obsidianPick: 'Choose the Obsidian vault', obsidianCounts: 'New: %c · updated: %u · unchanged: %s', obsidianOrphans: '%n notes of nodes no longer in the map were left as they are.', saveError: 'Could not save project',
     newProjectTitle: 'New project folder', newProjectName: 'New Project', createBtn: 'Create',
     notEmpty: 'A folder with this name already exists and is not empty. Choose another name.',
     notFolder: 'A file with this name already exists. Choose another name.',
@@ -335,6 +336,30 @@ ipcMain.handle('text-search', (event, query, opts) => {
       limit: 300
     })
   } catch (e) { return { files: [], total: 0, truncated: false, error: e.message } }
+})
+
+// Write the map into an Obsidian vault (one note per node, in the book's own folder).
+ipcMain.handle('obsidian-export', async (event, payload) => {
+  const L = labels()
+  const p = payload && typeof payload === 'object' ? payload : {}
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: L.obsidianPick, defaultPath: p.vault || undefined, properties: ['openDirectory', 'createDirectory']
+  })
+  if (res.canceled || !res.filePaths || !res.filePaths[0]) return { canceled: true }
+  try {
+    const r = Obsidian.exportVault({
+      vaultDir: res.filePaths[0], folderName: p.folderName, projectTitle: p.projectTitle,
+      projectDir: currentDir, nodes: Array.isArray(p.nodes) ? p.nodes : [], labels: p.labels
+    })
+    const detail = r.folder + '\n\n' + L.obsidianCounts.replace('%c', r.created).replace('%u', r.updated).replace('%s', r.unchanged) +
+      (r.orphaned ? '\n' + L.obsidianOrphans.replace('%n', r.orphaned) : '')
+    const choice = dialog.showMessageBoxSync(mainWindow, { type: 'info', title: L.obsidianTitle, message: L.obsidianDone, detail, buttons: [L.openBtn, 'OK'], defaultId: 0, cancelId: 1 })
+    if (choice === 0) require('electron').shell.openPath(r.folder)
+    return Object.assign({ vault: res.filePaths[0] }, r)
+  } catch (e) {
+    dialog.showErrorBox(L.obsidianTitle, e.message)
+    return { error: e.message }
+  }
 })
 
 // Where terms occur in the texts (for the glossary and index export).

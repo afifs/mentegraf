@@ -56,13 +56,60 @@ var ExportPick = (function () {
     try {
       if (kind === 'json') window.doExportJSON()
       else if (kind === 'publish') window.doPublish()
-      else if (kind === 'obsidian') window.doExportObsidian()
+      else if (kind === 'obsidian') ObsidianOut.run()
       else if (kind === 'svg') window.doExportSVG()
       else if (kind === 'csv') window.doExportCSV()
     } finally { window.exportTypes = null }
   }
 
   return { open: open, close: close, run: run, setAll: setAll }
+})()
+
+// Obsidian: one note per node in the vault, in a folder named after the book (main process
+// writes the files). Without the desktop app, falls back to the single combined Markdown file.
+var ObsidianOut = (function () {
+  'use strict'
+  function api() { return window.mentegraf }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch (e) { return null } }
+
+  function records() {
+    var nodes = cy.nodes().filter(function (n) { return inExport(n.data('type')) })
+    var keep = {}, byFragment = {}
+    nodes.forEach(function (n) { keep[n.id()] = true })
+    cy.nodes().forEach(function (n) { if (n.data('fragment')) byFragment[n.data('fragment')] = n.id() })
+    return nodes.map(function (n) {
+      var d = n.data(), cat = catById(d.type)
+      var links = []
+      n.connectedEdges().forEach(function (e) {
+        var out = e.source().id() === n.id(), o = out ? e.target() : e.source()
+        if (!keep[o.id()]) return
+        var ct = e.data('edgeType') ? connById(e.data('edgeType')) : null
+        links.push({ to: o.id(), dir: out ? 'out' : 'in', type: ct ? connLabel(ct) : '', marker: ct ? (ct.marker || '') : '', note: e.data('note') || '', w: e.data('weight') || 0 })
+      })
+      links.sort(function (a, b) { return (a.type || '~').localeCompare(b.type || '~', curLang) || b.w - a.w })
+      var cats = (d.cats || []).map(function (id) { return window.Classify ? Classify.path(id) : '' }).filter(Boolean)
+      var arg = window.Argue && Argue.isArg(n)
+      var passage = d.passage || '', owner = passage ? byFragment[passage.split('#')[0]] : null
+      return {
+        id: d.id, label: String(d.label || ''), type: d.type, typeLabel: cat ? catLabel(cat) : d.type,
+        description: d.description || '', notes: d.notes || '', tags: d.tags || [],
+        cats: cats, catTags: cats.map(function (c) { return c.split(' › ').join('/') }),
+        status: arg ? L('as_' + Argue.statusOf(n)) : '', passage: passage, passageOwner: owner && keep[owner] ? owner : null,
+        fragment: d.fragment || '', links: links
+      }
+    })
+  }
+
+  async function run() {
+    if (!api() || !api().obsidianExport) { window.doExportObsidianFile(); return }
+    var title = (window.Binder && Binder.get && Binder.get().title) || ''
+    var r = await api().obsidianExport({
+      vault: store('mentegraf-obsidian-vault') || undefined, folderName: title, projectTitle: title, nodes: records(),
+      labels: { status: L('argStatusLabel'), categories: L('catsTitle'), links: L('connections'), notes: L('notesLabel'), related: L('obsRelated'), index: L('obsIndex') }
+    })
+    if (r && r.vault) store('mentegraf-obsidian-vault', r.vault)
+  }
+  return { run: run, records: records }
 })()
 
 // Is a node of this type part of the export under way?
