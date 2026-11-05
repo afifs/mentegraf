@@ -54,11 +54,19 @@ var Audit = (function () {
     // which chapter names which word
     var cands = cy.nodes().filter(function (n) { return ENTITY.indexOf(n.data('type')) >= 0 && !plan[n.id()] })
     var terms = window.Gloss && Gloss._searchTerms ? Gloss._searchTerms(cands) : {}
-    var full = {}
-    cands.forEach(function (n) { if (n.data('type') === 'person') { var f = fullName(n.data('label')); if (f.length >= 3) full[n.id()] = f } })
+    // people are introduced where the full name appears, or the first name and the surname both
+    // appear ("John Henry Holland" introduces "John Holland")
+    var full = {}, given = {}, family = {}
+    cands.forEach(function (n) {
+      if (n.data('type') !== 'person') return
+      var f = fullName(n.data('label')); if (f.length >= 3) full[n.id()] = f
+      var w = f.split(/\s+/)
+      if (w.length >= 2 && w[0].length >= 3 && w[0].indexOf('.') < 0 && w[w.length - 1].length >= 3) { given[n.id()] = w[0]; family[n.id()] = w[w.length - 1] }
+    })
     var list = []
     Object.keys(terms).forEach(function (id) { terms[id].forEach(function (t) { if (list.indexOf(t) < 0) list.push(t) }) })
     Object.keys(full).forEach(function (id) { if (list.indexOf(full[id]) < 0) list.push(full[id]) })
+    Object.keys(given).forEach(function (id) { [given[id], family[id]].forEach(function (w) { if (list.indexOf(w) < 0) list.push(w) }) })
     var counts = {}
     if (list.length && chs.length && api() && api().textMentions) {
       var overrides = {}
@@ -78,7 +86,12 @@ var Audit = (function () {
       var linked = n.neighborhood().nodes().filter(function (o) { return !!plan[o.id()] }).map(function (o) { return plan[o.id()] }).sort(function (a, b) { return a.order - b.order })
       // early mention
       var intro = null
-      if (n.data('type') === 'person' && full[n.id()]) { var f = firstIn([full[n.id()]]); intro = f ? f.ch : (linked[0] || null) } else intro = linked[0] || null
+      if (n.data('type') === 'person' && full[n.id()]) {
+        var f = firstIn([full[n.id()]]), both = null
+        if (given[n.id()]) chs.forEach(function (c) { if (!both && (counts[given[n.id()]] || {})[c.path] && (counts[family[n.id()]] || {})[c.path]) both = c })
+        var cand = [f && f.ch, both].filter(Boolean).sort(function (a, b) { return a.order - b.order })[0]
+        intro = cand || linked[0] || null
+      } else intro = linked[0] || null
       if (first && intro && first.ch.order < intro.order) {
         out.push({ sub: 'early', node: n, group: first.ch.node, word: first.word, path: first.ch.path,
           text: L('au_earlyText').replace('%s', n.data('label')).replace('%c', intro.node.data('label')), done: isOk(n, 'early') })
