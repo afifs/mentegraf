@@ -32,7 +32,7 @@ const MENU_LABELS = {
     devTools: 'Geliştirici Araçları',
     unsavedTitle: 'Kaydedilmemiş değişiklikler', unsavedMsg: 'Projede kaydedilmemiş değişiklikler var.',
     saveBtn: 'Kaydet', dontSave: 'Kaydetme', cancel: 'İptal', discard: 'Değişiklikleri at',
-    openError: 'Proje açılamadı', obsidianTitle: 'Obsidian kasasına aktar', obsidianDone: 'Notlar yazıldı.', obsidianPick: 'Obsidian kasasını seçin', obsidianCounts: 'Yeni: %c · güncellenen: %u · değişmeyen: %s', obsidianOrphans: 'Haritada artık olmayan %n not olduğu gibi bırakıldı.', saveError: 'Proje kaydedilemedi',
+    openError: 'Proje açılamadı', obsidianTitle: 'Obsidian kasasına aktar', obsidianDone: 'Notlar yazıldı.', obsidianPick: 'Obsidian kasasını seçin', obsidianCounts: 'Yeni: %c · güncellenen: %u · değişmeyen: %s', obsidianOrphans: 'Haritada artık olmayan %n not olduğu gibi bırakıldı.', obsidianNoFolder: 'Kasada kitabın klasörü bulunamadı: %f', obsidianImport: 'Obsidian\'dan al…', saveError: 'Proje kaydedilemedi',
     newProjectTitle: 'Yeni proje klasörü', newProjectName: 'Yeni Proje', createBtn: 'Oluştur',
     notEmpty: 'Bu adla dolu bir klasör zaten var. Başka bir ad seçin.',
     notFolder: 'Bu adla bir dosya zaten var. Başka bir ad seçin.',
@@ -66,7 +66,7 @@ const MENU_LABELS = {
     devTools: 'Developer Tools',
     unsavedTitle: 'Unsaved changes', unsavedMsg: 'The project has unsaved changes.',
     saveBtn: 'Save', dontSave: "Don't Save", cancel: 'Cancel', discard: 'Discard changes',
-    openError: 'Could not open project', obsidianTitle: 'Export to an Obsidian vault', obsidianDone: 'Notes written.', obsidianPick: 'Choose the Obsidian vault', obsidianCounts: 'New: %c · updated: %u · unchanged: %s', obsidianOrphans: '%n notes of nodes no longer in the map were left as they are.', saveError: 'Could not save project',
+    openError: 'Could not open project', obsidianTitle: 'Export to an Obsidian vault', obsidianDone: 'Notes written.', obsidianPick: 'Choose the Obsidian vault', obsidianCounts: 'New: %c · updated: %u · unchanged: %s', obsidianOrphans: '%n notes of nodes no longer in the map were left as they are.', obsidianNoFolder: 'The book\'s folder was not found in the vault: %f', obsidianImport: 'Bring back from Obsidian…', saveError: 'Could not save project',
     newProjectTitle: 'New project folder', newProjectName: 'New Project', createBtn: 'Create',
     notEmpty: 'A folder with this name already exists and is not empty. Choose another name.',
     notFolder: 'A file with this name already exists. Choose another name.',
@@ -339,27 +339,72 @@ ipcMain.handle('text-search', (event, query, opts) => {
 })
 
 // Write the map into an Obsidian vault (one note per node, in the book's own folder).
+// payload.vaultDir skips the folder dialog (writing back after an import); payload.quiet the report.
+// What was written is kept in the project (.mentegraf/obsidian.json) for the next import.
+function obsidianBaselinePath() { return currentDir ? path.join(currentDir, '.mentegraf', 'obsidian.json') : null }
+function readObsidianBaseline() {
+  const p = obsidianBaselinePath()
+  try { return p ? JSON.parse(fs.readFileSync(p, 'utf8')) : null } catch (e) { return null }
+}
 ipcMain.handle('obsidian-export', async (event, payload) => {
   const L = labels()
   const p = payload && typeof payload === 'object' ? payload : {}
-  const res = await dialog.showOpenDialog(mainWindow, {
-    title: L.obsidianPick, defaultPath: p.vault || undefined, properties: ['openDirectory', 'createDirectory']
-  })
-  if (res.canceled || !res.filePaths || !res.filePaths[0]) return { canceled: true }
+  let vaultDir = typeof p.vaultDir === 'string' && p.vaultDir ? p.vaultDir : null
+  if (!vaultDir) {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: L.obsidianPick, defaultPath: p.vault || undefined, properties: ['openDirectory', 'createDirectory']
+    })
+    if (res.canceled || !res.filePaths || !res.filePaths[0]) return { canceled: true }
+    vaultDir = res.filePaths[0]
+  }
   try {
     const r = Obsidian.exportVault({
-      vaultDir: res.filePaths[0], folderName: p.folderName, projectTitle: p.projectTitle,
-      projectDir: currentDir, nodes: Array.isArray(p.nodes) ? p.nodes : [], labels: p.labels
+      vaultDir, folderName: p.folderName, projectTitle: p.projectTitle, projectDir: currentDir,
+      nodes: Array.isArray(p.nodes) ? p.nodes : [], labels: p.labels,
+      adopt: p.adopt && typeof p.adopt === 'object' ? p.adopt : undefined
     })
+    const bp = obsidianBaselinePath()
+    if (bp) {
+      try { fs.mkdirSync(path.dirname(bp), { recursive: true }); fs.writeFileSync(bp, JSON.stringify(Object.assign({ vault: vaultDir }, r.baseline)) + '\n', 'utf8') } catch (e) { /* the export itself worked */ }
+    }
+    const out = Object.assign({ vault: vaultDir }, r); delete out.baseline
+    if (p.quiet) return out
     const detail = r.folder + '\n\n' + L.obsidianCounts.replace('%c', r.created).replace('%u', r.updated).replace('%s', r.unchanged) +
       (r.orphaned ? '\n' + L.obsidianOrphans.replace('%n', r.orphaned) : '')
     const choice = dialog.showMessageBoxSync(mainWindow, { type: 'info', title: L.obsidianTitle, message: L.obsidianDone, detail, buttons: [L.openBtn, 'OK'], defaultId: 0, cancelId: 1 })
     if (choice === 0) require('electron').shell.openPath(r.folder)
-    return Object.assign({ vault: res.filePaths[0] }, r)
+    return out
   } catch (e) {
     dialog.showErrorBox(L.obsidianTitle, e.message)
     return { error: e.message }
   }
+})
+
+// Read the book's folder in the vault back: what the author changed there since the last export.
+// Uses the folder of the last export; asks for the vault when there is none.
+ipcMain.handle('obsidian-scan', async (event, payload) => {
+  const L = labels()
+  const p = payload && typeof payload === 'object' ? payload : {}
+  const base = readObsidianBaseline()
+  let folder = base && base.folder && fs.existsSync(base.folder) ? base.folder : null
+  let vault = folder ? base.vault : null
+  if (!folder) {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: L.obsidianPick, defaultPath: p.vault || undefined, properties: ['openDirectory']
+    })
+    if (res.canceled || !res.filePaths || !res.filePaths[0]) return { canceled: true }
+    vault = res.filePaths[0]
+    folder = path.join(vault, Obsidian.safeName(p.folderName || 'Mentegraf'))
+    if (!fs.existsSync(folder)) return { error: L.obsidianNoFolder.replace('%f', folder) }
+  }
+  try {
+    const plan = Obsidian.scanImport({
+      folder, folderName: p.folderName, nodes: Array.isArray(p.nodes) ? p.nodes : [], labels: p.labels,
+      baseline: base && base.folder === folder ? base : null,
+      quoteOf: n => Obsidian.passageText(currentDir, n.passage)
+    })
+    return Object.assign({ vault }, plan)
+  } catch (e) { return { error: e.message } }
 })
 
 // Where terms occur in the texts (for the glossary and index export).
@@ -569,6 +614,8 @@ function buildMenu() {
         { label: L.open, accelerator: 'CmdOrCtrl+O', click: openFile },
         { label: L.save, accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('menu-action', 'save') },
         { label: L.saveAs, accelerator: 'CmdOrCtrl+Shift+S', click: saveFileAs },
+        { label: L.obsidianImport, click: () => send('menu-action', 'obsidian-import') },
+        { type: 'separator' },
         { label: L.autoSave, type: 'checkbox', checked: autoSaveOn, click: () => send('menu-action', 'toggle-autosave') },
         { type: 'separator' },
         { label: L.quit, accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }

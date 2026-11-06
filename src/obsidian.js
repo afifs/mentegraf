@@ -107,17 +107,33 @@ function passageText(projectDir, passage) {
   return p ? p.replace(re, '').replace(/\s*\n\s*/g, ' ').trim() : ''
 }
 
-// Notes already in the folder that came from Mentegraf: id -> file name (without .md).
+// Markdown files under a folder, subfolders included (not hidden ones): paths relative to it,
+// '/'-separated, without .md.
+function listNotes(dir) {
+  const out = []
+  const walk = (rel, depth) => {
+    let entries = []
+    try { entries = fs.readdirSync(path.join(dir, rel), { withFileTypes: true }) } catch (e) { return }
+    entries.forEach(e => {
+      if (e.name.startsWith('.')) return
+      const r = rel ? rel + '/' + e.name : e.name
+      if (e.isDirectory()) { if (depth < 8) walk(r, depth + 1) } else if (/\.md$/i.test(e.name)) out.push(r.replace(/\.md$/i, ''))
+    })
+  }
+  walk('', 0)
+  return out.sort()
+}
+const baseName = rel => rel.split('/').pop()
+
+// Notes already in the folder that came from Mentegraf: id -> file (relative, without .md).
+// A note the author moved into a subfolder is still found.
 function scanFolder(dir) {
   const byId = {}, names = new Set()
-  let entries = []
-  try { entries = fs.readdirSync(dir) } catch (e) { return { byId, names } }
-  entries.filter(n => /\.md$/i.test(n)).forEach(n => {
-    const base = n.replace(/\.md$/i, '')
-    names.add(base.toLocaleLowerCase('tr'))
+  listNotes(dir).forEach(rel => {
+    names.add(baseName(rel).toLocaleLowerCase('tr'))
     try {
-      const id = readKey(splitNote(fs.readFileSync(path.join(dir, n), 'utf8')).lines, 'mentegraf-id')
-      if (id) byId[id] = base
+      const id = readKey(splitNote(fs.readFileSync(path.join(dir, rel + '.md'), 'utf8')).lines, 'mentegraf-id')
+      if (id) byId[id] = rel
     } catch (e) { /* unreadable: leave it */ }
   })
   return { byId, names }
@@ -126,7 +142,7 @@ function scanFolder(dir) {
 // File names for the nodes: an existing note keeps its name; new ones get a free, unique name.
 function assignNames(nodes, found, reserved) {
   const out = {}, taken = new Set((reserved || []).map(n => n.toLocaleLowerCase('tr')))
-  nodes.forEach(n => { if (found.byId[n.id]) { out[n.id] = found.byId[n.id]; taken.add(out[n.id].toLocaleLowerCase('tr')) } })
+  nodes.forEach(n => { if (found.byId[n.id]) { out[n.id] = found.byId[n.id]; taken.add(baseName(out[n.id]).toLocaleLowerCase('tr')) } })
   found.names.forEach(n => taken.add(n))
   const count = {}
   nodes.forEach(n => { const k = shortName(n).toLocaleLowerCase('tr'); count[k] = (count[k] || 0) + 1 })
@@ -142,7 +158,7 @@ function assignNames(nodes, found, reserved) {
 }
 
 function link(names, id, label) {
-  const n = names[id]
+  const n = names[id] && baseName(names[id])
   return !n ? label : (n === label ? '[[' + n + ']]' : '[[' + n + '|' + label + ']]')
 }
 
@@ -178,12 +194,16 @@ function exportVault(opts) {
   const dir = path.join(vaultDir, safeName(folderName || projectTitle || 'Mentegraf'))
   fs.mkdirSync(dir, { recursive: true })
   const found = scanFolder(dir)
-  const indexName = safeName((L.index || 'Dizin') + ' - ' + (folderName || projectTitle || 'Mentegraf'))
+  // notes written in Obsidian that just became nodes keep their file
+  Object.keys(opts.adopt || {}).forEach(id => { if (!found.byId[id]) found.byId[id] = opts.adopt[id] })
+  const indexName = indexNameOf(L, folderName || projectTitle)
   found.names.delete(indexName.toLocaleLowerCase('tr'))
   const names = assignNames(nodes, found, [indexName])
   const labels = {}
   nodes.forEach(n => { labels[n.id] = n.label })
   const counts = { created: 0, updated: 0, unchanged: 0, orphaned: 0 }
+  // what each note said when written, so a later import can tell who changed what
+  const baseline = { folder: dir, written: new Date().toISOString(), nodes: {} }
   const write = (file, text) => {
     const p = path.join(dir, file + '.md')
     let old = null
@@ -202,6 +222,7 @@ function exportVault(opts) {
       aliases: names[n.id] !== safeName(n.label) ? [n.label] : []
     }
     write(names[n.id], mergeNote(old, own, noteBlock(n, names, labels, projectDir, L)))
+    baseline.nodes[n.id] = { file: names[n.id], description: norm(n.description), notes: norm(n.notes), tags: (n.tags || []).map(safeTag).filter(Boolean) }
   })
   // The book's own note: every node by type.
   const byType = {}, order = []
@@ -213,7 +234,121 @@ function exportVault(opts) {
   write(indexName, mergeNote(oldIndex, { keys: { 'mentegraf-project': projectTitle || '', 'tür': L.index }, tags: [] }, index))
   // Notes of nodes that are no longer in the map are left alone, only counted.
   Object.keys(found.byId).forEach(id => { if (!labels[id]) counts.orphaned++ })
-  return Object.assign({ folder: dir, notes: nodes.length }, counts)
+  return Object.assign({ folder: dir, notes: nodes.length, baseline }, counts)
 }
 
-module.exports = { exportVault, mergeNote, safeName, safeTag, passageText, assignNames, splitNote, readList, START, END }
+function indexNameOf(L, title) { return safeName((L.index || 'Dizin') + ' - ' + (title || 'Mentegraf')) }
+function norm(s) { return String(s == null ? '' : s).replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n\s*\n/g, '\n\n').trim() }
+
+// ── Import: read back what the author changed in Obsidian ──────────────────────────────────
+
+// Our block, taken apart: description, quoted passage, notes.
+function parseBlock(block, L) {
+  const t = norm(block)
+  const notesHead = new RegExp('(^|\\n)## ' + escRe(L.notes) + '\\n')
+  const linksHead = new RegExp('(^|\\n)## ' + escRe(L.links) + '\\n')
+  let head = t, notes = ''
+  const mn = notesHead.exec(t)
+  if (mn) { head = t.slice(0, mn.index); notes = t.slice(mn.index + mn[0].length) }
+  const ml = linksHead.exec(head)
+  if (ml) head = head.slice(0, ml.index)
+  const meta = new RegExp('^\\*\\*(' + escRe(L.status) + '|' + escRe(L.categories) + '):\\*\\*')
+  const paras = head.split(/\n\s*\n/)
+  const desc = [], quote = []
+  let i = 0
+  for (; i < paras.length && !/^>/.test(paras[i]) && !meta.test(paras[i]); i++) desc.push(paras[i])
+  for (; i < paras.length; i++) if (/^>/.test(paras[i])) quote.push(paras[i])
+  const q = quote.join('\n').split('\n').map(l => l.replace(/^>\s?/, '')).join('\n').split(/\n\s*\n— /)[0]
+  return { description: norm(desc.join('\n\n')), notes: norm(notes), quote: norm(q).replace(/\s*\n\s*/g, ' ') }
+}
+function escRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+
+// [[Target]], [[Target|shown]], [[Target#heading]] — not embeds (![[…]]), not inside quotes.
+function wikiLinks(body) {
+  const out = []
+  norm(body).split('\n').forEach(line => {
+    if (/^\s*>/.test(line)) return
+    const re = /(!?)\[\[([^\]|#^]+)(?:[#^][^\]|]*)?(?:\|[^\]]*)?\]\]/g
+    let m
+    while ((m = re.exec(line))) if (!m[1]) out.push(m[2].trim())
+  })
+  return out
+}
+
+// Read the book folder and work out what changed there since the last export.
+//   nodes     the map as the export sends it (records)
+//   baseline  what the last export wrote ({ nodes: { id: { file, description, notes, tags } } }), or null
+// Returns lists the author confirms one by one; nothing is applied here.
+function scanImport(opts) {
+  const { folder, nodes } = opts
+  const L = Object.assign({ status: 'Durum', categories: 'Kategoriler', links: 'Bağlantılar', notes: 'Notlar', index: 'Dizin' }, opts.labels || {})
+  const base = (opts.baseline && opts.baseline.nodes) || null
+  const byId = {}
+  nodes.forEach(n => { byId[n.id] = n })
+  const indexName = indexNameOf(L, opts.folderName || opts.projectTitle).toLocaleLowerCase('tr')
+  const plan = { folder, hasBaseline: !!base, updates: [], tagsAdd: [], tagsRemove: [], links: [], created: [], orphans: [], quotes: [] }
+  const notes = []
+  listNotes(folder).forEach(rel => {
+    let text
+    try { text = fs.readFileSync(path.join(folder, rel + '.md'), 'utf8') } catch (e) { return }
+    const sp = splitNote(text)
+    const id = readKey(sp.lines, 'mentegraf-id')
+    if (!id && (baseName(rel).toLocaleLowerCase('tr') === indexName || readKey(sp.lines, 'mentegraf-project') != null)) return
+    notes.push({ rel, id, sp })
+  })
+  // name -> note key (an existing node's id, or 'new:<file>')
+  const keyOf = {}
+  const keyFor = n => n.id && byId[n.id] ? n.id : (n.id ? null : 'new:' + n.rel)
+  notes.forEach(n => {
+    const k = keyFor(n); if (!k) return
+    const names = [baseName(n.rel), n.rel].concat(readList(n.sp.lines, 'aliases'))
+    names.forEach(x => { const l = x.toLocaleLowerCase('tr'); if (!(l in keyOf)) keyOf[l] = k })
+  })
+  const neighbours = {}
+  nodes.forEach(n => { neighbours[n.id] = new Set((n.links || []).map(l => l.to)) })
+  const seenPair = new Set()
+  const addLink = (from, to, file) => {
+    if (!to || from === to) return
+    if (byId[from] && byId[to] && (neighbours[from].has(to) || neighbours[to].has(from))) return
+    const pair = [from, to].sort().join('|')
+    if (seenPair.has(pair)) return
+    seenPair.add(pair); plan.links.push({ from, to, file })
+  }
+
+  notes.forEach(n => {
+    if (n.id && !byId[n.id]) { plan.orphans.push(n.rel); return }
+    const fmTags = readList(n.sp.lines, 'tags').map(safeTag).filter(Boolean)
+    const body = n.sp.body
+    if (!n.id) {
+      plan.created.push({ file: n.rel, label: baseName(n.rel), typeHint: readKey(n.sp.lines, 'mentegraf-type') || readKey(n.sp.lines, 'tür') || '', tags: fmTags })
+      wikiLinks(body).forEach(t => addLink('new:' + n.rel, keyOf[t.toLocaleLowerCase('tr')], n.rel))
+      return
+    }
+    const node = byId[n.id], b = base && base[n.id]
+    const a = body.indexOf(START), z = body.indexOf(END)
+    if (a >= 0 && z > a) {
+      const got = parseBlock(body.slice(a + START.length, z), L)
+      ;['description', 'notes'].forEach(f => {
+        const inVault = got[f], inMap = norm(node[f])
+        if (inVault === inMap) return
+        if (b && inVault === b[f]) return // only the map changed: the next export writes it
+        plan.updates.push({ id: n.id, file: n.rel, field: f, from: inMap, to: inVault, conflict: !!b && inMap !== b[f], noBaseline: !b })
+      })
+      if (got.quote && opts.quoteOf) {
+        const q = norm(opts.quoteOf(node)).replace(/\s*\n\s*/g, ' ')
+        if (q && q !== got.quote) plan.quotes.push({ id: n.id, file: n.rel })
+      }
+    }
+    // tags: the node's own ones; category tags are written from the classification
+    const cat = new Set((node.catTags || []).map(safeTag))
+    const mine = (node.tags || []).map(t => ({ t, s: safeTag(t) }))
+    const mineSafe = new Set(mine.map(x => x.s))
+    const baseTags = new Set(b ? b.tags : mine.map(x => x.s))
+    fmTags.forEach(t => { if (!cat.has(t) && !mineSafe.has(t) && !baseTags.has(t)) plan.tagsAdd.push({ id: n.id, file: n.rel, tag: t }) })
+    if (b) mine.forEach(x => { if (baseTags.has(x.s) && fmTags.indexOf(x.s) < 0) plan.tagsRemove.push({ id: n.id, file: n.rel, tag: x.t }) })
+    wikiLinks(body).forEach(t => addLink(n.id, keyOf[t.toLocaleLowerCase('tr')], n.rel))
+  })
+  return plan
+}
+
+module.exports = { exportVault, scanImport, parseBlock, wikiLinks, listNotes, mergeNote, safeName, safeTag, passageText, assignNames, splitNote, readList, START, END }

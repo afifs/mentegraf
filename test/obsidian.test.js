@@ -99,4 +99,80 @@ test('a note without markers gets the block on top, the author text below', () =
   assert.strictEqual(t, '---\nmentegraf-id: x\ntags:\n  - a b\n---\n<!-- mentegraf:start -->\nAçıklama.\n<!-- mentegraf:end -->\n\nElle yazılmış.\n')
 })
 
+// ── import ──
+const exported = () => {
+  const p = project(), vault = tmp()
+  const opts = { vaultDir: vault, folderName: 'Kitap', projectTitle: 'Kitap', projectDir: p, nodes: nodes() }
+  const r = Obs.exportVault(opts)
+  return { p, vault, opts, r, dir: r.folder }
+}
+const scan = (x, ns, base) => Obs.scanImport({ folder: x.dir, folderName: 'Kitap', nodes: ns || nodes(), baseline: base === undefined ? x.r.baseline : base, quoteOf: n => Obs.passageText(x.p, n.passage) })
+const edit = (x, file, fn) => { const f = path.join(x.dir, file + '.md'); fs.writeFileSync(f, fn(fs.readFileSync(f, 'utf8'))) }
+
+test('block parsing gets description, notes and quote back', () => {
+  const b = Obs.parseBlock('Bir.\n\nİki.\n\n> Alıntı satırı.\n>\n> — [[Giriş]]\n\n**Durum:** Tez\n\n## Bağlantılar\n\n- x\n\n## Notlar\n\nNot bir.\n\n## Alt başlık\n\nNot iki.', { status: 'Durum', categories: 'Kategoriler', links: 'Bağlantılar', notes: 'Notlar' })
+  assert.deepStrictEqual(b, { description: 'Bir.\n\nİki.', notes: 'Not bir.\n\n## Alt başlık\n\nNot iki.', quote: 'Alıntı satırı.' })
+  assert.deepStrictEqual(Obs.wikiLinks('a [[X]] b [[Y|y]] ![[img.png]] [[Z#h]]\n> [[Q]]'), ['X', 'Y', 'Z'])
+})
+
+test('an untouched vault brings nothing back', () => {
+  const x = exported(), pl = scan(x)
+  assert.ok(pl.hasBaseline)
+  ;['updates', 'tagsAdd', 'tagsRemove', 'links', 'created', 'orphans', 'quotes'].forEach(k => assert.deepStrictEqual(pl[k], [], k))
+})
+
+test('edits in the block, tags, links and new notes come back as proposals', () => {
+  const x = exported()
+  edit(x, 'Herbert Simon', t => t.replace('Sınırlı rasyonellik: ehven.', 'Sınırlı rasyonellik: ehven (satisficing).').replace('Nobel 1978.', 'Nobel 1978. Carnegie Mellon.')
+    .replace('---\n', '---\ntags:\n  - okunacak\n') + '\nBkz. [[Schiller (Kişi)]] ve [[Yeni fikir]].\n')
+  edit(x, 'Ehven seçer, sıçrama görünür kılar', t => t.replace('  - tez\n', '').replace('sıçrama yeniyi görünür kılar.\n>', 'sıçrama yeniyi gösterir.\n>'))
+  fs.mkdirSync(path.join(x.dir, 'Taslaklar'))
+  fs.writeFileSync(path.join(x.dir, 'Taslaklar', 'Yeni fikir.md'), '---\ntür: Kavram\ntags: [deneme]\n---\nSerbest metin, [[Herbert Simon]] ile ilgili.\n')
+  const pl = scan(x)
+  assert.deepStrictEqual(pl.updates.map(u => [u.id, u.field, u.to, u.conflict]), [['p1', 'description', 'Sınırlı rasyonellik: ehven (satisficing).', false], ['p1', 'notes', 'Nobel 1978. Carnegie Mellon.', false]])
+  assert.deepStrictEqual(pl.tagsAdd.map(t => [t.id, t.tag]), [['p1', 'okunacak']])
+  assert.deepStrictEqual(pl.tagsRemove.map(t => [t.id, t.tag]), [['c1', 'tez']])
+  assert.deepStrictEqual(pl.created, [{ file: 'Taslaklar/Yeni fikir', label: 'Yeni fikir', typeHint: 'Kavram', tags: ['deneme'] }])
+  assert.deepStrictEqual(pl.links.map(l => [l.from, l.to].sort()).sort(), [['new:Taslaklar/Yeni fikir', 'p1'], ['p1', 'p2']].sort(), 'Simon–Yeni fikir once, Simon–Schiller; existing Simon–claim link skipped')
+  assert.deepStrictEqual(pl.quotes.map(q => q.id), ['c1'])
+})
+
+test('both sides changed is a conflict; only the map changed is not a proposal; no baseline marks everything', () => {
+  const x = exported()
+  edit(x, 'Herbert Simon', t => t.replace('Sınırlı rasyonellik: ehven.', 'Obsidian sürümü.'))
+  const ns = nodes(); ns[2].description = 'Harita sürümü.'; ns[3].description = 'Friedrich Schiller, şair.'
+  const pl = scan(x, ns)
+  assert.deepStrictEqual(pl.updates.map(u => [u.id, u.from, u.to, u.conflict]), [['p1', 'Harita sürümü.', 'Obsidian sürümü.', true]])
+  const nb = scan(x, ns, null)
+  assert.ok(!nb.hasBaseline && nb.updates.length === 2 && nb.updates.every(u => u.noBaseline))
+})
+
+test('the index note is skipped; notes of deleted nodes are listed; re-export adopts new notes without moving the author text', () => {
+  const x = exported()
+  fs.writeFileSync(path.join(x.dir, 'Yeni fikir.md'), 'Serbest metin.\n')
+  const ns = nodes().filter(n => n.id !== 'p3')
+  const pl = scan(x, ns)
+  assert.deepStrictEqual(pl.orphans, ['Schiller (Kavram)'])
+  assert.deepStrictEqual(pl.created.map(c => c.file), ['Yeni fikir'])
+  ns.push({ id: 'n9', label: 'Yeni fikir', type: 'idea', typeLabel: 'Fikir', description: '', tags: [], links: [] })
+  const r = Obs.exportVault(Object.assign({}, x.opts, { nodes: ns, adopt: { n9: 'Yeni fikir' } }))
+  assert.strictEqual(r.created, 0)
+  const t = read(x.dir, 'Yeni fikir.md')
+  assert.ok(t.startsWith('---\nmentegraf-id: n9\n') && t.endsWith('-->\n\nSerbest metin.\n'), t)
+  assert.ok(!fs.existsSync(path.join(x.dir, 'Yeni fikir (Fikir).md')))
+  assert.strictEqual(r.baseline.nodes.n9.file, 'Yeni fikir')
+  const again = scan(Object.assign({}, x, { r }), ns)
+  assert.strictEqual(again.created.length + again.updates.length + again.links.length, 0)
+})
+
+test('a note moved into a subfolder is still the same node', () => {
+  const x = exported()
+  fs.mkdirSync(path.join(x.dir, 'Kişiler'))
+  fs.renameSync(path.join(x.dir, 'Herbert Simon.md'), path.join(x.dir, 'Kişiler', 'Herbert Simon.md'))
+  const r = Obs.exportVault(x.opts)
+  assert.strictEqual(r.created, 0)
+  assert.ok(!fs.existsSync(path.join(x.dir, 'Herbert Simon.md')))
+  assert.ok(read(x.dir, 'Ehven seçer, sıçrama görünür kılar.md').includes('[[Herbert Simon]]'))
+})
+
 console.log(passed + ' passed')

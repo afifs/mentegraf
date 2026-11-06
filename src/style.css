@@ -412,3 +412,28 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .qau{flex:none;font-size:11px;color:#9a6a1e}
 .qok{flex:none;border:1px solid var(--border);background:transparent;border-radius:6px;font-size:11px;line-height:1;padding:2px 5px;color:var(--dim);cursor:pointer}
 .qok:hover{color:var(--text);border-color:var(--accent)}
+
+/* Obsidian'dan al */
+.obs-in{width:720px;max-width:94vw;max-height:86vh;display:flex;flex-direction:column;padding:20px}
+.oi-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.oi-body{flex:1;overflow-y:auto;min-height:120px}
+.oi-where{font-size:11px;color:var(--dim);margin-bottom:10px;word-break:break-all}
+.oi-warn{font-size:12px;padding:8px 10px;border-radius:8px;border:1px solid var(--accent);margin-bottom:10px;color:var(--text)}
+.oi-sec{margin-bottom:14px}
+.oi-sh{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:6px}
+.oi-n{background:var(--badge-bg);border-radius:8px;padding:0 6px;margin-left:4px}
+.oi-row{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer}
+.oi-row input[type=checkbox]{margin-top:3px}
+.oi-main{flex:1;min-width:0}
+.oi-t{font-size:13px;color:var(--text)}
+.oi-t select{margin-left:6px;font-size:12px}
+.oi-dim{font-size:11px;color:var(--dim)}
+.oi-badge{font-size:10px;border:1px solid var(--accent);border-radius:6px;padding:0 5px;margin-left:4px;color:var(--text)}
+.oi-diff{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;font-size:12px;color:var(--text)}
+.oi-diff>div{background:var(--badge-bg);border-radius:6px;padding:6px 8px;white-space:pre-wrap;word-break:break-word}
+.oi-tag{font-size:12px;color:var(--accent);margin-left:4px}
+.oi-tag.oi-del{text-decoration:line-through}
+.oi-info{font-size:12px;color:var(--dim);padding:2px 0}
+.oi-empty{font-size:13px;color:var(--dim);padding:20px 0;text-align:center}
+.oi-foot{display:flex;align-items:center;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.oi-note{font-size:11px;color:var(--dim)}

@@ -104,12 +104,148 @@ var ObsidianOut = (function () {
     if (!api() || !api().obsidianExport) { window.doExportObsidianFile(); return }
     var title = (window.Binder && Binder.get && Binder.get().title) || ''
     var r = await api().obsidianExport({
-      vault: store('mentegraf-obsidian-vault') || undefined, folderName: title, projectTitle: title, nodes: records(),
-      labels: { status: L('argStatusLabel'), categories: L('catsTitle'), links: L('connections'), notes: L('notesLabel'), related: L('obsRelated'), index: L('obsIndex') }
+      vault: store('mentegraf-obsidian-vault') || undefined, folderName: title, projectTitle: title, nodes: records(), labels: labels()
     })
     if (r && r.vault) store('mentegraf-obsidian-vault', r.vault)
   }
-  return { run: run, records: records }
+  function labels() {
+    return { status: L('argStatusLabel'), categories: L('catsTitle'), links: L('connections'), notes: L('notesLabel'), related: L('obsRelated'), index: L('obsIndex') }
+  }
+  // Write the vault again without asking (after an import), so the notes and the baseline follow the map.
+  async function rewrite(vault, adopt) {
+    if (!api() || !api().obsidianExport) return null
+    var title = (window.Binder && Binder.get && Binder.get().title) || ''
+    return api().obsidianExport({ vaultDir: vault, quiet: true, folderName: title, projectTitle: title, nodes: records(), labels: labels(), adopt: adopt || {} })
+  }
+  return { run: run, records: records, labels: labels, rewrite: rewrite, store: store }
+})()
+
+// Bring back from Obsidian what the author changed in the book's folder: corrected descriptions
+// and notes, tags, [[links]] between notes, and new notes as new nodes. Shown as a list to tick;
+// the map changes only for what is ticked. Afterwards the vault is written again from the map.
+var ObsidianIn = (function () {
+  'use strict'
+  var plan = null
+  function api() { return window.mentegraf }
+  function $(id) { return document.getElementById(id) }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] }) }
+  function short(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s }
+  function node(id) { var n = cy.getElementById(id); return n.length ? n : null }
+  function nameOf(key) {
+    if (String(key).indexOf('new:') === 0) return String(key).slice(4).split('/').pop()
+    var n = node(key); return n ? n.data('label') : key
+  }
+
+  function modal() {
+    var m = $('obsInModal')
+    if (m) return m
+    m = document.createElement('div')
+    m.className = 'modal-overlay'; m.id = 'obsInModal'
+    m.innerHTML = '<div class="modal obs-in"><div class="oi-head"><h2>' + esc(L('oiTitle')) + '</h2><button class="bt bg" onclick="ObsidianIn.close()">✕</button></div>' +
+      '<div id="oiBody" class="oi-body"></div>' +
+      '<div class="oi-foot"><span id="oiNote" class="oi-note"></span><span style="flex:1"></span>' +
+      '<button class="bt bg" onclick="ObsidianIn.close()">' + esc(L('cancel')) + '</button> ' +
+      '<button class="bt bp" id="oiApply" onclick="ObsidianIn.apply()">' + esc(L('oiApply')) + '</button></div></div>'
+    document.body.appendChild(m)
+    return m
+  }
+  function close() { var m = $('obsInModal'); if (m) m.style.display = 'none' }
+
+  async function open() {
+    if (!api() || !api().obsidianScan) { showMsg(L('oiDesktopOnly')); return }
+    var title = (window.Binder && Binder.get && Binder.get().title) || ''
+    var r = await api().obsidianScan({ vault: ObsidianOut.store('mentegraf-obsidian-vault') || undefined, folderName: title, nodes: ObsidianOut.records(), labels: ObsidianOut.labels() })
+    if (!r || r.canceled) return
+    if (r.error) { alert(r.error); return }
+    plan = r
+    var m = modal()
+    render()
+    m.style.display = 'flex'
+  }
+
+  function typeOptions(hint) {
+    var h = String(hint || '').toLocaleLowerCase('tr')
+    var pick = categories.find(function (c) { return c.id === hint || catLabel(c).toLocaleLowerCase('tr') === h || (c.tr || '').toLocaleLowerCase('tr') === h || (c.en || '').toLowerCase() === h })
+    if (!pick) pick = catById('idea') || categories[0]
+    return categories.map(function (c) { return '<option value="' + esc(c.id) + '"' + (c === pick ? ' selected' : '') + '>' + esc(catLabel(c)) + '</option>' }).join('')
+  }
+
+  function section(title, rows) {
+    if (!rows.length) return ''
+    return '<div class="oi-sec"><div class="oi-sh">' + esc(title) + ' <span class="oi-n">' + rows.length + '</span></div>' + rows.join('') + '</div>'
+  }
+  function row(kind, i, on, html) {
+    return '<label class="oi-row"><input type="checkbox" data-k="' + kind + '" data-i="' + i + '"' + (on ? ' checked' : '') + '><div class="oi-main">' + html + '</div></label>'
+  }
+
+  function render() {
+    var p = plan, h = ''
+    h += '<div class="oi-where">' + esc(p.folder) + '</div>'
+    if (!p.hasBaseline) h += '<div class="oi-warn">' + esc(L('oiNoBase')) + '</div>'
+    h += section(L('oiUpdates'), p.updates.map(function (u, i) {
+      var tag = u.conflict ? '<span class="oi-badge">' + esc(L('oiConflict')) + '</span>' : (u.noBaseline ? '<span class="oi-badge">' + esc(L('oiUnsure')) + '</span>' : '')
+      return row('updates', i, !u.conflict && !u.noBaseline,
+        '<div class="oi-t">' + esc(short(nameOf(u.id), 90)) + ' · ' + esc(L(u.field === 'notes' ? 'notesLabel' : 'oiDesc')) + ' ' + tag + '</div>' +
+        '<div class="oi-diff"><div><b>' + esc(L('oiInMap')) + '</b> ' + (esc(short(u.from, 400)) || '<i>—</i>') + '</div><div><b>' + esc(L('oiInVault')) + '</b> ' + (esc(short(u.to, 400)) || '<i>—</i>') + '</div></div>')
+    }))
+    h += section(L('oiTagsAdd'), p.tagsAdd.map(function (t, i) { return row('tagsAdd', i, true, '<div class="oi-t">' + esc(short(nameOf(t.id), 90)) + ' <span class="oi-tag">+ #' + esc(t.tag) + '</span></div>') }))
+    h += section(L('oiTagsRemove'), p.tagsRemove.map(function (t, i) { return row('tagsRemove', i, true, '<div class="oi-t">' + esc(short(nameOf(t.id), 90)) + ' <span class="oi-tag oi-del">− #' + esc(t.tag) + '</span></div>') }))
+    h += section(L('oiCreated'), p.created.map(function (c, i) {
+      return row('created', i, true, '<div class="oi-t">' + esc(c.label) + (c.file !== c.label ? ' <span class="oi-dim">' + esc(c.file) + '</span>' : '') +
+        ' <select data-type="' + i + '" onclick="event.preventDefault();event.stopPropagation()" onmousedown="event.stopPropagation()">' + typeOptions(c.typeHint) + '</select></div>')
+    }))
+    h += section(L('oiLinks'), p.links.map(function (l, i) { return row('links', i, true, '<div class="oi-t">' + esc(short(nameOf(l.from), 70)) + ' — ' + esc(short(nameOf(l.to), 70)) + '</div>') }))
+    var info = []
+    p.quotes.forEach(function (q) { info.push('<div class="oi-info">' + esc(short(nameOf(q.id), 90)) + ': ' + esc(L('oiQuote')) + '</div>') })
+    p.orphans.forEach(function (f) { info.push('<div class="oi-info">' + esc(f) + ': ' + esc(L('oiOrphan')) + '</div>') })
+    if (info.length) h += '<div class="oi-sec"><div class="oi-sh">' + esc(L('oiInfo')) + '</div>' + info.join('') + '</div>'
+    var any = p.updates.length + p.tagsAdd.length + p.tagsRemove.length + p.created.length + p.links.length
+    if (!any) h += '<div class="oi-empty">' + esc(L('oiNothing')) + '</div>'
+    $('oiBody').innerHTML = h
+    $('oiApply').disabled = !any
+    $('oiNote').textContent = any ? L('oiAfter') : ''
+  }
+
+  function ticked(kind) {
+    var out = []
+    document.querySelectorAll('#oiBody input[data-k="' + kind + '"]').forEach(function (cb) { if (cb.checked) out.push(+cb.dataset.i) })
+    return out
+  }
+
+  async function apply() {
+    var p = plan; if (!p) return
+    var ids = {}, adopt = {}, n = { updates: 0, tags: 0, created: 0, links: 0 }
+    var ext = cy.extent(), cx = (ext.x1 + ext.x2) / 2, cyy = (ext.y1 + ext.y2) / 2
+    ticked('created').forEach(function (i) {
+      var c = p.created[i], sel = document.querySelector('#oiBody select[data-type="' + i + '"]')
+      var type = sel ? sel.value : 'idea', cat = catById(type) || categories[0]
+      var id = ProjectFormat.newId('n'), x = cx + (Math.random() - 0.5) * 300, y = cyy + (Math.random() - 0.5) * 300
+      cy.add({ data: { id: id, label: c.label, type: cat.id, color: cat.color, description: '', notes: '', tags: (c.tags || []).slice(), x: x, y: y }, position: { x: x, y: y } })
+      ids['new:' + c.file] = id; adopt[id] = c.file; n.created++
+    })
+    ticked('updates').forEach(function (i) { var u = p.updates[i], nd = node(u.id); if (nd) { nd.data(u.field, u.to); n.updates++ } })
+    ticked('tagsAdd').forEach(function (i) {
+      var t = p.tagsAdd[i], nd = node(t.id); if (!nd) return
+      var tags = (nd.data('tags') || []).slice(); if (tags.indexOf(t.tag) < 0) { tags.push(t.tag); nd.data('tags', tags); n.tags++ }
+    })
+    ticked('tagsRemove').forEach(function (i) {
+      var t = p.tagsRemove[i], nd = node(t.id); if (!nd) return
+      nd.data('tags', (nd.data('tags') || []).filter(function (x) { return x !== t.tag })); n.tags++
+    })
+    ticked('links').forEach(function (i) {
+      var l = p.links[i], a = ids[l.from] || (node(l.from) ? l.from : null), b = ids[l.to] || (node(l.to) ? l.to : null)
+      if (!a || !b || a === b) return
+      cy.add({ data: { id: ProjectFormat.newId('e'), source: a, target: b, weight: 3, edgeType: '', note: 'Obsidian' } }); n.links++
+    })
+    close()
+    if (typeof uStats === 'function') uStats()
+    snapshot()
+    var r = await ObsidianOut.rewrite(p.vault, adopt)
+    showMsg(L('oiDone').replace('%u', n.updates).replace('%t', n.tags).replace('%c', n.created).replace('%l', n.links) + (r && r.error ? ' — ' + r.error : ''))
+    plan = null
+  }
+
+  return { open: open, close: close, apply: apply, _plan: function () { return plan } }
 })()
 
 // Is a node of this type part of the export under way?
