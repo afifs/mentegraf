@@ -437,3 +437,7 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .oi-empty{font-size:13px;color:var(--dim);padding:20px 0;text-align:center}
 .oi-foot{display:flex;align-items:center;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 .oi-note{font-size:11px;color:var(--dim)}
+.argmenu .mm-count{padding:4px 8px 6px;font:12px 'DM Sans',sans-serif;color:var(--dim);border-bottom:1px solid var(--border);margin-bottom:3px}
+.bmenu button:disabled{opacity:.45;cursor:default}
+#wPreview mark{background:rgba(255,214,0,.38);color:inherit;border-radius:2px}
+.wtb .tb-marks svg path:first-child{fill:none}

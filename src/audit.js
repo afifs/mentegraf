@@ -121,12 +121,31 @@ var Audit = (function () {
       out.push({ sub: 'unsupported', node: n, group: owner, text: n.data('label'), passage: n.data('passage'), status: st, done: isOk(n, 'unsupported') })
     })
 
+    // highlighted changes ([..]{.mark}) still waiting to be accepted, per chapter
+    if (chs.length && api() && api().textSearch) {
+      var ov = {}
+      if (window.Writer && Writer.dirtyFragments) Writer.dirtyFragments().forEach(function (f) { ov[f.path] = f.text })
+      var mr = await api().textSearch('{.mark}', { only: chs.map(function (c) { return c.path }), overrides: ov })
+      if (my !== seq) return items
+      ;((mr && mr.files) || []).forEach(function (f) {
+        var c = byPath[f.path]
+        if (!c) return
+        out.push({ sub: 'marks', node: c.node, group: c.node, path: f.path, count: f.count,
+          text: L('au_marksText').replace('%c', c.node.data('label')).replace('%n', f.count), done: isOk(c.node, 'marks') })
+      })
+    }
+
     items = out
     return items
   }
 
   // Open the earlier chapter at the first place the word occurs.
   async function open(it) {
+    if (it.sub === 'marks') {
+      await Writer.openForNode(it.group, { focus: true })
+      if (Writer.firstMark) Writer.firstMark()
+      return true
+    }
     if (it.sub !== 'early' || !it.path || !api() || !api().textSearch) return false
     var r = await api().textSearch(it.word, { only: [it.path] })
     var f = r && r.files && r.files[0], h = f && f.hits && f.hits[0]

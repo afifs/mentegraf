@@ -148,7 +148,7 @@ var Work = (function () {
     if (el.dataset.kind === 'audit') {
       var a = Audit.items()[+el.dataset.audit]
       selNode(n)
-      if (a && a.sub === 'early') { await Audit.open(a); return }
+      if (a && (a.sub === 'early' || a.sub === 'marks')) { await Audit.open(a); return }
       if (a && a.passage && await Argue.goToPassage(a.passage)) return
       if (typeof focusNeighborhood === 'function') focusNeighborhood(n)
       return

@@ -368,5 +368,20 @@
   "oiNothing": "Obsidian'da haritaya dönecek bir değişiklik yok.",
   "oiAfter": "Uygulayınca kasa yeniden yazılır; işaretlemediğin blok içi düzeltmeler haritadaki hâline döner.",
   "oiDone": "Obsidian'dan alındı: %u düzeltme, %t etiket, %c yeni düğüm, %l bağ",
-  "oiOptDesc": "Kasada değiştirdiklerini haritaya geri getir: düzeltmeler, etiketler, bağlar, yeni notlar"
+  "oiOptDesc": "Kasada değiştirdiklerini haritaya geri getir: düzeltmeler, etiketler, bağlar, yeni notlar",
+  "tbMarks": "Sarı işaretler: kabul et, sonrakine git",
+  "markAcceptTip": "İşareti kabul et (Ctrl+Shift+A): sarıyı kaldırır, yazıyı bırakır",
+  "markAcceptHere": "Bu işareti kabul et",
+  "markNext": "Sonraki işaret",
+  "markAcceptAll": "Bu metindekilerin hepsini kabul et",
+  "markCount": "Bu metinde %n sarı işaret",
+  "markNone": "Bu metinde sarı işaret yok",
+  "markWhere": "Sarı işaret %i / %n — Ctrl+Shift+A kabul eder",
+  "markAcceptedLeft": "Kabul edildi — %n işaret kaldı",
+  "markAllDone": "Bu metindeki işaretlerin hepsi kabul edildi",
+  "markAllConfirm": "Bu metindeki %n sarı işaretin hepsi kabul edilsin mi? (Ctrl+Z ile geri alınabilir)",
+  "markAllAccepted": "%n işaret kabul edildi (Ctrl+Z geri alır)",
+  "au_marks": "sarı işaret",
+  "au_marksTip": "Bu metinde okunup kabul edilmeyi bekleyen değişiklikler var. Tıklayınca ilki açılır.",
+  "au_marksText": "%c: %n sarı işaret"
 }

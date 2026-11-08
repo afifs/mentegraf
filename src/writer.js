@@ -64,6 +64,11 @@ var Writer = (function () {
       '.cm-pid': { color: 'var(--dim)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.72em' },
       '.cm-lensline': { backgroundColor: 'rgba(197,160,94,0.13)', boxShadow: 'inset 3px 0 0 #c5a05e' },
       '.cm-lensword': { borderBottom: '2px solid #c5a05e' },
+      '.cm-hl': { backgroundColor: 'rgba(255,214,0,0.38)', borderRadius: '2px' },
+      '.cm-hl-open': { color: 'var(--dim)', fontSize: '0.8em' },
+      '.cm-hl-end': { fontSize: '0', cursor: 'pointer' },
+      '.cm-hl-end::after': { content: "'✓'", fontSize: '11px', fontFamily: "'DM Sans', sans-serif", fontWeight: '700', color: '#8a6d00', background: 'rgba(255,214,0,0.55)', borderRadius: '8px', padding: '0 5px', marginLeft: '2px', verticalAlign: '2px' },
+      '.cm-hl-end:hover::after': { background: '#e0b800', color: '#fff' },
       '.cm-pid-arg': { cursor: 'pointer', color: '#c0683f !important' },
       '.cm-pid-arg::after': { content: 'attr(data-arg)', marginLeft: '4px', padding: '0 5px', borderRadius: '8px', background: 'rgba(192,104,63,0.14)', color: '#a0532f', fontFamily: "'DM Sans', sans-serif", fontSize: '11px' }
     })
@@ -78,6 +83,7 @@ var Writer = (function () {
       markPlugin(/\s\^[a-z0-9]{4,12}$/g, 'cm-pid'),
       lensPlugin(),
       argPlugin(),
+      hlPlugin(),
       CM.syntaxHighlighting(hl),
       CM.search({ top: true }),
       CM.highlightSelectionMatches(),
@@ -87,7 +93,13 @@ var Writer = (function () {
       CM.EditorView.domEventHandlers({
         paste: function (e) { return window.Figures ? Figures.onPaste(e) : false },
         drop: function (e, v) { return window.Figures ? Figures.onDrop(e, v) : false },
-        mousedown: function (e) {
+        mousedown: function (e, v) {
+          var h = e.target.closest && e.target.closest('.cm-hl-end')
+          if (h && current) {
+            var at = v.posAtDOM(h)
+            var mk = marksIn(v.state).filter(function (m) { return at >= m.from && at <= m.to })[0]
+            if (mk) { acceptRange(v, mk); e.preventDefault(); return true }
+          }
           var b = e.target.closest && e.target.closest('.cm-pid-arg')
           if (!b || !window.Argue || !current) return false
           Argue.onBadge(current.path, b.getAttribute('data-pid'))
@@ -112,6 +124,8 @@ var Writer = (function () {
         { key: 'Mod-Shift-f', run: footnote, preventDefault: true },
         { key: 'Mod-Shift-c', run: cite, preventDefault: true },
         { key: 'Mod-Shift-p', run: passageId, preventDefault: true },
+        { key: 'Mod-Shift-a', run: acceptMark, preventDefault: true },
+        { key: 'Mod-Shift-m', run: nextMark, preventDefault: true },
         { key: 'Mod-e', run: function () { togglePreview(); return true }, preventDefault: true },
         { key: 'Mod-Shift-g', run: function () { run('figure'); return true }, preventDefault: true },
         { key: 'Mod-Shift-k', run: function () { run('claim'); return true }, preventDefault: true },
@@ -205,6 +219,115 @@ var Writer = (function () {
         if (u.docChanged || u.viewportChanged || ver !== this.ver) { this.ver = ver; this.decorations = find(u.view) }
       }
     }, { decorations: function (v) { return v.decorations } })
+  }
+
+  // ───────── highlighted changes: [text]{.mark} ─────────
+  // Text wrapped as [..]{.mark} (a highlight in Word) is a change waiting to be read.
+  // Accepting it removes the wrapper and keeps the words.
+
+  var MARK_RE = /\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\{\.mark\}/g
+
+  function marksInText(text, offset) {
+    var out = [], m
+    MARK_RE.lastIndex = 0
+    while ((m = MARK_RE.exec(text))) out.push({ from: offset + m.index, to: offset + m.index + m[0].length, inner: m[1] })
+    return out
+  }
+  function marksIn(st) { return marksInText(st.doc.toString(), 0) }
+
+  function hlPlugin() {
+    var body = CM.Decoration.mark({ class: 'cm-hl' }), open = CM.Decoration.mark({ class: 'cm-hl-open' })
+    function find(v) {
+      var ranges = []
+      v.visibleRanges.forEach(function (r) {
+        for (var pos = r.from; pos <= r.to;) {
+          var l = v.state.doc.lineAt(pos)
+          if (l.text.indexOf('{.mark}') >= 0) marksInText(l.text, l.from).forEach(function (m) {
+            var endAt = m.to - 8
+            ranges.push(open.range(m.from, m.from + 1))
+            if (endAt > m.from + 1) ranges.push(body.range(m.from + 1, endAt))
+            ranges.push(CM.Decoration.mark({ class: 'cm-hl-end', attributes: { title: L('markAcceptTip') } }).range(endAt, m.to))
+          })
+          pos = l.to + 1
+        }
+      })
+      return CM.Decoration.set(ranges, true)
+    }
+    return CM.ViewPlugin.fromClass(class {
+      constructor(v) { this.decorations = find(v) }
+      update(u) { if (u.docChanged || u.viewportChanged) this.decorations = find(u.view) }
+    }, { decorations: function (v) { return v.decorations } })
+  }
+
+  function acceptRange(v, m) {
+    v.dispatch({ changes: [{ from: m.from, to: m.from + 1, insert: '' }, { from: m.to - 8, to: m.to, insert: '' }], userEvent: 'input' })
+    var left = marksIn(v.state).length
+    flash(left ? L('markAcceptedLeft').replace('%n', left) : L('markAllDone'))
+  }
+
+  // Go to the next highlight after the cursor (from the top again at the end) and select its words.
+  function nextMark(v) {
+    if (!current || previewOn) return false
+    var all = marksIn(v.state)
+    if (!all.length) { flash(L('markNone')); return true }
+    var sel = v.state.selection.main, head = sel.head
+    var m = all.filter(function (x) { return x.from > head || (x.from === head && sel.empty) })[0] || all[0]
+    v.dispatch({ selection: { anchor: m.from + 1, head: m.to - 8 }, effects: CM.EditorView.scrollIntoView(m.from, { y: 'center' }) })
+    flash(L('markWhere').replace('%i', all.indexOf(m) + 1).replace('%n', all.length))
+    v.focus()
+    return true
+  }
+
+  // Accept the highlight the cursor is in; when it is in none, go to the next one.
+  function acceptMark(v) {
+    if (!current || previewOn) return false
+    var sel = v.state.selection.main
+    var m = marksIn(v.state).filter(function (x) { return sel.from >= x.from && sel.to <= x.to && sel.head >= x.from && sel.head <= x.to })[0]
+    if (!m) return nextMark(v)
+    acceptRange(v, m)
+    return true
+  }
+
+  function acceptAllMarks(v) {
+    if (!current || previewOn) return false
+    var all = marksIn(v.state)
+    if (!all.length) { flash(L('markNone')); return true }
+    if (!confirm(L('markAllConfirm').replace('%n', all.length))) return true
+    var ch = []
+    all.forEach(function (m) { ch.push({ from: m.from, to: m.from + 1, insert: '' }, { from: m.to - 8, to: m.to, insert: '' }) })
+    v.dispatch({ changes: ch, userEvent: 'input' })
+    flash(L('markAllAccepted').replace('%n', all.length))
+    return true
+  }
+
+  function closeMarkMenu() { var m = $('markMenu'); if (m) m.remove() }
+  function markMenu() {
+    if ($('markMenu')) { closeMarkMenu(); return }
+    var btn = document.querySelector('#wToolbar button[data-cmd="marks"]'), n = marksIn(view.state).length
+    var m = document.createElement('div')
+    m.id = 'markMenu'
+    m.className = 'bmenu argmenu'
+    m.innerHTML = '<div class="mm-count">' + escapeHtml(n ? L('markCount').replace('%n', n) : L('markNone')) + '</div>' +
+      [['accept', 'markAcceptHere', 'Ctrl+Shift+A'], ['next', 'markNext', 'Ctrl+Shift+M'], ['all', 'markAcceptAll', '']].map(function (x) {
+        return '<button data-mk="' + x[0] + '"' + (n ? '' : ' disabled') + '><span>' + escapeHtml(L(x[1])) + '</span>' + (x[2] ? '<kbd>' + x[2] + '</kbd>' : '') + '</button>'
+      }).join('')
+    $('writer').appendChild(m)
+    var r = btn.getBoundingClientRect(), w = $('writer').getBoundingClientRect()
+    m.style.top = (r.bottom - w.top + 4) + 'px'
+    m.style.left = Math.max(8, Math.min(r.left - w.left, w.width - m.offsetWidth - 8)) + 'px'
+    m.addEventListener('mousedown', function (e) { e.preventDefault() })
+    m.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-mk]')
+      if (!b || b.disabled) return
+      closeMarkMenu()
+      if (b.dataset.mk === 'accept') acceptMark(view)
+      else if (b.dataset.mk === 'next') nextMark(view)
+      else acceptAllMarks(view)
+      view.focus()
+    })
+    document.addEventListener('mousedown', function away(e) {
+      if (!e.target.closest('#markMenu') && !e.target.closest('button[data-cmd="marks"]')) { closeMarkMenu(); document.removeEventListener('mousedown', away, true) }
+    }, true)
   }
 
   // ───────── formatting commands (toolbar and shortcuts) ─────────
@@ -367,7 +490,7 @@ var Writer = (function () {
     var a = line.number, b = line.number
     while (a > 1 && st.doc.line(a - 1).text.trim()) a--
     while (b < st.doc.lines && st.doc.line(b + 1).text.trim()) b++
-    var text = st.sliceDoc(st.doc.line(a).from, st.doc.line(b).to)
+    var text = st.sliceDoc(st.doc.line(a).from, st.doc.line(b).to).replace(MARK_RE, '$1')
       .replace(/\s\^[a-z0-9]{4,12}\s*$/, '').replace(/\[\^[^\]]+\]/g, '').replace(/\[@[^\]]*\]/g, '')
       .replace(/^#+\s*|^>\s*|^[-*]\s+|^\d+\.\s+/gm, '').replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim()
     var m = /^(.{20,}?[.!?…])(\s|$)/.exec(text)
@@ -377,11 +500,11 @@ var Writer = (function () {
   var COMMANDS = {
     bold: wrap('**'), italic: wrap('_'), heading: linePrefix('heading'), quote: linePrefix('quote'),
     bullet: linePrefix('bullet'), number: linePrefix('number'), link: link,
-    footnote: footnote, cite: cite, passage: passageId
+    footnote: footnote, cite: cite, passage: passageId, accept: acceptMark, nextmark: nextMark, acceptall: acceptAllMarks
   }
   var ARG = { claim: 1, question: 1, task: 1 }
   var TIPS = { bold: 'tbBold', italic: 'tbItalic', heading: 'tbHeading', quote: 'tbQuote', bullet: 'tbBullet',
-    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', preview: 'tbPreview', docx: 'tbDocx', figure: 'tbFigure', argue: 'tbArgue' }
+    number: 'tbNumber', link: 'tbLink', footnote: 'tbFootnote', cite: 'tbCite', passage: 'tbPassage', marks: 'tbMarks', preview: 'tbPreview', docx: 'tbDocx', figure: 'tbFigure', argue: 'tbArgue' }
 
   // Export the open text to Word through Pandoc (main process shows the result).
   var exporting = false
@@ -399,6 +522,7 @@ var Writer = (function () {
   function run(name) {
     if (name === 'preview') { togglePreview(); return }
     if (name === 'docx') { exportDocx(); return }
+    if (name === 'marks') { if (view && current && !previewOn) markMenu(); return }
     if (name === 'figure') { if (window.Figures && current && !previewOn) Figures.openPicker(document.querySelector('#wToolbar button[data-cmd="figure"]')); return }
     if (name === 'argue') { if (window.Argue && current && !previewOn) Argue.menu(document.querySelector('#wToolbar button[data-cmd="argue"]')); return }
     if (ARG[name]) { if (window.Argue && current && !previewOn) Argue.capture(name); return }
@@ -442,8 +566,9 @@ var Writer = (function () {
     var text = view.state.doc.toString()
       .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '')        // metadata block
       .replace(/[ \t]\^[a-z0-9]{4,12}[ \t]*$/gm, '')         // passage IDs
+    text = text.replace(MARK_RE, '\uE000$1\uE001')                // highlighted changes
     if (window.Figures) text = Figures.previewMarkdown(text)
-    var html = md.render(text)
+    var html = md.render(text).replace(/\uE000/g, '<mark>').replace(/\uE001/g, '</mark>')
     if (window.Figures) html = Figures.markCaptions(html)
       .replace(/\[([^\[\]<]*@[^\[\]<]*)\]/g, function (all, inner) { return '<span class="pv-cite">[' + inner + ']</span>' })
     $('wPreview').innerHTML = html
@@ -780,6 +905,13 @@ var Writer = (function () {
         return true
       }
       return false
+    },
+    // Bring the first highlighted change into view (work queue).
+    firstMark: function () {
+      if (!view || !current) return false
+      if (previewOn) togglePreview()
+      view.dispatch({ selection: { anchor: 0 } })
+      return nextMark(view)
     },
     // Select a found word and bring it to the middle of the pane (search results).
     reveal: function (line, col, len) {

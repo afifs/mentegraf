@@ -368,5 +368,20 @@
   "oiNothing": "Nothing in Obsidian to bring back to the map.",
   "oiAfter": "After applying, the vault is written again; unticked edits inside the block go back to the map's version.",
   "oiDone": "From Obsidian: %u edits, %t tags, %c new nodes, %l links",
-  "oiOptDesc": "Bring what you changed in the vault back to the map: edits, tags, links, new notes"
+  "oiOptDesc": "Bring what you changed in the vault back to the map: edits, tags, links, new notes",
+  "tbMarks": "Highlights: accept, go to next",
+  "markAcceptTip": "Accept this change (Ctrl+Shift+A): removes the highlight, keeps the words",
+  "markAcceptHere": "Accept this highlight",
+  "markNext": "Next highlight",
+  "markAcceptAll": "Accept all in this text",
+  "markCount": "%n highlights in this text",
+  "markNone": "No highlights in this text",
+  "markWhere": "Highlight %i of %n — Ctrl+Shift+A accepts it",
+  "markAcceptedLeft": "Accepted — %n left",
+  "markAllDone": "All highlights in this text accepted",
+  "markAllConfirm": "Accept all %n highlights in this text? (Ctrl+Z undoes it)",
+  "markAllAccepted": "%n highlights accepted (Ctrl+Z undoes it)",
+  "au_marks": "highlight",
+  "au_marksTip": "Changes in this text are waiting to be read and accepted. Click to open the first one.",
+  "au_marksText": "%c: %n highlights"
 }
