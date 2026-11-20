@@ -413,5 +413,9 @@
   "au_style_hyphen": "hyphenated",
   "au_style_mark": "with circumflex",
   "au_style_plain": "without circumflex",
-  "au_times": "%n times"
+  "au_times": "%n times",
+  "markAdd": "Highlight the selection",
+  "markSelectFirst": "Select the words to highlight first",
+  "markOneParagraph": "A highlight stays within one paragraph",
+  "markAlready": "The selection touches a highlight already"
 }

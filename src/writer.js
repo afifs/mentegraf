@@ -130,6 +130,7 @@ var Writer = (function () {
         { key: 'Mod-Shift-c', run: cite, preventDefault: true },
         { key: 'Mod-Shift-p', run: passageId, preventDefault: true },
         { key: 'Mod-Shift-a', run: acceptMark, preventDefault: true },
+        { key: 'Mod-Shift-y', run: addMark, preventDefault: true },
         { key: 'Mod-Shift-m', run: nextMark, preventDefault: true },
         { key: 'Mod-e', run: function () { togglePreview(); return true }, preventDefault: true },
         { key: 'Mod-Shift-g', run: function () { run('figure'); return true }, preventDefault: true },
@@ -299,6 +300,19 @@ var Writer = (function () {
     return true
   }
 
+  // Highlight the selected words as a change to read later: [words]{.mark}.
+  function addMark(v) {
+    if (!current || (previewOn && v === primary.view)) return false
+    var st = v.state, r = st.selection.main
+    if (r.empty) { flash(L('markSelectFirst')); return true }
+    if (/\n\s*\n/.test(st.sliceDoc(r.from, r.to))) { flash(L('markOneParagraph')); return true }
+    var inside = marksIn(st).filter(function (m) { return r.from < m.to && r.to > m.from })[0]
+    if (inside) { flash(L('markAlready')); return true }
+    v.dispatch({ changes: [{ from: r.from, insert: '[' }, { from: r.to, insert: ']{.mark}' }],
+      selection: { anchor: r.to + 9 }, userEvent: 'input' })
+    return true
+  }
+
   function acceptAllMarks(v) {
     if (!current || previewOn) return false
     var all = marksIn(v.state)
@@ -319,8 +333,8 @@ var Writer = (function () {
     m.id = 'markMenu'
     m.className = 'bmenu argmenu'
     m.innerHTML = '<div class="mm-count">' + escapeHtml(n ? L('markCount').replace('%n', n) : L('markNone')) + '</div>' +
-      [['accept', 'markAcceptHere', 'Ctrl+Shift+A'], ['next', 'markNext', 'Ctrl+Shift+M'], ['all', 'markAcceptAll', '']].map(function (x) {
-        return '<button data-mk="' + x[0] + '"' + (n ? '' : ' disabled') + '><span>' + escapeHtml(L(x[1])) + '</span>' + (x[2] ? '<kbd>' + x[2] + '</kbd>' : '') + '</button>'
+      [['add', 'markAdd', 'Ctrl+Shift+Y'], ['accept', 'markAcceptHere', 'Ctrl+Shift+A'], ['next', 'markNext', 'Ctrl+Shift+M'], ['all', 'markAcceptAll', '']].map(function (x) {
+        return '<button data-mk="' + x[0] + '"' + (n || x[0] === 'add' ? '' : ' disabled') + '><span>' + escapeHtml(L(x[1])) + '</span>' + (x[2] ? '<kbd>' + x[2] + '</kbd>' : '') + '</button>'
       }).join('')
     $('writer').appendChild(m)
     var r = btn.getBoundingClientRect(), w = $('writer').getBoundingClientRect()
@@ -331,7 +345,8 @@ var Writer = (function () {
       var b = e.target.closest('[data-mk]')
       if (!b || b.disabled) return
       closeMarkMenu()
-      if (b.dataset.mk === 'accept') acceptMark(view)
+      if (b.dataset.mk === 'add') addMark(view)
+      else if (b.dataset.mk === 'accept') acceptMark(view)
       else if (b.dataset.mk === 'next') nextMark(view)
       else acceptAllMarks(view)
       view.focus()
@@ -511,7 +526,7 @@ var Writer = (function () {
   var COMMANDS = {
     bold: wrap('**'), italic: wrap('_'), heading: linePrefix('heading'), quote: linePrefix('quote'),
     bullet: linePrefix('bullet'), number: linePrefix('number'), link: link,
-    footnote: footnote, cite: cite, passage: passageId, accept: acceptMark, nextmark: nextMark, acceptall: acceptAllMarks
+    footnote: footnote, cite: cite, passage: passageId, accept: acceptMark, nextmark: nextMark, acceptall: acceptAllMarks, markadd: addMark
   }
   var ARG = { claim: 1, question: 1, task: 1 }
   var TIPS = { bold: 'tbBold', italic: 'tbItalic', heading: 'tbHeading', quote: 'tbQuote', bullet: 'tbBullet',
@@ -763,8 +778,8 @@ var Writer = (function () {
     if (p.win) { try { p.win.document.title = (label || '') + ' — Mentegraf' } catch (e) { /* closed */ } }
   }
 
-  var PANE_TOOLS = [['bold', 'B', 'tb-b'], ['italic', 'I', 'tb-i'], ['footnote', '¹', 'tb-fn'], ['passage', '¶', ''], ['sep'], ['accept', '✓', 'tb-acc'], ['nextmark', '↓', '']]
-  var PANE_TIPS = { accept: 'markAcceptHere', nextmark: 'markNext' }
+  var PANE_TOOLS = [['bold', 'B', 'tb-b'], ['italic', 'I', 'tb-i'], ['footnote', '¹', 'tb-fn'], ['passage', '¶', ''], ['sep'], ['markadd', '▌', 'tb-hl'], ['accept', '✓', 'tb-acc'], ['nextmark', '↓', '']]
+  var PANE_TIPS = { markadd: 'markAdd', accept: 'markAcceptHere', nextmark: 'markNext' }
 
   // The pane's own header, small toolbar, editor and status line, built in `doc` (the main
   // window's document or a window of its own).

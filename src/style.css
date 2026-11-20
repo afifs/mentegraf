@@ -460,3 +460,4 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .sidemenu button kbd:hover{background:var(--hover)}
 body.wwin{display:block;height:100vh;background:var(--bg2)}
 body.wwin .wpane{height:100vh}
+.wpane-tb .tb-hl{color:#e0b800;font-weight:700}

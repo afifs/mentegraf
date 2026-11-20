@@ -413,5 +413,9 @@
   "au_style_hyphen": "tireli",
   "au_style_mark": "şapkalı",
   "au_style_plain": "şapkasız",
-  "au_times": "%n kez"
+  "au_times": "%n kez",
+  "markAdd": "Seçimi sarı işaretle",
+  "markSelectFirst": "Önce işaretlenecek sözcükleri seçin",
+  "markOneParagraph": "Sarı işaret tek paragraf içinde olmalı",
+  "markAlready": "Seçim zaten sarı işaretli bir yere değiyor"
 }
