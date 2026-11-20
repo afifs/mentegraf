@@ -86,7 +86,7 @@ var Work = (function () {
     })
     if (kinds.audit && window.Audit) Audit.items().forEach(function (a, i) {
       if (a.done && !showDone) return
-      items.push({ kind: 'audit', sub: a.sub, idx: i, node: a.node, group: a.group, text: a.text, passage: a.passage, done: a.done, missing: false })
+      items.push({ kind: 'audit', sub: a.sub, idx: i, node: a.node, group: a.group, book: !!a.book, text: a.text, passage: a.passage, done: a.done, missing: false })
     })
     return items.filter(function (it) { return kinds[it.kind] && (lensOk(it.node) || (it.group && lensOk(it.group))) })
   }
@@ -105,9 +105,11 @@ var Work = (function () {
     var box = $('qList')
     if (!box || !window.cy) return
     var items = collect(), order = planOrder(), groups = {}, keys = []
-    items.forEach(function (it) { var k = it.group ? it.group.id() : ''; if (!groups[k]) { groups[k] = []; keys.push(k) } groups[k].push(it) })
+    // book-wide checks (spelling, repeats, names) get a group of their own, after the chapters
+    items.forEach(function (it) { var k = it.book ? '~book' : it.group ? it.group.id() : ''; if (!groups[k]) { groups[k] = []; keys.push(k) } groups[k].push(it) })
     keys.sort(function (a, b) {
       if (!a) return 1; if (!b) return -1
+      if (a === '~book') return 1; if (b === '~book') return -1
       var oa = order[a] != null ? order[a] : 1e6, ob = order[b] != null ? order[b] : 1e6
       return oa - ob || String(node(a).data('label')).localeCompare(String(node(b).data('label')), 'tr')
     })
@@ -122,12 +124,12 @@ var Work = (function () {
     if (!items.length) { put('<div class="cnone">' + esc(L('queueEmpty')) + '</div>'); return }
     var RANK = { contested: 0, open: 1, draft: 2, supported: 3, thesis: 3, answered: 4, beyond: 4, dropped: 5 }
     put(keys.map(function (k) {
-      var g = k ? node(k) : null
+      var g = k && k !== '~book' ? node(k) : null
       var list = groups[k].sort(function (a, b) {
         return (b.missing - a.missing) || (a.done - b.done) || ({ question: 0, task: 1, claim: 2, audit: 3 }[a.kind] - { question: 0, task: 1, claim: 2, audit: 3 }[b.kind]) || ((RANK[a.status] || 0) - (RANK[b.status] || 0))
       })
       return '<div class="qgroup"><div class="qgh"' + (g ? ' data-node="' + esc(g.id()) + '"' : '') + '><span class="cdot" style="background:' + esc(g ? typeColor(g) : '#bbb') + '"></span>' +
-        '<span class="qgname">' + esc(g ? g.data('label') : L('queueOther')) + '</span>' +
+        '<span class="qgname">' + esc(g ? g.data('label') : L(k === '~book' ? 'queueBook' : 'queueOther')) + '</span>' +
         (g && g.data('fragment') ? '<button class="qbrief" data-act="brief" title="' + esc(L('briefTitle')) + '">' + esc(L('briefBtn')) + '</button>' : '') + '</div>' +
         list.map(function (it) {
           var icon = it.kind === 'task' ? '<input type="checkbox"' + (it.done ? ' checked' : '') + '>' : '<span class="qicon q-' + it.kind + '">' + (it.kind === 'claim' ? '◆' : it.kind === 'audit' ? '⚑' : '?') + '</span>'
@@ -148,7 +150,7 @@ var Work = (function () {
     if (el.dataset.kind === 'audit') {
       var a = Audit.items()[+el.dataset.audit]
       selNode(n)
-      if (a && (a.sub === 'early' || a.sub === 'marks')) { await Audit.open(a); return }
+      if (a && /^(early|marks|term|spelling|repeat)$/.test(a.sub)) { await Audit.open(a); return }
       if (a && a.passage && await Argue.goToPassage(a.passage)) return
       if (typeof focusNeighborhood === 'function') focusNeighborhood(n)
       return
@@ -166,7 +168,7 @@ var Work = (function () {
       var head = e.target.closest('.qgh[data-node]')
       if (head) { var g = node(head.dataset.node); selNode(g); if (typeof focusNeighborhood === 'function') focusNeighborhood(g); return }
       var it = e.target.closest('.qitem'); if (!it) return
-      if (e.target.closest('[data-act="auditok"]')) { var a = Audit.items()[+it.dataset.audit]; if (a) Audit.dismiss(a.node, a.sub, !a.done); render(); return }
+      if (e.target.closest('[data-act="auditok"]')) { var a = Audit.items()[+it.dataset.audit]; if (a) Audit.dismissItem(a, !a.done); render(); return }
       if (e.target.matches('input[type=checkbox]')) { Argue.changeTask(node(it.dataset.node), it.dataset.task, { done: e.target.checked }); schedule(); return }
       openItem(it)
     })

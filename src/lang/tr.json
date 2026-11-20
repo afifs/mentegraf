@@ -383,5 +383,15 @@
   "markAllAccepted": "%n işaret kabul edildi (Ctrl+Z geri alır)",
   "au_marks": "sarı işaret",
   "au_marksTip": "Bu metinde okunup kabul edilmeyi bekleyen değişiklikler var. Tıklayınca ilki açılır.",
-  "au_marksText": "%c: %n sarı işaret"
+  "au_marksText": "%c: %n sarı işaret",
+  "au_term": "terim",
+  "au_termTip": "Aynı kavram birden çok adla geçiyor: düğümün adı ve parantez içindeki adı metinlerde birlikte kullanılmış. Tıkladıkça öteki adın geçtiği yerler sırayla açılır.",
+  "au_termText": "%s: %f",
+  "au_spelling": "yazım",
+  "au_spellingTip": "Aynı sözcük farklı yazılmış (bitişik, ayrı, tireli ya da şapkalı). En çok kullanılan yazım esas alınır; tıkladıkça öteki yazımların geçtiği yerler sırayla açılır.",
+  "au_repeat": "tekrar",
+  "au_repeatTip": "Farklı bölümlerde birbirine çok benzeyen paragraflar: aynı kavram yeniden açıklanıyor ya da aynı örnek yeniden anlatılıyor olabilir. Tıkladıkça paragraflar sırayla açılır.",
+  "au_repeatText": "%t — %c",
+  "au_where": "%i / %n — sonraki yer için yeniden tıklayın",
+  "queueBook": "Kitap geneli: terim, yazım, tekrar"
 }

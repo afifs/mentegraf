@@ -418,6 +418,18 @@ ipcMain.handle('text-mentions', (event, terms, opts) => {
   } catch (e) { return { counts: {}, error: e.message } }
 })
 
+// Book-wide consistency checks for the work queue: spelling variants and repeated paragraphs.
+function checkOpts(o) {
+  o = o && typeof o === 'object' ? o : {}
+  return { overrides: o.overrides && typeof o.overrides === 'object' ? o.overrides : {}, only: Array.isArray(o.only) ? o.only.slice(0, 5000) : undefined, min: typeof o.min === 'number' ? o.min : undefined }
+}
+ipcMain.handle('text-variants', (event, opts) => {
+  try { return ProjectStore.spellingVariants(currentDir || null, checkOpts(opts)) } catch (e) { return { groups: [], error: e.message } }
+})
+ipcMain.handle('text-repeats', (event, opts) => {
+  try { return ProjectStore.similarParagraphs(currentDir || null, checkOpts(opts)) } catch (e) { return { clusters: [], error: e.message } }
+})
+
 ipcMain.handle('fragment-stats', (event, paths) => {
   if (!currentDir) return { counts: {} }
   try { return { counts: ProjectStore.fragmentStats(currentDir, Array.isArray(paths) ? paths.slice(0, 2000) : []) } } catch (e) { return { counts: {} } }

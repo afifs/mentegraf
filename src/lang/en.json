@@ -383,5 +383,15 @@
   "markAllAccepted": "%n highlights accepted (Ctrl+Z undoes it)",
   "au_marks": "highlight",
   "au_marksTip": "Changes in this text are waiting to be read and accepted. Click to open the first one.",
-  "au_marksText": "%c: %n highlights"
+  "au_marksText": "%c: %n highlights",
+  "au_term": "term",
+  "au_termTip": "One concept goes by more than one name: the node's label and a name in its parentheses are both used in the texts. Each click opens the next place where the other name is used.",
+  "au_termText": "%s: %f",
+  "au_spelling": "spelling",
+  "au_spellingTip": "The same word is written in different ways (joined, spaced, hyphenated or with a circumflex). The most used way counts as the house style; each click opens the next place written the other way.",
+  "au_repeat": "repeat",
+  "au_repeatTip": "Paragraphs in different chapters that are very much alike: a concept explained again, or an example told twice. Each click opens the next paragraph.",
+  "au_repeatText": "%t — %c",
+  "au_where": "%i of %n — click again for the next place",
+  "queueBook": "Whole book: terms, spelling, repeats"
 }

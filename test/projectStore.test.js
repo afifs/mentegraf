@@ -375,4 +375,34 @@ test('Save As brings assets along', () => {
   assert.ok(fs.existsSync(path.join(b, 'assets', 't.csv')))
 })
 
+test('spelling variants: joined, spaced and hyphenated forms of one word, and circumflex', () => {
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  const o = { overrides: {
+    'manuscript/a.md': '---\nmentegraf-node: n1\n---\nGeribildirim döngüsü. Olumlu geribildirimler büyütür. Hâlâ öyle.\n',
+    'manuscript/b.md': 'Negatif geri bildirimler söndürür. Bu hala geçerli, hala.\n\n[^b-1]: geri bildirim notu sayılmaz.\n'
+  } }
+  const g = Store.spellingVariants(dir, o).groups
+  const sp = g.find(x => x.key === 'sp:geri|geribild')
+  assert.ok(sp, 'spacing group found')
+  assert.deepStrictEqual(sp.forms.map(f => [f.style, f.n]), [['joined', 2], ['spaced', 1]])
+  assert.deepStrictEqual(sp.hits.map(h => [h.path, h.line, h.col, h.len]), [['manuscript/b.md', 1, 8, 16]])
+  const cf = g.find(x => x.kind === 'circumflex')
+  assert.deepStrictEqual(cf.forms.map(f => [f.form, f.n]), [['hala', 2], ['hâlâ', 1]])
+  assert.strictEqual(cf.hits[0].line, 4)
+})
+
+test('similar paragraphs in different texts are clustered; a paragraph only like its own text is not', () => {
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  const p1 = 'Termodinamiğin ikinci yasasına göre kapalı bir sistemde entropi zamanla artar ve düzensizlik büyür; canlılar ise çevrelerinden enerji alarak iç düzenlerini korur, çevrelerindeki entropiyi artırır.'
+  const p2 = 'Canlılar çevrelerinden enerji alarak iç düzenlerini korurken çevrelerindeki entropiyi artırır; termodinamiğin ikinci yasası kapalı sistemde entropinin zamanla arttığını, düzensizliğin büyüdüğünü söyler.'
+  const other = 'Dunbar sayısı yaklaşık yüz elli kişilik bir grubun güvene dayalı ilişkilerle bir arada kalabileceğini öne sürer; bu sınır aşılınca hiyerarşi, kurallar ve ortak öyküler gerekir, ekipler küçülür.'
+  const filler = n => Array.from({ length: n }, (_, i) => 'Paragraf ' + i + ' konusu ' + ['deniz', 'orman', 'şehir', 'müzik', 'tarih', 'kimya', 'yazılım', 'mimari'][i % 8] + ' üzerine birbirinden farklı sözcüklerle yazılmış uzunca bir anlatı içeriyor ve burada sayılar ' + (i * 7) + ' ile ' + (i * 13) + ' arasında değişiyor, ayrıca ' + ['kırmızı', 'mavi', 'yeşil', 'sarı'][i % 4] + ' renkler var.').join('\n\n')
+  const o = { overrides: { 'manuscript/a.md': p1 + '\n\n' + other + '\n\n' + filler(30), 'manuscript/b.md': filler(30) + '\n\n' + p2 } }
+  const c = Store.similarParagraphs(dir, o).clusters.filter(x => x.paras.some(p => /entropi/.test(p.text)))
+  assert.strictEqual(c.length, 1)
+  assert.deepStrictEqual(c[0].paras.map(p => p.path), ['manuscript/a.md', 'manuscript/b.md'])
+  assert.ok(c[0].key.startsWith('rp:'))
+  assert.ok(!Store.similarParagraphs(dir, o).clusters.some(x => x.paras.some(p => /Dunbar/.test(p.text))))
+})
+
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''))

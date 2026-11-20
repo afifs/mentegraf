@@ -544,6 +544,199 @@ function searchTexts(dir, query, opts) {
   return { files, total: files.reduce((s, f) => s + f.count, 0), truncated }
 }
 
+// ───────── consistency checks over the texts (audit) ─────────
+
+// The texts to check, metadata block removed: [{ rel, lines, start }] (start: first body line, 0-based).
+function bodyTexts(dir, opts) {
+  opts = opts || {}
+  const overrides = opts.overrides && typeof opts.overrides === 'object' ? opts.overrides : {}
+  let paths = listTexts(dir)
+  Object.keys(overrides).forEach(p => { if (paths.indexOf(p) < 0) paths.push(p) })
+  if (Array.isArray(opts.only)) { const set = new Set(opts.only); paths = paths.filter(p => set.has(p)) }
+  const out = []
+  paths.forEach(rel => {
+    let text = typeof overrides[rel] === 'string' ? overrides[rel] : null
+    if (text == null && dir) { try { const r = readFragment(dir, rel); text = r.exists ? r.text : null } catch (e) { text = null } }
+    if (text == null) return
+    const lines = text.replace(/\r\n?/g, '\n').split('\n')
+    let start = 0
+    if (lines[0] === '---') { const end = lines.indexOf('---', 1); if (end > 0) start = end + 1 }
+    out.push({ rel, lines, start })
+  })
+  return out
+}
+
+// Markup that is not prose (footnote and citation keys, attributes, link targets, passage IDs,
+// URLs), blanked with spaces so columns still match the line.
+function blankMarkup(line) {
+  const blank = s => ' '.repeat(s.length)
+  return line
+    .replace(/\[\^[^\]\s]*\]|\[@[^\]]*\]|\{[^}\n]*\}|\]\([^)\s]*\)|<[^>\s]*>|https?:\/\/\S+|\s\^[a-z0-9]{4,12}\s*$/g, blank)
+}
+// Lines that are not running prose: headings, footnote texts, images, tables, rules.
+function proseLine(line) { return !!line.trim() && !/^\s*(#|\[\^[^\]]*\]:|!\[|\||-{3,}|\*{3,})/.test(line) }
+
+// Remember the last answer of a check while its texts are unchanged (the work queue asks often).
+const checkCache = new Map()
+function cached(name, dir, opts, fn) {
+  const o = opts || {}, overrides = o.overrides && typeof o.overrides === 'object' ? o.overrides : {}
+  let paths = listTexts(dir)
+  Object.keys(overrides).forEach(p => { if (paths.indexOf(p) < 0) paths.push(p) })
+  if (Array.isArray(o.only)) { const set = new Set(o.only); paths = paths.filter(p => set.has(p)) }
+  const sig = [name, dir || '', o.min == null ? '' : o.min].concat(paths.map(rel => {
+    if (typeof overrides[rel] === 'string') { const s = overrides[rel]; let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return rel + '=' + s.length + ':' + h }
+    try { const st = fs.statSync(fragmentAbs(dir, rel)); return rel + '@' + st.mtimeMs + ':' + st.size } catch (e) { return rel + '!' }
+  })).join('\n')
+  const hit = checkCache.get(name)
+  if (hit && hit.sig === sig) return hit.value
+  const value = fn()
+  checkCache.set(name, { sig, value })
+  return value
+}
+
+// Words written in more than one way across the texts:
+//  - spacing and hyphen: "geri bildirim" / "geribildirim" / "geri-bildirim"
+//  - circumflex: "hâlâ" / "hala", "resmî" / "resmi"
+// Returns { groups: [{ key, kind, forms: [{ form, n }] (most used first), hits: [{ path, line, col, len, form }] }] }.
+// hits lists where the less used forms are (up to 100), so they can be visited one by one.
+function spellingVariants(dir, opts) { return cached('spelling', dir, opts, () => spellingVariantsNow(dir, opts)) }
+function spellingVariantsNow(dir, opts) {
+  const texts = bodyTexts(dir, opts)
+  const lower = s => s.toLocaleLowerCase('tr')
+  const single = new Map(), pairs = new Map(), hyph = new Map()
+  const add = (m, k, h) => { let e = m.get(k); if (!e) m.set(k, e = { n: 0, hits: [] }); e.n++; if (e.hits.length < 100) e.hits.push(h) }
+  const W = /[\p{L}\p{N}]+(?:[-‐][\p{L}\p{N}]+)*/gu
+  texts.forEach(t => {
+    for (let i = t.start; i < t.lines.length; i++) {
+      if (!proseLine(t.lines[i])) continue
+      const line = blankMarkup(t.lines[i])
+      let m, prev = null
+      W.lastIndex = 0
+      while ((m = W.exec(line))) {
+        const w = lower(m[0]).replace(/‐/g, '-'), h = { path: t.rel, line: i + 1, col: m.index, len: m[0].length }
+        if (w.indexOf('-') >= 0) add(hyph, w, h); else add(single, w, h)
+        if (prev && line.slice(prev.end, m.index) === ' ' && w.indexOf('-') < 0 && prev.w.indexOf('-') < 0) add(pairs, prev.w + ' ' + w, { path: t.rel, line: i + 1, col: prev.col, len: m.index + m[0].length - prev.col })
+        prev = { w, end: m.index + m[0].length, col: m.index }
+      }
+    }
+  })
+  const ok = (a, b) => a.length >= 3 && b.length >= 3 && !/\d/.test(a + b)
+  const groups = new Map()
+  const put = (key, kind, form, e) => {
+    let g = groups.get(key); if (!g) groups.set(key, g = { key, kind, forms: new Map() })
+    let f = g.forms.get(form); if (!f) g.forms.set(form, f = { n: 0, hits: [] })
+    f.n += e.n; e.hits.forEach(h => { if (f.hits.length < 100) f.hits.push(Object.assign({ form }, h)) })
+  }
+  // root of a split word: first part + a few letters of the second, so inflected forms group together
+  const rootOf = (a, b) => 'sp:' + a + '|' + (a + b).slice(0, a.length + 4)
+  const spacedForm = (a, b) => ({ spaced: a + ' ' + b, joined: a + b, hyphen: a + '-' + b })
+  const seen = new Set()
+  pairs.forEach((e, k) => {
+    const [a, b] = k.split(' ')
+    if (!ok(a, b) || (!single.has(a + b) && !hyph.has(a + '-' + b))) return
+    const key = rootOf(a, b), f = spacedForm(a, b)
+    put(key, 'spacing', f.spaced, e); seen.add(key + '\n' + f.spaced)
+  })
+  groups.forEach(g => {
+    const [a, pre] = g.key.slice(3).split('|')
+    single.forEach((e, w) => { if (w.startsWith(pre) && w.length > a.length + 2) put(g.key, 'spacing', w, e) })
+    hyph.forEach((e, w) => { const parts = w.split('-'); if (parts.length === 2 && parts[0] === a && (parts[0] + parts[1]).startsWith(pre)) put(g.key, 'spacing', w, e) })
+  })
+  hyph.forEach((e, w) => {
+    const parts = w.split('-'); if (parts.length !== 2) return
+    const [a, b] = parts; if (!ok(a, b)) return
+    const key = rootOf(a, b); if (groups.has(key)) return
+    const j = single.get(a + b), s = pairs.get(a + ' ' + b)
+    if (!j && !s) return
+    put(key, 'spacing', w, e); if (j) put(key, 'spacing', a + b, j); if (s) put(key, 'spacing', a + ' ' + b, s)
+  })
+  // circumflex: key on the plain spelling up to just after the marked vowel
+  single.forEach((e, w) => {
+    const at = w.search(/[âîû]/); if (at < 0) return
+    const plain = w.replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u')
+    const pe = single.get(plain); if (!pe) return
+    const key = 'cf:' + plain.slice(0, Math.max(at + 2, 4))
+    put(key, 'circumflex', w, e); put(key, 'circumflex', plain, pe)
+  })
+  const out = []
+  groups.forEach(g => {
+    // spellings grouped by style (joined / spaced / hyphenated, or with / without circumflex);
+    // each style is shown by its most used form
+    const styleOf = form => g.kind === 'circumflex' ? (/[âîû]/.test(form) ? 'mark' : 'plain') : form.indexOf(' ') >= 0 ? 'spaced' : form.indexOf('-') >= 0 ? 'hyphen' : 'joined'
+    const styles = new Map()
+    g.forms.forEach((f, form) => {
+      const s = styleOf(form); let st = styles.get(s); if (!st) styles.set(s, st = { style: s, n: 0, form, top: 0, hits: [] })
+      st.n += f.n; if (f.n > st.top) { st.top = f.n; st.form = form }
+      f.hits.forEach(h => { if (st.hits.length < 100) st.hits.push(h) })
+    })
+    const forms = Array.from(styles.values()).sort((x, y) => y.n - x.n || (x.form < y.form ? -1 : 1))
+    if (forms.length < 2) return
+    // the most used style counts as the house style; the places of the others are listed
+    const hits = []
+    forms.slice(1).forEach(f => f.hits.forEach(h => { if (hits.length < 100) hits.push(h) }))
+    hits.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : x.line - y.line || x.col - y.col))
+    out.push({ key: g.key, kind: g.kind, forms: forms.map(f => ({ form: f.form, n: f.n, style: f.style })), hits })
+  })
+  out.sort((x, y) => y.forms.reduce((s, f) => s + f.n, 0) - x.forms.reduce((s, f) => s + f.n, 0))
+  return { groups: out }
+}
+
+// Paragraphs in different texts that say much the same thing (a concept explained again,
+// an example told twice). Each paragraph becomes a weighted bag of word stems (rare words
+// weigh more); pairs whose cosine similarity reaches opts.min (default 0.3) are joined into
+// clusters. Returns { clusters: [{ key, score, paras: [{ path, line, text }] }] }, strongest first.
+const STOP_WORDS = new Set(('ve ile bir bu da de ki icin gibi daha cok olan olarak ama ancak en her ne su ya veya hem kadar sonra once ise yani gore bunu bunun buna bunlar ' +
+  'sey diye oldu olur olmasi olmak degil var yok kendi diger ayni boyle sekilde nasil neden cunku ayrica tum butun bazi baska icinde uzerinde arasinda ilgili zaman fakat ' +
+  'oysa hatta bile the and of to in is that for it as with are this by on be or from an which').split(' '))
+function similarParagraphs(dir, opts) { return cached('repeats', dir, opts, () => similarParagraphsNow(dir, opts)) }
+function similarParagraphsNow(dir, opts) {
+  opts = opts || {}
+  const min = typeof opts.min === 'number' ? opts.min : 0.3
+  const P = []
+  bodyTexts(dir, opts).forEach(t => {
+    for (let i = t.start; i < t.lines.length; i++) {
+      const line = t.lines[i]
+      if (!proseLine(line) || /^\s*[-*+]\s|^\s*\d+\.\s/.test(line)) continue
+      if (/^\s*\p{Lu}[\p{L}'’ -]{1,40},\s+\p{Lu}/u.test(line) && /\*[^*]+\*/.test(line)) continue      // a bibliography entry
+      const words = (foldText(blankMarkup(line)).match(/\p{L}{3,}/gu) || []).filter(w => !STOP_WORDS.has(w)).map(w => w.slice(0, 5))
+      if (words.length < 12) continue
+      P.push({ path: t.rel, line: i + 1, words, text: line.replace(/\s\^[a-z0-9]{4,12}\s*$/, '').trim() })
+    }
+  })
+  const N = P.length, df = new Map()
+  P.forEach(p => new Set(p.words).forEach(w => df.set(w, (df.get(w) || 0) + 1)))
+  P.forEach(p => {
+    const tf = new Map(); p.words.forEach(w => tf.set(w, (tf.get(w) || 0) + 1))
+    p.vec = new Map(); let norm = 0
+    tf.forEach((c, w) => { const d = df.get(w); if (d > N * 0.05 || d < 2) return; const v = (1 + Math.log(c)) * Math.log(N / d); p.vec.set(w, v); norm += v * v })
+    p.norm = Math.sqrt(norm) || 1
+  })
+  const parent = P.map((p, i) => i)
+  const find = i => { while (parent[i] !== i) i = parent[i] = parent[parent[i]]; return i }
+  const best = new Map()
+  for (let a = 0; a < N; a++) for (let b = a + 1; b < N; b++) {
+    const A = P[a], B = P[b]
+    if (A.path === B.path) continue
+    const [s, l] = A.vec.size < B.vec.size ? [A, B] : [B, A]
+    let dot = 0; s.vec.forEach((v, w) => { const u = l.vec.get(w); if (u) dot += v * u })
+    const c = dot / (A.norm * B.norm)
+    if (c < min) continue
+    parent[find(a)] = find(b)
+    best.set(a, Math.max(best.get(a) || 0, c)); best.set(b, Math.max(best.get(b) || 0, c))
+  }
+  const byRoot = new Map()
+  best.forEach((c, i) => { const r = find(i); let g = byRoot.get(r); if (!g) byRoot.set(r, g = { score: 0, idx: [] }); g.idx.push(i); g.score = Math.max(g.score, c) })
+  const clusters = []
+  byRoot.forEach(g => {
+    const paras = g.idx.map(i => P[i]).sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : x.line - y.line))
+    // a key that survives small edits: the start of each paragraph, folded
+    const key = 'rp:' + paras.map(p => foldText(p.text).replace(/[^\p{L}]+/gu, '').slice(0, 24)).sort().join('|')
+    clusters.push({ key, score: Math.round(g.score * 100) / 100, paras: paras.map(p => ({ path: p.path, line: p.line, text: p.text.slice(0, 200) })) })
+  })
+  clusters.sort((x, y) => y.score - x.score)
+  return { clusters }
+}
+
 // ───────── assets (images and CSV tables for figure and table nodes) ─────────
 
 const ASSET_TYPES = { png: 'figure', jpg: 'figure', jpeg: 'figure', gif: 'figure', webp: 'figure', svg: 'figure', csv: 'table' }
@@ -583,6 +776,6 @@ module.exports = {
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
   TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
-  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, mentionCounts, assetKind, importAsset,
+  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, mentionCounts, spellingVariants, similarParagraphs, assetKind, importAsset,
   backupsToDrop
 }
