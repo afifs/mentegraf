@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('mentegraf', {
   textMentions: (terms, opts) => ipcRenderer.invoke('text-mentions', terms, opts),
   textVariants: (opts) => ipcRenderer.invoke('text-variants', opts),
   textRepeats: (opts) => ipcRenderer.invoke('text-repeats', opts),
+  textPunctuation: (opts) => ipcRenderer.invoke('text-punctuation', opts),
   obsidianExport: (payload) => ipcRenderer.invoke('obsidian-export', payload),
   obsidianScan: (payload) => ipcRenderer.invoke('obsidian-scan', payload),
   citePick: () => ipcRenderer.invoke('cite-pick'),

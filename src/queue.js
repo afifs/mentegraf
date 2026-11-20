@@ -150,7 +150,7 @@ var Work = (function () {
     if (el.dataset.kind === 'audit') {
       var a = Audit.items()[+el.dataset.audit]
       selNode(n)
-      if (a && /^(early|marks|term|spelling|repeat)$/.test(a.sub)) { await Audit.open(a); return }
+      if (a && /^(early|marks|term|spelling|repeat|punct)$/.test(a.sub)) { await Audit.open(a); return }
       if (a && a.passage && await Argue.goToPassage(a.passage)) return
       if (typeof focusNeighborhood === 'function') focusNeighborhood(n)
       return

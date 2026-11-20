@@ -14,6 +14,9 @@
 //               "geribildirim", "hâlâ" / "hala"); the most used way is taken as the house style.
 //  repeat       paragraphs in different chapters say much the same thing (a concept explained
 //               again, an example told twice).
+//  punct        punctuation against the TDK rules, per chapter and rule (Turkish projects): a long
+//               dash inside a sentence, a space before or none after a mark, two or four dots,
+//               a comma with ve / veya / yahut / ya da.
 //
 // Items that point at places in the texts (term, spelling, repeat) open the next place on
 // every click.
@@ -183,6 +186,17 @@ var Audit = (function () {
         if (!first) return
         out.push({ sub: 'spelling', key: g.key, node: first.node, group: null, book: true, hits: g.hits,
           text: g.forms.map(function (f) { return quote(f.form) + ' ' + f.n }).join(' · '), done: keyOk(g.key) })
+      })
+    }
+    if (chs.length && api() && api().textPunctuation && (window.curLang || 'tr') === 'tr') {
+      var pu = await api().textPunctuation({ only: only, overrides: ov2 })
+      if (my !== seq) return items
+      ;((pu && pu.rules) || []).forEach(function (r) {
+        var ch = byPath[r.path]
+        if (!ch) return
+        var key = 'pn:' + r.rule + ':' + r.path
+        out.push({ sub: 'punct', key: key, node: ch.node, group: ch.node, hits: r.hits.map(function (h) { return { path: r.path, line: h.line, col: h.col, len: h.len } }),
+          text: L('au_punct_' + r.rule).replace('%n', r.hits.length), done: keyOk(key) })
       })
     }
     if (chs.length && api() && api().textRepeats) {

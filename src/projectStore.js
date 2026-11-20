@@ -568,8 +568,8 @@ function bodyTexts(dir, opts) {
 
 // Markup that is not prose (footnote and citation keys, attributes, link targets, passage IDs,
 // URLs), blanked with spaces so columns still match the line.
-function blankMarkup(line) {
-  const blank = s => ' '.repeat(s.length)
+function blankMarkup(line, fill) {
+  const blank = s => (fill || ' ').repeat(s.length)
   return line
     .replace(/\[\^[^\]\s]*\]|\[@[^\]]*\]|\{[^}\n]*\}|\]\([^)\s]*\)|<[^>\s]*>|https?:\/\/\S+|\s\^[a-z0-9]{4,12}\s*$/g, blank)
 }
@@ -681,6 +681,48 @@ function spellingVariantsNow(dir, opts) {
   return { groups: out }
 }
 
+// Punctuation against the TDK rules (Turkish texts). Each rule lists its places:
+//  dash       a long dash (or a spaced en dash) inside a sentence; TDK keeps it for dialogue
+//  spaceBefore  a space before . , ; : ! ?
+//  spaceAfter   no space after , ; : ! ? or after a full stop that ends a sentence
+//  dots       two dots (except ?.. and !..) or four or more
+//  conj       a comma before or after ve, veya, yahut, ya da
+// Returns { rules: [{ rule, path, hits: [{ line, col, len }] }] } — one entry per rule and text.
+// a bibliography entry: "Surname, Name. *Title*…"
+const BIBLIO = /^\s*\p{Lu}[\p{L}'’ -]{1,40},\s+\p{Lu}[\p{L}. -]{0,40}\.\s.*\*[^*]+\*/u
+const PUNCT_RULES = [
+  ['dash', /(?<=\S[^\S\n]*)(—|(?<=\s)–(?=\s))/gu],
+  ['spaceBefore', /(?<=[\p{L}\p{N}”’"*_)])[^\S\n]+[,.;:!?](?=[\s"”’)\]]|$)/gu],
+  ['spaceAfter', /(?<=\p{L})[,;!?](?=\p{L})|(?<=\p{Ll}{2})[.:](?=\p{Lu}\p{Ll})/gu],
+  ['dots', /(?<![.?!…])\.\.(?![.])|\.{4,}/gu],
+  ['conj', /,[^\S\n]+(?:ve|veya|yahut|ya da)(?![\p{L}])|(?<![\p{L}])(?:ve|veya|yahut),/gu]
+]
+function punctuationIssues(dir, opts) { return cached('punct', dir, opts, () => punctuationNow(dir, opts)) }
+function punctuationNow(dir, opts) {
+  const out = []
+  bodyTexts(dir, opts).forEach(t => {
+    const by = {}
+    for (let i = t.start; i < t.lines.length; i++) {
+      const raw = t.lines[i]
+      if (!proseLine(raw) || /^\s*(```|<)/.test(raw) || BIBLIO.test(raw)) continue
+      // markup is filled with a mark that is neither a letter nor a space, so "word[^1]." stays tight
+      const line = blankMarkup(raw, '\u0001').replace(/`[^`]*`/g, s => '\u0001'.repeat(s.length))
+      PUNCT_RULES.forEach(([rule, re]) => {
+        re.lastIndex = 0
+        let m
+        while ((m = re.exec(line))) {
+          if (!m[0].length) { re.lastIndex++; continue }
+          // a dash that opens a line of dialogue is right
+          if (rule === 'dash' && /^\s*(>\s*)?[*_]*$/.test(line.slice(0, m.index))) continue
+          ;(by[rule] = by[rule] || []).push({ line: i + 1, col: m.index, len: m[0].length })
+        }
+      })
+    }
+    PUNCT_RULES.forEach(([rule]) => { if (by[rule]) out.push({ rule, path: t.rel, hits: by[rule] }) })
+  })
+  return { rules: out }
+}
+
 // Paragraphs in different texts that say much the same thing (a concept explained again,
 // an example told twice). Each paragraph becomes a weighted bag of word stems (rare words
 // weigh more); pairs whose cosine similarity reaches opts.min (default 0.3) are joined into
@@ -697,7 +739,7 @@ function similarParagraphsNow(dir, opts) {
     for (let i = t.start; i < t.lines.length; i++) {
       const line = t.lines[i]
       if (!proseLine(line) || /^\s*[-*+]\s|^\s*\d+\.\s/.test(line)) continue
-      if (/^\s*\p{Lu}[\p{L}'’ -]{1,40},\s+\p{Lu}/u.test(line) && /\*[^*]+\*/.test(line)) continue      // a bibliography entry
+      if (BIBLIO.test(line)) continue      // a bibliography entry
       const words = (foldText(blankMarkup(line)).match(/\p{L}{3,}/gu) || []).filter(w => !STOP_WORDS.has(w)).map(w => w.slice(0, 5))
       if (words.length < 12) continue
       P.push({ path: t.rel, line: i + 1, words, text: line.replace(/\s\^[a-z0-9]{4,12}\s*$/, '').trim() })
@@ -776,6 +818,6 @@ module.exports = {
   toFiles, fromFiles, safeName, isConflictName,
   atomicWrite, classify, isProjectDir, readProject, writeProject, convertLegacy, checkNewProjectDir,
   TEXT_DIRS, slugify, fragmentAbs, newFragmentPath, readFragment, writeFragments, copyTextFolders,
-  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, mentionCounts, spellingVariants, similarParagraphs, assetKind, importAsset,
+  normalizeManuscript, normalizeClassification, countWords, fragmentStats, foldText, listTexts, searchTexts, mentionCounts, spellingVariants, similarParagraphs, punctuationIssues, assetKind, importAsset,
   backupsToDrop
 }

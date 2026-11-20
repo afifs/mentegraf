@@ -405,4 +405,24 @@ test('similar paragraphs in different texts are clustered; a paragraph only like
   assert.ok(!Store.similarParagraphs(dir, o).clusters.some(x => x.paras.some(p => /Dunbar/.test(p.text))))
 })
 
+test('punctuation: long dash in a sentence, spaces, dots, comma with ve / ya da', () => {
+  const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
+  const text = [
+    '— Konuşma satırı doğru.',
+    'Bir ara söz — burada yanlış. Aralık 1914-1918 doğru.',
+    'Boşluk hatası , burada. Dipnot doğru[^a-1]. Sayı 38,6 doğru.',
+    'Bitişik,hata. Cümle bitti.Yeni cümle. Kısaltma vb.nin doğru.',
+    'İki nokta.. yanlış. Ünlemli!.. doğru. Dört nokta.... yanlış.',
+    'Elma, ve armut. Elma ya da armut. Elma, ya da armut.',
+    'Bertalanffy, Ludwig. *General System Theory* – 1968.'
+  ].join('\n\n')
+  const r = Store.punctuationIssues(dir, { overrides: { 'manuscript/a.md': text } }).rules
+  const at = rule => (r.find(x => x.rule === rule) || { hits: [] }).hits.map(h => [h.line, h.col])
+  assert.deepStrictEqual(at('dash'), [[3, 12]])
+  assert.deepStrictEqual(at('spaceBefore'), [[5, 13]])
+  assert.deepStrictEqual(at('spaceAfter'), [[7, 7], [7, 25]])
+  assert.deepStrictEqual(at('dots'), [[9, 9], [9, 48]])
+  assert.deepStrictEqual(at('conj'), [[11, 4], [11, 38]])
+})
+
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''))

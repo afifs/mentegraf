@@ -400,5 +400,12 @@
   "paneToMain": "Back to the main window",
   "paneAlreadyOpen": "This text is already open",
   "paneBesideHint": "Text to open beside (⇱: in its own window)",
-  "paneWindowTip": "Open in a window of its own"
+  "paneWindowTip": "Open in a window of its own",
+  "au_punct": "punctuation",
+  "au_punctTip": "Places that seem to go against the TDK punctuation rules (Turkish texts). Each click opens the next one. If intended, tick ✓ to take it off the list.",
+  "au_punct_dash": "Long dash inside a sentence (TDK: dialogue only): %n places",
+  "au_punct_spaceBefore": "Space before a punctuation mark: %n places",
+  "au_punct_spaceAfter": "No space after a punctuation mark: %n places",
+  "au_punct_dots": "Two dots, or four or more (should be three): %n places",
+  "au_punct_conj": "Comma before or after “ve, veya, yahut, ya da”: %n places"
 }

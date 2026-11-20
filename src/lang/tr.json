@@ -400,5 +400,12 @@
   "paneToMain": "Ana pencereye al",
   "paneAlreadyOpen": "Bu metin zaten açık",
   "paneBesideHint": "Yanına açılacak metin (⇱: ayrı pencerede)",
-  "paneWindowTip": "Ayrı pencerede aç"
+  "paneWindowTip": "Ayrı pencerede aç",
+  "au_punct": "noktalama",
+  "au_punctTip": "TDK noktalama kurallarına aykırı görünen yerler. Tıkladıkça bir sonraki yer açılır. Bilinçliyse ✓ ile listeden çıkarın.",
+  "au_punct_dash": "Cümle içinde uzun tire (TDK’de yalnızca konuşma çizgisi): %n yer",
+  "au_punct_spaceBefore": "Noktalama işaretinden önce boşluk: %n yer",
+  "au_punct_spaceAfter": "Noktalama işaretinden sonra boşluk yok: %n yer",
+  "au_punct_dots": "İki nokta ya da dört ve daha çok nokta (üç nokta olmalı): %n yer",
+  "au_punct_conj": "“ve, veya, yahut, ya da” önünde ya da ardında virgül: %n yer"
 }

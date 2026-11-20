@@ -426,6 +426,9 @@ function checkOpts(o) {
 ipcMain.handle('text-variants', (event, opts) => {
   try { return ProjectStore.spellingVariants(currentDir || null, checkOpts(opts)) } catch (e) { return { groups: [], error: e.message } }
 })
+ipcMain.handle('text-punctuation', (event, opts) => {
+  try { return ProjectStore.punctuationIssues(currentDir || null, checkOpts(opts)) } catch (e) { return { rules: [], error: e.message } }
+})
 ipcMain.handle('text-repeats', (event, opts) => {
   try { return ProjectStore.similarParagraphs(currentDir || null, checkOpts(opts)) } catch (e) { return { clusters: [], error: e.message } }
 })
