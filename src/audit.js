@@ -173,7 +173,7 @@ var Audit = (function () {
       var alts = ts.slice(1).filter(function (a) { return !/^[\p{Lu}\d\s.&-]+$/u.test(a) && total(a) > 0 })
       if (!alts.length) return
       out.push({ sub: 'term', node: n, group: null, book: true, terms: alts, hits: null,
-        text: L('au_termText').replace('%s', n.data('label')).replace('%f', [ts[0]].concat(alts).map(function (a) { return quote(a) + ' ' + total(a) }).join(' · ')),
+        text: L('au_termText').replace('%s', n.data('label')).replace('%f', [ts[0]].concat(alts).map(function (a) { return quote(a) + ' ' + L('au_times').replace('%n', total(a)) }).join(' · ')),
         done: isOk(n, 'term') })
     })
 
@@ -185,7 +185,7 @@ var Audit = (function () {
         var first = g.hits[0] && byPath[g.hits[0].path]
         if (!first) return
         out.push({ sub: 'spelling', key: g.key, node: first.node, group: null, book: true, hits: g.hits,
-          text: g.forms.map(function (f) { return quote(f.form) + ' ' + f.n }).join(' · '), done: keyOk(g.key) })
+          text: g.forms.map(function (f) { return L('au_style_' + f.style) + ' ' + quote(f.form) + ' ' + L('au_times').replace('%n', f.n) }).join(' · '), done: keyOk(g.key) })
       })
     }
     if (chs.length && api() && api().textPunctuation && (window.curLang || 'tr') === 'tr') {

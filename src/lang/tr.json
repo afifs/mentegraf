@@ -388,7 +388,7 @@
   "au_termTip": "Aynı kavram birden çok adla geçiyor: düğümün adı ve parantez içindeki adı metinlerde birlikte kullanılmış. Tıkladıkça öteki adın geçtiği yerler sırayla açılır.",
   "au_termText": "%s: %f",
   "au_spelling": "yazım",
-  "au_spellingTip": "Aynı sözcük farklı yazılmış (bitişik, ayrı, tireli ya da şapkalı). En çok kullanılan yazım esas alınır; tıkladıkça öteki yazımların geçtiği yerler sırayla açılır.",
+  "au_spellingTip": "Aynı sözcük farklı yazılmış. Sayılar her yazılışın kitapta kaç kez geçtiğini gösterir; ekli hâller de dahildir (geri bildirimler, geri bildirimin…). Çok kullanılan yazılış doğru olan demek değildir; TDK sözlüğüne bakın. Tıkladıkça az kullanılan yazılışın geçtiği yerler sırayla açılır.",
   "au_repeat": "tekrar",
   "au_repeatTip": "Farklı bölümlerde birbirine çok benzeyen paragraflar: aynı kavram yeniden açıklanıyor ya da aynı örnek yeniden anlatılıyor olabilir. Tıkladıkça paragraflar sırayla açılır.",
   "au_repeatText": "%t (%c)",
@@ -407,5 +407,11 @@
   "au_punct_spaceBefore": "Noktalama işaretinden önce boşluk: %n yer",
   "au_punct_spaceAfter": "Noktalama işaretinden sonra boşluk yok: %n yer",
   "au_punct_dots": "İki nokta ya da dört ve daha çok nokta (üç nokta olmalı): %n yer",
-  "au_punct_conj": "“ve, veya, yahut, ya da” önünde ya da ardında virgül: %n yer"
+  "au_punct_conj": "“ve, veya, yahut, ya da” önünde ya da ardında virgül: %n yer",
+  "au_style_joined": "bitişik",
+  "au_style_spaced": "ayrı",
+  "au_style_hyphen": "tireli",
+  "au_style_mark": "şapkalı",
+  "au_style_plain": "şapkasız",
+  "au_times": "%n kez"
 }

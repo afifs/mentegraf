@@ -388,7 +388,7 @@
   "au_termTip": "One concept goes by more than one name: the node's label and a name in its parentheses are both used in the texts. Each click opens the next place where the other name is used.",
   "au_termText": "%s: %f",
   "au_spelling": "spelling",
-  "au_spellingTip": "The same word is written in different ways (joined, spaced, hyphenated or with a circumflex). The most used way counts as the house style; each click opens the next place written the other way.",
+  "au_spellingTip": "The same word is written in different ways. The numbers show how often each way occurs in the book, inflected forms included. The most used way is not necessarily the right one; check the dictionary. Each click opens the next place written the less used way.",
   "au_repeat": "repeat",
   "au_repeatTip": "Paragraphs in different chapters that are very much alike: a concept explained again, or an example told twice. Each click opens the next paragraph.",
   "au_repeatText": "%t — %c",
@@ -407,5 +407,11 @@
   "au_punct_spaceBefore": "Space before a punctuation mark: %n places",
   "au_punct_spaceAfter": "No space after a punctuation mark: %n places",
   "au_punct_dots": "Two dots, or four or more (should be three): %n places",
-  "au_punct_conj": "Comma before or after “ve, veya, yahut, ya da”: %n places"
+  "au_punct_conj": "Comma before or after “ve, veya, yahut, ya da”: %n places",
+  "au_style_joined": "joined",
+  "au_style_spaced": "spaced",
+  "au_style_hyphen": "hyphenated",
+  "au_style_mark": "with circumflex",
+  "au_style_plain": "without circumflex",
+  "au_times": "%n times"
 }

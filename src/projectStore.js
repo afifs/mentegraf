@@ -671,6 +671,16 @@ function spellingVariantsNow(dir, opts) {
     })
     const forms = Array.from(styles.values()).sort((x, y) => y.n - x.n || (x.form < y.form ? -1 : 1))
     if (forms.length < 2) return
+    // each style named by its plain (uninflected) form: "geri bildirim", not "geri bildirimlerle"
+    if (g.kind === 'spacing') {
+      const a = g.key.slice(3).split('|')[0]
+      let joined = null
+      g.forms.forEach((f, form) => { const j = form.replace(/[ -]/g, ''); if (!joined || j.length < joined.length) joined = j })
+      const rest = joined.slice(a.length)
+      forms.forEach(f => { f.form = f.style === 'spaced' ? a + ' ' + rest : f.style === 'hyphen' ? a + '-' + rest : joined })
+    } else {
+      forms.forEach(f => { g.forms.forEach((x, form) => { if (styleOf(form) === f.style && form.length < f.form.length) f.form = form }) })
+    }
     // the most used style counts as the house style; the places of the others are listed
     const hits = []
     forms.slice(1).forEach(f => f.hits.forEach(h => { if (hits.length < 100) hits.push(h) }))
