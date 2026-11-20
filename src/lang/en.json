@@ -393,5 +393,12 @@
   "au_repeatTip": "Paragraphs in different chapters that are very much alike: a concept explained again, or an example told twice. Each click opens the next paragraph.",
   "au_repeatText": "%t — %c",
   "au_where": "%i of %n — click again for the next place",
-  "queueBook": "Whole book: terms, spelling, repeats"
+  "queueBook": "Whole book: terms, spelling, repeats",
+  "paneBeside": "Open another text beside this one",
+  "paneToWindow": "Open in a window of its own",
+  "paneClose": "Close this side",
+  "paneToMain": "Back to the main window",
+  "paneAlreadyOpen": "This text is already open",
+  "paneBesideHint": "Text to open beside (⇱: in its own window)",
+  "paneWindowTip": "Open in a window of its own"
 }

@@ -10,8 +10,13 @@ var Writer = (function () {
 
   var buffers = {}        // path -> { state, saved }  saved: text on disk (null = never written)
   var lastWritten = {}    // path -> text we sent to disk most recently
-  var current = null      // { nodeId, path }
-  var view = null
+  var current = null      // { nodeId, path } — of the active pane
+  var view = null         // editor of the active pane
+  // Panes: the main one in the writer, a second one beside it (side) and any number in windows
+  // of their own. Each shows a different text. `view` and `current` always belong to the
+  // pane last clicked or typed in, so every command works on the text the author is in.
+  var primary = null      // { view, current, kind: 'main' }
+  var panes = []
   var extensions = null
   var loading = false     // true while we replace text ourselves
   var lastKey = {}        // command -> time, to avoid running a command twice (keymap + menu)
@@ -95,14 +100,14 @@ var Writer = (function () {
         drop: function (e, v) { return window.Figures ? Figures.onDrop(e, v) : false },
         mousedown: function (e, v) {
           var h = e.target.closest && e.target.closest('.cm-hl-end')
-          if (h && current) {
+          if (h && curOf(v)) {
             var at = v.posAtDOM(h)
             var mk = marksIn(v.state).filter(function (m) { return at >= m.from && at <= m.to })[0]
             if (mk) { acceptRange(v, mk); e.preventDefault(); return true }
           }
           var b = e.target.closest && e.target.closest('.cm-pid-arg')
-          if (!b || !window.Argue || !current) return false
-          Argue.onBadge(current.path, b.getAttribute('data-pid'))
+          if (!b || !window.Argue || !curOf(v)) return false
+          Argue.onBadge(curOf(v).path, b.getAttribute('data-pid'))
           return true
         }
       }),
@@ -143,6 +148,10 @@ var Writer = (function () {
       })
     ]
     view = new CM.EditorView({ state: makeState(''), parent: $('wEditor') })
+    primary = { view: view, current: null, kind: 'main', doc: document, el: $('wEditor') }
+    panes = [primary]
+    view.dom.addEventListener('focusin', function () { activate(primary) })
+    view.dom.addEventListener('mousedown', function () { activate(primary) })
   }
 
   // Colour footnote markers, citations and passage IDs.
@@ -158,8 +167,9 @@ var Writer = (function () {
   function lensPlugin() {
     var line = CM.Decoration.line({ class: 'cm-lensline' }), word = CM.Decoration.mark({ class: 'cm-lensword' })
     function find(v) {
-      var terms = window.Classify && current ? Classify.lensTerms(current.nodeId) : []
-      var pass = window.Classify && current && Classify.lensPassages ? Classify.lensPassages(current.path) : {}
+      var cur = curOf(v)
+      var terms = window.Classify && cur ? Classify.lensTerms(cur.nodeId) : []
+      var pass = window.Classify && cur && Classify.lensPassages ? Classify.lensPassages(cur.path) : {}
       if (!terms.length && !Object.keys(pass).length) return CM.Decoration.none
       // whole paragraphs whose claim is in the filter
       var marked = {}, doc = v.state.doc
@@ -193,7 +203,8 @@ var Writer = (function () {
   // Passages with claims, questions or open tasks: a small marker after their ^id.
   function argPlugin() {
     function find(v) {
-      var info = window.Argue && current ? Argue.passageInfo(current.path) : {}
+      var cur = curOf(v)
+      var info = window.Argue && cur ? Argue.passageInfo(cur.path) : {}
       if (!Object.keys(info).length) return CM.Decoration.none
       var ranges = []
       v.visibleRanges.forEach(function (r) {
@@ -267,7 +278,7 @@ var Writer = (function () {
 
   // Go to the next highlight after the cursor (from the top again at the end) and select its words.
   function nextMark(v) {
-    if (!current || previewOn) return false
+    if (!current || (previewOn && v === primary.view)) return false
     var all = marksIn(v.state)
     if (!all.length) { flash(L('markNone')); return true }
     var sel = v.state.selection.main, head = sel.head
@@ -280,7 +291,7 @@ var Writer = (function () {
 
   // Accept the highlight the cursor is in; when it is in none, go to the next one.
   function acceptMark(v) {
-    if (!current || previewOn) return false
+    if (!current || (previewOn && v === primary.view)) return false
     var sel = v.state.selection.main
     var m = marksIn(v.state).filter(function (x) { return sel.from >= x.from && sel.to <= x.to && sel.head >= x.from && sel.head <= x.to })[0]
     if (!m) return nextMark(v)
@@ -540,12 +551,13 @@ var Writer = (function () {
   }
 
   function setTips() {
+    Array.prototype.forEach.call(document.querySelectorAll('#writer .wh [data-lt]'), function (b) { b.title = L(b.dataset.lt) })
     var bar = $('wToolbar')
     if (bar) bar.querySelectorAll('button[data-cmd]').forEach(function (b) { b.title = L(TIPS[b.dataset.cmd]) })
   }
 
   function flash(text) {
-    var el = $('wMsg')
+    var pane = paneOfView(view), el = pane && pane.msgEl ? pane.msgEl : $('wMsg')
     if (!el) return
     el.textContent = text
     clearTimeout(msgTimer)
@@ -557,13 +569,13 @@ var Writer = (function () {
   function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 
   function renderPreview() {
-    if (!previewOn || !view || !window.MD) return
+    if (!previewOn || !primary || !primary.current || !window.MD) return
     if (!md) {
       md = window.MD()
       var defaultValidate = md.validateLink
       md.validateLink = function (u) { return (window.Figures && Figures.isAssetUrl(u)) || defaultValidate(u) }   // project images only
     }
-    var text = view.state.doc.toString()
+    var text = primary.view.state.doc.toString()
       .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '')        // metadata block
       .replace(/[ \t]\^[a-z0-9]{4,12}[ \t]*$/gm, '')         // passage IDs
     text = text.replace(MARK_RE, '\uE000$1\uE001')                // highlighted changes
@@ -581,7 +593,8 @@ var Writer = (function () {
   }
 
   function togglePreview() {
-    if (!view || !current) return
+    if (!primary || !primary.current) return
+    activate(primary)
     previewOn = !previewOn
     $('writer').classList.toggle('previewing', previewOn)
     var b = document.querySelector('#wToolbar button[data-cmd="preview"]')
@@ -633,13 +646,14 @@ var Writer = (function () {
   }
 
   function textOf(path) {
-    if (current && current.path === path && view) return view.state.doc.toString()
+    var p = paneShowing(path)
+    if (p) return p.view.state.doc.toString()
     var b = buffers[path]
     return b ? b.state.doc.toString() : null
   }
 
   function syncCurrent() {
-    if (current && view && buffers[current.path]) buffers[current.path].state = view.state
+    panes.forEach(function (p) { if (p.current && buffers[p.current.path]) buffers[p.current.path].state = p.view.state })
   }
 
   // ───────── pane ─────────
@@ -682,15 +696,24 @@ var Writer = (function () {
     if (!current || !view) return
     var text = view.state.doc.toString().replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '')
     var words = (text.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length
-    $('wWords').textContent = words.toLocaleString(window.curLang === 'en' ? 'en-GB' : 'tr-TR') + ' ' + L('words')
+    var p = paneOfView(view), wEl = p && p.wordsEl ? p.wordsEl : $('wWords'), sEl = p && p.stateEl ? p.stateEl : $('wState')
+    wEl.textContent = words.toLocaleString(window.curLang === 'en' ? 'en-GB' : 'tr-TR') + ' ' + L('words')
     var b = buffers[current.path]
-    $('wState').textContent = b && view.state.doc.toString() !== b.saved ? L('unsavedText') : ''
+    sEl.textContent = b && view.state.doc.toString() !== b.saved ? L('unsavedText') : ''
   }
 
   function show(path, node, keepFocus) {
     build()
     syncCurrent()
-    current = { nodeId: node.id(), path: path }
+    var other = paneShowing(path)
+    if (other && other !== primary) {                 // already open beside or in a window
+      activate(other)
+      if (other.win) { try { other.win.focus() } catch (e) { /* closed */ } }
+      if (!keepFocus) other.view.focus()
+      return
+    }
+    activate(primary)
+    current = primary.current = { nodeId: node.id(), path: path }
     loading = true
     view.setState(buffers[path].state)
     loading = false
@@ -705,7 +728,10 @@ var Writer = (function () {
 
   function close() {
     syncCurrent()
-    current = null
+    if (primary) primary.current = null
+    panes.filter(function (p) { return p.kind === 'side' }).forEach(closePane)
+    activate(panes.filter(function (p) { return p.current })[0] || primary)
+    if (primary && view === primary.view) current = null
     var main = $('main')
     main.classList.remove('writing', 'writer-full')
     resizeGraph()
@@ -715,6 +741,228 @@ var Writer = (function () {
     $('main').classList.toggle('writer-full')
     resizeGraph()
     if (view) view.focus()
+  }
+
+  // ───────── panes: beside the main text, or in a window of its own ─────────
+
+  function paneOfView(v) { for (var i = 0; i < panes.length; i++) if (panes[i].view === v) return panes[i]; return null }
+  function curOf(v) { var p = paneOfView(v); return p ? p.current : current }
+  function paneShowing(path) { for (var i = 0; i < panes.length; i++) if (panes[i].current && panes[i].current.path === path) return panes[i]; return null }
+
+  // Make a pane the one that commands, the toolbar and the status line work on.
+  function activate(p) {
+    if (!p || !p.view) return
+    view = p.view
+    current = p.current
+    panes.forEach(function (x) { if (x.el) x.el.classList.toggle('active', x === p) })
+    updateStatus()
+  }
+
+  function setPaneTitle(p, label) {
+    if (p.titleEl) p.titleEl.textContent = label || ''
+    if (p.win) { try { p.win.document.title = (label || '') + ' — Mentegraf' } catch (e) { /* closed */ } }
+  }
+
+  var PANE_TOOLS = [['bold', 'B', 'tb-b'], ['italic', 'I', 'tb-i'], ['footnote', '¹', 'tb-fn'], ['passage', '¶', ''], ['sep'], ['accept', '✓', 'tb-acc'], ['nextmark', '↓', '']]
+  var PANE_TIPS = { accept: 'markAcceptHere', nextmark: 'markNext' }
+
+  // The pane's own header, small toolbar, editor and status line, built in `doc` (the main
+  // window's document or a window of its own).
+  function paneDom(p, doc) {
+    var el = doc.createElement('div')
+    el.className = 'wpane wpane-' + p.kind
+    var head = doc.createElement('div')
+    head.className = 'wpane-h'
+    head.innerHTML = '<div class="wt"><span class="wpane-title"></span><span class="wpane-path"></span></div><div class="wbtns"></div>'
+    var btns = head.querySelector('.wbtns')
+    var addBtn = function (txt, tip, fn) {
+      var b = doc.createElement('button'); b.textContent = txt; b.title = L(tip); b.setAttribute('aria-label', L(tip))
+      b.addEventListener('click', fn); btns.appendChild(b)
+    }
+    if (p.kind === 'side') {
+      addBtn('⇱', 'paneToWindow', function () { var c = p.current; if (!c) return; closePane(p); openInWindow(c.nodeId) })
+      addBtn('✕', 'paneClose', function () { closePane(p) })
+    } else {
+      addBtn('⇲', 'paneToMain', function () { var c = p.current; closePane(p); if (c && window.cy) { var n = cy.getElementById(c.nodeId); if (n.length) openForNode(n) } })
+    }
+    var bar = doc.createElement('div')
+    bar.className = 'wtb wpane-tb'
+    bar.innerHTML = PANE_TOOLS.map(function (x) {
+      return x[0] === 'sep' ? '<span class="wsep"></span>' : '<button data-pcmd="' + x[0] + '" class="' + x[2] + '" title="' + escapeHtml(L(PANE_TIPS[x[0]] || TIPS[x[0]])) + '">' + x[1] + '</button>'
+    }).join('')
+    bar.addEventListener('mousedown', function (e) { if (e.target.closest('button')) e.preventDefault() })
+    bar.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-pcmd]'); if (!b || !p.current) return
+      activate(p)
+      COMMANDS[b.dataset.pcmd](p.view)
+      p.view.focus()
+    })
+    var ed = doc.createElement('div')
+    ed.className = 'wpane-ed'
+    var st = doc.createElement('div')
+    st.className = 'wst'
+    st.innerHTML = '<span class="wpane-words"></span><span class="wpane-msg"></span><span class="wpane-state"></span>'
+    el.appendChild(head); el.appendChild(bar); el.appendChild(ed); el.appendChild(st)
+    p.el = el
+    p.titleEl = head.querySelector('.wpane-title')
+    p.pathEl = head.querySelector('.wpane-path')
+    p.wordsEl = st.querySelector('.wpane-words')
+    p.msgEl = st.querySelector('.wpane-msg')
+    p.stateEl = st.querySelector('.wpane-state')
+    return ed
+  }
+
+  // Load a node's text into the buffers (as openForNode does) without showing it.
+  async function loadBuffer(node) {
+    var path = node.data('fragment')
+    if (!path || !api()) return null
+    if (!buffers[path]) {
+      var r = await api().fragmentRead(path)
+      if (r.error || !r.exists) { alert(L('textError') + '\n\n' + (r.message || path)); return null }
+      buffers[path] = { state: makeState(r.text), saved: r.text }
+    }
+    return path
+  }
+
+  function mountPane(p, parent, doc, node, path) {
+    syncCurrent()
+    p.current = { nodeId: node.id(), path: path }
+    p.view = new CM.EditorView({ state: buffers[path].state, parent: parent, root: doc })
+    p.view.dom.addEventListener('focusin', function () { activate(p) })
+    p.view.dom.addEventListener('mousedown', function () { activate(p) })
+    panes.push(p)
+    setPaneTitle(p, node.data('label'))
+    if (p.pathEl) p.pathEl.textContent = path
+    activate(p)
+    p.view.focus()
+  }
+
+  // Open a node's text in a second pane beside the main one (two chapters side by side).
+  async function openBeside(nodeOrId) {
+    build()
+    var node = typeof nodeOrId === 'string' ? cy.getElementById(nodeOrId) : nodeOrId
+    if (!node || !node.length) return false
+    var path = await loadBuffer(node)
+    if (!path) return false
+    var there = paneShowing(path)
+    if (there) { activate(there); there.view.focus(); flash(L('paneAlreadyOpen')); return false }
+    var old = panes.filter(function (x) { return x.kind === 'side' })[0]
+    if (old) closePane(old)
+    var p = { kind: 'side', doc: document }
+    var ed = paneDom(p, document)
+    $('wBody').appendChild(p.el)
+    var main = $('main')
+    if (!main.classList.contains('writing')) openPane()
+    if (!main.classList.contains('writer-full')) { main.classList.add('writer-full'); p.madeFull = true; resizeGraph() }
+    main.classList.add('writer-split')
+    mountPane(p, ed, document, node, path)
+    return true
+  }
+
+  // Open a node's text in a window of its own (for a second screen).
+  async function openInWindow(nodeOrId) {
+    build()
+    var node = typeof nodeOrId === 'string' ? cy.getElementById(nodeOrId) : nodeOrId
+    if (!node || !node.length) return false
+    var path = await loadBuffer(node)
+    if (!path) return false
+    var there = paneShowing(path)
+    if (there && there.win) { try { there.win.focus() } catch (e) { /* closed */ } return false }
+    if (there) closePane(there === primary ? null : there)
+    if (there === primary) detachPrimaryOnly()
+    var win = window.open('', 'mentegraf-text-' + node.id(), 'width=900,height=1000')
+    if (!win) return false
+    var doc = win.document
+    doc.open()
+    // the layout is set inline so the window is right before the stylesheet arrives
+    doc.write('<!doctype html><html><head><meta charset="utf-8"><title></title><style>html,body{margin:0;height:100%;overflow:hidden}' +
+      '.wpane{display:flex;flex-direction:column;height:100vh}.wpane-ed{flex:1;min-height:0;overflow:hidden}.wpane-ed .cm-editor{height:100%}</style></head><body class="wwin"></body></html>')
+    doc.close()
+    var loads = []
+    Array.prototype.forEach.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) {
+      var c = doc.createElement('link'); c.rel = 'stylesheet'; c.href = l.href
+      loads.push(new Promise(function (res) { c.onload = c.onerror = res; setTimeout(res, 1500) }))
+      doc.head.appendChild(c)
+    })
+    doc.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') || 'light')
+    doc.documentElement.setAttribute('lang', document.documentElement.getAttribute('lang') || 'tr')
+    var p = { kind: 'window', doc: doc, win: win }
+    var ed = paneDom(p, doc)
+    doc.body.appendChild(p.el)
+    await Promise.all(loads)
+    if (win.closed) return false
+    mountPane(p, ed, doc, node, path)
+    // closing the window keeps the edits in memory; they are saved with the project
+    win.addEventListener('pagehide', function () { if (panes.indexOf(p) >= 0) closePane(p, true) })
+    return true
+  }
+
+  // Leave the main pane empty after its text moved to a window.
+  function detachPrimaryOnly() {
+    if (!primary) return
+    syncCurrent()
+    primary.current = null
+    if (view === primary.view) current = null
+    loading = true
+    primary.view.setState(CM.EditorState.create({ doc: '', extensions: [extensions, CM.EditorView.editable.of(false)] }))
+    loading = false
+    $('wTitle').textContent = ''; $('wPath').textContent = ''
+    var side = panes.filter(function (x) { return x.kind === 'side' })[0]
+    if (!side) { $('main').classList.remove('writing', 'writer-full', 'writer-split'); resizeGraph() }
+  }
+  function detachMain() { if (primary && primary.current) openInWindow(primary.current.nodeId) }
+
+  function closePane(p, windowGone) {
+    if (!p || p === primary || panes.indexOf(p) < 0) return
+    syncCurrent()
+    panes.splice(panes.indexOf(p), 1)
+    try { p.view.destroy() } catch (e) { /* already gone */ }
+    if (p.el && p.el.parentNode) p.el.parentNode.removeChild(p.el)
+    if (p.win && !windowGone) { try { p.win.close() } catch (e) { /* closed */ } }
+    if (p.kind === 'side') {
+      var main = $('main')
+      main.classList.remove('writer-split')
+      if (p.madeFull) { main.classList.remove('writer-full'); resizeGraph() }
+      if (!primary.current) { main.classList.remove('writing', 'writer-full'); resizeGraph() }
+    }
+    if (view === p.view) activate(primary.current ? primary : (panes.filter(function (x) { return x.current })[0] || primary))
+    if (view === primary.view && !primary.current) current = null
+  }
+
+  // "Beside" button: the texts of the book plan (and other texts), to open next to this one.
+  function sideMenu(btn) {
+    var old = $('sideMenu')
+    if (old) { old.remove(); return }
+    if (!window.cy) return
+    var seen = {}, rows = []
+    var add = function (n, depth) {
+      if (!n || !n.length || seen[n.id()] || !n.data('fragment')) return
+      seen[n.id()] = true
+      rows.push({ id: n.id(), label: n.data('label') || n.data('fragment'), depth: depth, open: !!paneShowing(n.data('fragment')) })
+    }
+    var walk = function (list, depth) { (list || []).forEach(function (it) { if (it.kind === 'node') add(cy.getElementById(it.node), depth); walk(it.children, depth + 1) }) }
+    if (window.Binder && Binder.get) walk(Binder.get().items, 0)
+    var rest = []
+    cy.nodes().forEach(function (n) { if (n.data('fragment') && !seen[n.id()]) rest.push(n) })
+    rest.sort(function (a, b) { return String(a.data('label')).localeCompare(String(b.data('label')), 'tr') }).forEach(function (n) { add(n, 0) })
+    var m = document.createElement('div')
+    m.id = 'sideMenu'
+    m.className = 'bmenu argmenu sidemenu'
+    m.innerHTML = '<div class="mm-count">' + escapeHtml(L('paneBesideHint')) + '</div>' + rows.map(function (r) {
+      return '<button data-id="' + escapeHtml(r.id) + '"' + (r.open ? ' disabled' : '') + ' style="padding-left:' + (10 + r.depth * 14) + 'px"><span>' + escapeHtml(r.label) + '</span><kbd data-win="1" title="' + escapeHtml(L('paneWindowTip')) + '">⇱</kbd></button>'
+    }).join('')
+    $('writer').appendChild(m)
+    var r = btn.getBoundingClientRect(), w = $('writer').getBoundingClientRect()
+    m.style.top = (r.bottom - w.top + 4) + 'px'
+    m.style.left = Math.max(8, Math.min(r.left - w.left - 220, w.width - m.offsetWidth - 8)) + 'px'
+    m.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-id]'); if (!b || b.disabled) return
+      m.remove()
+      if (e.target.closest('[data-win]')) openInWindow(b.dataset.id); else openBeside(b.dataset.id)
+    })
+    document.addEventListener('mousedown', function away(e) {
+      if (!e.target.closest('#sideMenu') && !e.target.closest('[data-act="beside"]')) { m.remove(); document.removeEventListener('mousedown', away, true) }
+    }, true)
   }
 
   // ───────── opening and creating texts ─────────
@@ -797,10 +1045,11 @@ var Writer = (function () {
   function replaceText(path, text) {
     var b = buffers[path]
     loading = true
-    if (current && current.path === path && view) {
-      var head = view.state.selection.main.head   // keep the cursor where it was
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: Math.min(head, text.length) } })
-      b.state = view.state
+    var shown = paneShowing(path)
+    if (shown) {
+      var v = shown.view, head = v.state.selection.main.head   // keep the cursor where it was
+      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: text }, selection: { anchor: Math.min(head, text.length) } })
+      b.state = v.state
     } else {
       b.state = b.state.update({ changes: { from: 0, to: b.state.doc.length, insert: text } }).state
     }
@@ -829,10 +1078,14 @@ var Writer = (function () {
     if (!window.cy || boundCy === cy) return
     boundCy = cy
     cy.on('remove', 'node', function () {
-      setTimeout(function () { if (current && cy.getElementById(current.nodeId).empty()) close() }, 0)
+      setTimeout(function () {
+        panes.slice().forEach(function (p) { if (p !== primary && p.current && cy.getElementById(p.current.nodeId).empty()) closePane(p) })
+        if (primary && primary.current && cy.getElementById(primary.current.nodeId).empty()) close()
+      }, 0)
     })
     cy.on('data', 'node', function (e) {
-      if (current && e.target.id() === current.nodeId) $('wTitle').textContent = e.target.data('label') || ''
+      if (primary && primary.current && e.target.id() === primary.current.nodeId) $('wTitle').textContent = e.target.data('label') || ''
+      panes.forEach(function (p) { if (p.titleEl && p.current && e.target.id() === p.current.nodeId) setPaneTitle(p, e.target.data('label')) })
     })
   }
 
@@ -849,6 +1102,7 @@ var Writer = (function () {
 
   // New or opened project: forget all texts.
   function reset() {
+    panes.slice().forEach(function (p) { if (p !== primary) closePane(p) })
     close()
     if (previewOn) {
       previewOn = false
@@ -878,6 +1132,7 @@ var Writer = (function () {
   }
 
   return {
+    openBeside: openBeside, openInWindow: openInWindow, sideMenu: sideMenu, detachMain: detachMain, panes: function () { return panes.map(function (p) { return { kind: p.kind, path: p.current && p.current.path } }) },
     init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull, run: run, togglePreview: togglePreview, exportDocx: exportDocx,
     updatePanel: updatePanel, dirtyFragments: dirtyFragments, willSave: willSave, markSaved: markSaved,
     hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu,
@@ -888,7 +1143,7 @@ var Writer = (function () {
     paragraphText: paragraphText,
     flash: function (t) { flash(t) },
     focus: function () { if (view && current && !previewOn) view.focus() },
-    refreshArgs: function () { if (view) view.dispatch({}) },
+    refreshArgs: function () { panes.forEach(function (p) { p.view.dispatch({}) }) },
     cursorCoords: function () { if (!view || !current) return null; try { return view.coordsAtPos(view.state.selection.main.head) } catch (e) { return null } },
     // Select the paragraph that ends with ^id and bring it into view.
     revealPassage: function (id) {
@@ -931,7 +1186,7 @@ var Writer = (function () {
       return view.state.sliceDoc(r.from, r.to).trim()
     },
     // Re-mark lens lines after the lens changed.
-    refreshLens: function () { if (view) view.dispatch({}) },
+    refreshLens: function () { panes.forEach(function (p) { p.view.dispatch({}) }) },
     // The open text: { path, nodeId } or null.
     current: function () { return current ? { path: current.path, nodeId: current.nodeId } : null },
     // Insert at the cursor; block = on its own paragraph (blank lines around it).

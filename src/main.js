@@ -676,6 +676,26 @@ function createWindow() {
   })
 
   mainWindow.loadFile(path.join(srcPath, 'index.html'))
+  // A text opened in a window of its own (writer.js): the page fills that window itself, from
+  // the main window, so the texts stay one set. It gets no menu (whose shortcuts act on the main
+  // window) and closes with the main window. Other windows are not opened from the page.
+  mainWindow.webContents.setWindowOpenHandler(({ frameName }) => {
+    if (!/^mentegraf-text-/.test(frameName || '')) return { action: 'deny' }
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        width: 900, height: 1000, minWidth: 420, minHeight: 400, autoHideMenuBar: true,
+        backgroundColor: '#ffffff',
+        icon: path.join(assetsPath, process.platform === 'win32' ? 'icon.ico' : 'icon.png')
+      }
+    }
+  })
+  mainWindow.webContents.on('did-create-window', (win) => {
+    win.removeMenu()
+    const closeIt = () => { if (!win.isDestroyed()) win.destroy() }
+    mainWindow.once('closed', closeIt)
+    win.once('closed', () => { if (mainWindow) mainWindow.removeListener('closed', closeIt) })
+  })
   mainWindow.on('close', (e) => {
     if (forceClose || !isDirty) return
     e.preventDefault()

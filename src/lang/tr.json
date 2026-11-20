@@ -393,5 +393,12 @@
   "au_repeatTip": "Farklı bölümlerde birbirine çok benzeyen paragraflar: aynı kavram yeniden açıklanıyor ya da aynı örnek yeniden anlatılıyor olabilir. Tıkladıkça paragraflar sırayla açılır.",
   "au_repeatText": "%t — %c",
   "au_where": "%i / %n — sonraki yer için yeniden tıklayın",
-  "queueBook": "Kitap geneli: terim, yazım, tekrar"
+  "queueBook": "Kitap geneli: terim, yazım, tekrar",
+  "paneBeside": "Yanına başka bir metin aç (yan yana)",
+  "paneToWindow": "Ayrı pencerede aç",
+  "paneClose": "Bu tarafı kapat",
+  "paneToMain": "Ana pencereye al",
+  "paneAlreadyOpen": "Bu metin zaten açık",
+  "paneBesideHint": "Yanına açılacak metin (⇱: ayrı pencerede)",
+  "paneWindowTip": "Ayrı pencerede aç"
 }
