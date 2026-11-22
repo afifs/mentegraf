@@ -36,6 +36,17 @@ test('circumflex forms are right (kâr, hâlâ, kâğıt, hâkim, resmî)', () =
   assert.deepStrictEqual(bad(['kâr', 'hâlâ', 'kâğıt', 'hâkim', 'resmî', 'kar', 'hala']), [])
 })
 
+test('Turkish capitals: İ and I at the start of a word are lowered the Turkish way', () => {
+  assert.deepStrictEqual(bad(['İlerideki', 'İnsan', 'Işık', 'Ilık', 'İstanbul', 'İleridekki']), ['İleridekki'])
+  assert.deepStrictEqual(bad(['Iron', 'Island']), [])                     // English words keep English rules
+})
+
+test('suggestions for a capitalized Turkish word keep a Turkish capital', () => {
+  const s = sp.suggest('İleridekki')
+  assert.ok(s.indexOf('İlerideki') >= 0, JSON.stringify(s))
+  assert.ok(s.every(x => x.charAt(0) !== 'I' || x === 'I'), JSON.stringify(s))
+})
+
 test('a word typed in decomposed form (a + ◌̂) is checked as the same word', () => {
   assert.deepStrictEqual(sp.check(['kâr']), [false])
 })
