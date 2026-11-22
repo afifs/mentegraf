@@ -32,5 +32,17 @@ var Spell = (function () {
     apply()
   }
 
+  // A dictionary could not be downloaded (no internet, or a blocker such as Pi-hole on
+  // redirector.gvt1.com): say so once, in the status line.
+  var told = {}
+  if (api() && api().onSpellcheckProblem) api().onSpellcheckProblem(function (info) {
+    if (!info || told[info.lang]) return
+    told[info.lang] = true
+    var msg = (window.L ? L('spellDownloadFailed') : 'Spelling dictionary could not be downloaded: %s').replace('%s', info.lang)
+    var m = document.getElementById('ml')
+    if (m) { m.textContent = '⚠ ' + msg; setTimeout(function () { if (m.textContent === '⚠ ' + msg) m.textContent = '' }, 12000) }
+    console.warn(msg)
+  })
+
   return { apply: apply, toggle: toggle, language: language, enabled: enabled }
 })()

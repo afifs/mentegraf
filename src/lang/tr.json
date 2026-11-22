@@ -301,6 +301,7 @@
   "ctxCut": "Kes",
   "ctxCopy": "Kopyala",
   "ctxPaste": "Yapıştır",
+  "spellDownloadFailed": "Yazım sözlüğü indirilemedi (%s). İnternet bağlantısını ya da reklam engelleyiciyi denetleyin.",
   "searchCount": "%n eşleşme, %t metin",
   "searchMore": "ilk 300 gösteriliyor",
   "searchNone": "Eşleşme yok.",
