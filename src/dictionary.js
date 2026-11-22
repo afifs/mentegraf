@@ -11,6 +11,7 @@ const fs = require('fs')
 const path = require('path')
 
 const FILES = { dictionary: 'dictionary.txt', ignore: 'ignore.txt' }
+const SUSPICIOUS_FILE = 'suspicious.txt'
 const HEADER = {
   dictionary: '# Mentegraf — bu projenin yazım sözlüğü / this project\'s spelling dictionary. One word per line.\n',
   ignore: '# Mentegraf — bu projede yok sayılan sözcükler / words ignored in this project. One word per line.\n'
@@ -65,15 +66,80 @@ function projectWords(dir) {
   return read(dir, 'dictionary').concat(read(dir, 'ignore')).filter(w => !seen.has(w) && seen.add(w))
 }
 
-// Saving the project in a new folder: take the word lists along (an existing list is kept).
+// Saving the project in a new folder: take the word lists along, the suspicious words too
+// (an existing list is kept).
 function copy(fromDir, toDir) {
   if (!fromDir || !toDir || path.resolve(fromDir) === path.resolve(toDir)) return
-  Object.keys(FILES).forEach(kind => {
-    const from = filePath(fromDir, kind), to = filePath(toDir, kind)
+  Object.keys(FILES).concat(['suspicious']).forEach(kind => {
+    const from = kind === 'suspicious' ? suspiciousPath(fromDir) : filePath(fromDir, kind)
+    const to = kind === 'suspicious' ? suspiciousPath(toDir) : filePath(toDir, kind)
     if (!fs.existsSync(from) || fs.existsSync(to)) return
     fs.mkdirSync(path.dirname(to), { recursive: true })
     fs.copyFileSync(from, to)
   })
 }
 
-module.exports = { FILES, clean, parse, read, add, projectWords, copy, filePath }
+// ───────── suspicious words (.mentegraf/suspicious.txt) ─────────
+//
+// Words the spell checker cannot catch because every form is a real word: "kar" (snow) and
+// "kâr" (profit), "hala" and "hâlâ". Each line lists forms that are easily confused, then an
+// optional note after a long dash:
+//     kar | kâr* — kâr: kazanç; kar: yağış
+// A form ending in * also stands for the word with endings (kâr* → kârı, kârlı). Letters
+// are matched without regard to case, but a circumflex counts. Lines starting with # are notes.
+const SUSPICIOUS_HEADER = [
+  '# Mentegraf — şüpheli sözcükler / suspicious words',
+  '# Yazım denetiminin yakalayamadığı, kolayca karışan yazılışlar. Satır başına bir grup:',
+  '#   yazılış | yazılış — açıklama',
+  '# Sonuna * konan yazılış ekli hâlleri de bulur (kâr* → kârı, kârlı). Büyük/küçük harf fark etmez; şapka eder.',
+  '# Forms that are easily confused, one group per line: form | form — note. A * at the end also finds the word with endings.',
+  ''
+].join('\n')
+const SUSPICIOUS_DEFAULT = [
+  'kar | kâr* — kâr: kazanç; kar: yağış',
+  'hala | hâlâ — hâlâ: henüz, şimdi bile; hala: babanın kız kardeşi',
+  'adet | âdet* — âdet: gelenek, alışkanlık; adet: sayı',
+  'hakim* | hâkim* — hâkim: yargıç, egemen (hakîm: bilge)',
+  'ama | âmâ — âmâ: görme engelli; ama: bağlaç',
+  'alem | âlem* — âlem: dünya, evren; alem: bayrak, sancak',
+  'kağıt* | kağıd* | kâğıt* | kâğıd* — TDK yazımı: kâğıt',
+  ''
+].join('\n')
+
+const lowerTr = s => s.toLocaleLowerCase('tr')
+
+// Text -> [{ key, forms: [{ form, prefix }], note }]
+function parseSuspicious(text) {
+  const out = []
+  String(text || '').replace(/^\uFEFF/, '').split(/\r\n?|\n/).forEach(line => {
+    const t = line.normalize('NFC').trim()
+    if (!t || t[0] === '#') return
+    const cut = t.search(/\s[—–]\s|\s--\s/)
+    const head = cut >= 0 ? t.slice(0, cut) : t
+    const note = cut >= 0 ? t.slice(cut).replace(/^\s*(?:[—–]|--)\s*/, '').trim() : ''
+    const forms = []
+    head.split('|').forEach(f => {
+      let w = lowerTr(f.trim()), prefix = false
+      if (w.endsWith('*')) { prefix = true; w = w.slice(0, -1).trim() }
+      if (w && !/\s/.test(w) && !forms.some(x => x.form === w)) forms.push({ form: w, prefix })
+    })
+    if (forms.length) out.push({ key: 'sw:' + forms.map(f => f.form + (f.prefix ? '*' : '')).join('|'), forms, note })
+  })
+  return out
+}
+
+function suspiciousPath(dir) { return path.join(dir, '.mentegraf', SUSPICIOUS_FILE) }
+
+// The project's list. A project without one gets the starting list written into its folder
+// (so it can be edited and travels with the book); a project not yet saved uses it unwritten.
+function readSuspicious(dir) {
+  if (!dir) return parseSuspicious(SUSPICIOUS_DEFAULT)
+  const file = suspiciousPath(dir)
+  try { return parseSuspicious(fs.readFileSync(file, 'utf8')) } catch (e) { /* missing */ }
+  try {
+    if (fs.existsSync(dir)) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, SUSPICIOUS_HEADER + SUSPICIOUS_DEFAULT, { encoding: 'utf8', flag: 'wx' }) }
+  } catch (e) { /* written meanwhile, or read-only: use the starting list */ }
+  try { return parseSuspicious(fs.readFileSync(file, 'utf8')) } catch (e) { return parseSuspicious(SUSPICIOUS_DEFAULT) }
+}
+
+module.exports = { FILES, clean, parse, read, add, projectWords, copy, filePath, parseSuspicious, readSuspicious, suspiciousPath, SUSPICIOUS_DEFAULT }

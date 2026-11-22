@@ -16,6 +16,7 @@
 const fs = require('fs')
 const path = require('path')
 const ProjectFormat = require('./projectFormat')
+const Dictionary = require('./dictionary')
 
 const MANIFEST = 'project.mentegraf'
 const FORMAT = '3.0'
@@ -633,12 +634,12 @@ function proseLine(line) { return !!line.trim() && !/^\s*(#|\[\^[^\]]*\]:|!\[|\|
 
 // Remember the last answer of a check while its texts are unchanged (the work queue asks often).
 const checkCache = new Map()
-function cached(name, dir, opts, fn) {
+function cached(name, dir, opts, fn, extra) {
   const o = opts || {}, overrides = o.overrides && typeof o.overrides === 'object' ? o.overrides : {}
   let paths = listTexts(dir)
   Object.keys(overrides).forEach(p => { if (paths.indexOf(p) < 0) paths.push(p) })
   if (Array.isArray(o.only)) { const set = new Set(o.only); paths = paths.filter(p => set.has(p)) }
-  const sig = [name, dir || '', o.min == null ? '' : o.min].concat(paths.map(rel => {
+  const sig = [name, dir || '', o.min == null ? '' : o.min, extra || ''].concat(paths.map(rel => {
     if (typeof overrides[rel] === 'string') { const s = overrides[rel]; let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return rel + '=' + s.length + ':' + h }
     try { const st = fs.statSync(fragmentAbs(dir, rel)); return rel + '@' + st.mtimeMs + ':' + st.size } catch (e) { return rel + '!' }
   })).join('\n')
@@ -652,10 +653,57 @@ function cached(name, dir, opts, fn) {
 // Words written in more than one way across the texts:
 //  - spacing and hyphen: "geri bildirim" / "geribildirim" / "geri-bildirim"
 //  - circumflex: "hâlâ" / "hala", "resmî" / "resmi"
+//  - suspicious words from the project's list (kind 'suspicious', see suspiciousWords below)
 // Returns { groups: [{ key, kind, forms: [{ form, n }] (most used first), hits: [{ path, line, col, len, form }] }] }.
 // hits lists where the less used forms are (up to 100), so they can be visited one by one.
-function spellingVariants(dir, opts) { return cached('spelling', dir, opts, () => spellingVariantsNow(dir, opts)) }
-function spellingVariantsNow(dir, opts) {
+function spellingVariants(dir, opts) {
+  const list = Dictionary.readSuspicious(dir)
+  return cached('spelling', dir, opts, () => spellingVariantsNow(dir, opts, list), JSON.stringify(list))
+}
+// Suspicious words (.mentegraf/suspicious.txt, see dictionary.js): every place where a form of
+// a listed group occurs — in running text, headings, footnotes and captions; not in code
+// blocks or markup. Letters match without regard to case; a circumflex counts.
+// Returns groups like spellingVariants' with kind 'suspicious', a note, and all their places.
+function suspiciousWords(texts, list) {
+  if (!list || !list.length) return []
+  const W = /[\p{L}\p{M}\p{N}]+/gu
+  const exact = new Map(), prefixes = []
+  list.forEach((g, gi) => g.forms.forEach((f, fi) => { if (f.prefix) prefixes.push({ gi, fi, form: f.form }); else exact.set(f.form, { gi, fi }) }))
+  const found = list.map(g => g.forms.map(() => ({ n: 0, hits: [] })))
+  texts.forEach(t => {
+    let fence = false
+    for (let i = t.start; i < t.lines.length; i++) {
+      const raw = t.lines[i]
+      if (/^\s*(```|~~~)/.test(raw)) { fence = !fence; continue }
+      if (fence || !raw.trim()) continue
+      const line = blankMarkup(raw.normalize('NFC'))
+      let m
+      W.lastIndex = 0
+      while ((m = W.exec(line))) {
+        const w = m[0].toLocaleLowerCase('tr')
+        const hits = []
+        const e = exact.get(w); if (e) hits.push(e)
+        prefixes.forEach(p => { if (w.startsWith(p.form) && !(e && e.gi === p.gi)) hits.push(p) })
+        hits.forEach(h => {
+          const f = found[h.gi][h.fi]
+          f.n++
+          if (f.hits.length < 200) f.hits.push({ path: t.rel, line: i + 1, col: m.index, len: m[0].length, form: list[h.gi].forms[h.fi].form })
+        })
+      }
+    }
+  })
+  const out = []
+  list.forEach((g, gi) => {
+    const forms = g.forms.map((f, fi) => ({ form: f.form, n: found[gi][fi].n, style: 'word' }))
+    if (!forms.some(f => f.n)) return
+    const hits = [].concat(...found[gi].map(f => f.hits)).slice(0, 200)
+    hits.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : x.line - y.line || x.col - y.col))
+    out.push({ key: g.key, kind: 'suspicious', forms, note: g.note, hits })
+  })
+  return out
+}
+
+function spellingVariantsNow(dir, opts, suspicious) {
   const texts = bodyTexts(dir, opts)
   const lower = s => s.toLocaleLowerCase('tr')
   const single = new Map(), pairs = new Map(), hyph = new Map()
@@ -743,7 +791,10 @@ function spellingVariantsNow(dir, opts) {
     out.push({ key: g.key, kind: g.kind, forms: forms.map(f => ({ form: f.form, n: f.n, style: f.style })), hits })
   })
   out.sort((x, y) => y.forms.reduce((s, f) => s + f.n, 0) - x.forms.reduce((s, f) => s + f.n, 0))
-  return { groups: out }
+  // a circumflex pair that is on the suspicious list is shown there, with its note, not twice
+  const listed = (suspicious || []).map(g => g.forms)
+  const coveredPair = g => g.kind === 'circumflex' && listed.some(fs => g.forms.every(x => fs.some(f => f.prefix ? x.form.startsWith(f.form) : x.form === f.form)))
+  return { groups: out.filter(g => !coveredPair(g)).concat(suspiciousWords(texts, suspicious)) }
 }
 
 // Punctuation against the TDK rules (Turkish texts). Each rule lists its places:

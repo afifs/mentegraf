@@ -1,4 +1,16 @@
 
+# Mentegraf v2.5.0 — Release Notes
+
+## Suspicious words
+
+- Words the spell checker cannot catch because every form is a real word — "kar" / "kâr", "hala" / "hâlâ" — are listed in the work queue's **Whole book** group, marked **suspicious**: how often each form occurs and a short note ("kar 3 times · kâr 5 times — kâr: kazanç; kar: yağış"). Each click opens the next place; ✓ takes the item off the list. A group is listed even when only one of its forms occurs.
+- The list lives in the project folder, `.mentegraf/suspicious.txt`, and travels and syncs with the book. It is created at the first check with kar/kâr, hala/hâlâ, adet/âdet, hakim/hâkim, ama/âmâ, alem/âlem, kağıt/kâğıt. One group per line: `kar | kâr* — note`; a `*` also finds the word with endings (kârı, kârlı). Case does not count, the circumflex does.
+- Running text, headings, footnotes and captions are read; code blocks, link targets, citation and footnote keys are not. A circumflex pair on the list is no longer shown a second time as a circumflex variant.
+
+## Other
+
+- The misspelling underline is a little darker.
+
 # Mentegraf v2.4.0 — Release Notes
 
 ## Search in texts

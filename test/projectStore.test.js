@@ -378,8 +378,8 @@ test('Save As brings assets along', () => {
 test('spelling variants: joined, spaced and hyphenated forms of one word, and circumflex', () => {
   const dir = path.join(tmp(), 'Book'); Store.writeProject(dir, sample())
   const o = { overrides: {
-    'manuscript/a.md': '---\nmentegraf-node: n1\n---\nGeribildirim döngüsü. Olumlu geribildirimler büyütür. Hâlâ öyle.\n',
-    'manuscript/b.md': 'Negatif geri bildirimler söndürür. Bu hala geçerli, hala.\n\n[^b-1]: geri bildirim notu sayılmaz.\n'
+    'manuscript/a.md': '---\nmentegraf-node: n1\n---\nGeribildirim döngüsü. Olumlu geribildirimler büyütür. Resmî öyle.\n',
+    'manuscript/b.md': 'Negatif geri bildirimler söndürür. Bu resmi geçerli, resmi.\n\n[^b-1]: geri bildirim notu sayılmaz.\n'
   } }
   const g = Store.spellingVariants(dir, o).groups
   const sp = g.find(x => x.key === 'sp:geri|geribild')
@@ -387,7 +387,7 @@ test('spelling variants: joined, spaced and hyphenated forms of one word, and ci
   assert.deepStrictEqual(sp.forms.map(f => [f.style, f.n]), [['joined', 2], ['spaced', 1]])
   assert.deepStrictEqual(sp.hits.map(h => [h.path, h.line, h.col, h.len]), [['manuscript/b.md', 1, 8, 16]])
   const cf = g.find(x => x.kind === 'circumflex')
-  assert.deepStrictEqual(cf.forms.map(f => [f.form, f.n]), [['hala', 2], ['hâlâ', 1]])
+  assert.deepStrictEqual(cf.forms.map(f => [f.form, f.n]), [['resmi', 2], ['resmî', 1]])
   assert.strictEqual(cf.hits[0].line, 4)
 })
 
