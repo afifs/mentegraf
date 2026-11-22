@@ -31,7 +31,9 @@ Metin Markdown olarak saklanır ve öyle görünür: `#`, `**`, `_` gibi işaret
 
 ## Yazım denetimi
 
-Mentegraf yazarken yazım yanlışlarının altını çizer. Denetim yalnızca metin bölmesinde yapılır (dipnotlar ve şekil alt yazıları dahil); düğüm adları, dosya adları, web adresleri, dipnot ve atıf işaretleri, pasaj kimlikleri ve `{…}` blokları denetlenmez.
+Mentegraf metindeki yazım yanlışlarının altını kırmızı dalgalı bir çizgiyle çizer: yalnızca yazdıklarınızın değil, dosyada önceden duran metnin de. Denetim yalnızca metin bölmesinde yapılır (dipnotlar ve şekil alt yazıları dahil). Düğüm adları, dosya adları, metnin başındaki üst bilgi bloğu, kod blokları, web adresleri, dipnot ve atıf işaretleri, pasaj kimlikleri, `{…}` blokları, sayı içeren sözcükler ve büyük harfli kısaltmalar (NATO, AB) denetlenmez.
+
+Türkçe sözlük şapkalı yazımları tanımaz; bu yüzden "kâr", "hâlâ", "kâğıt" gibi sözcükler, şapkasız hâlleri doğruysa doğru sayılır. Şapkanın yerinde kullanılıp kullanılmadığı yazım denetiminin işi değildir.
 
 - **Dil** menülerin dili değil, kitabın dilidir (Ayarlar → belge dili). Türkçe bir kitap Türkçe ve İngilizce birlikte denetlenir; böylece metindeki İngilizce terimler yanlış görünmez.
 - **Görünüm → Yazım denetimi** denetimi açıp kapatır. Varsayılanı açıktır; seçim projeye yazılır.

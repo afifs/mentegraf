@@ -708,9 +708,9 @@ function watchSpellSession() {
   if (spellWatched) return
   spellWatched = true
   const ses = spellSession()
-  ses.on('spellcheck-dictionary-initialized', (e, lang) => spellEvent('initialized', lang))
+  ses.on('spellcheck-dictionary-initialized', (e, lang) => { spellEvent('initialized', lang); send('spell-ready') })
   ses.on('spellcheck-dictionary-download-begin', (e, lang) => spellEvent('download-begin', lang))
-  ses.on('spellcheck-dictionary-download-success', (e, lang) => spellEvent('download-success', lang))
+  ses.on('spellcheck-dictionary-download-success', (e, lang) => { spellEvent('download-success', lang); send('spell-ready') })
   ses.on('spellcheck-dictionary-download-failure', (e, lang) => {
     spellEvent('download-failure', lang)
     send('spellcheck-problem', { kind: 'download-failure', lang })
@@ -739,6 +739,8 @@ function applySpell() {
     const langs = Dictionary.spellLanguages(spell.lang, ses.availableSpellCheckerLanguages || [])
     try { if (langs.length) ses.setSpellCheckerLanguages(langs) } catch (e) { console.warn('Spell checker languages:', e.message) }
   }
+  // the editor checks words itself (writer.js): let it check again with the new languages
+  setTimeout(() => send('spell-ready'), 300)
 }
 
 ipcMain.on('spellcheck-config', (event, cfg) => {
@@ -751,7 +753,7 @@ ipcMain.on('spellcheck-config', (event, cfg) => {
 })
 
 function unloadProjectWords() {
-  if (!loadedWords.length) { wordsDir = null; return }
+  if (!loadedWords.length) { wordsDir = null; sendProjectWords(); return }
   if (process.platform !== 'darwin') {
     const ses = spellSession()
     loadedWords.forEach(w => { try { ses.removeWordFromSpellCheckerDictionary(w) } catch (e) { /* gone already */ } })
@@ -759,11 +761,14 @@ function unloadProjectWords() {
   loadedWords = []
   wordsDir = null
   saveLoadedWords()
+  sendProjectWords()
 }
 function addProjectWord(w) {
-  try { spellSession().addWordToSpellCheckerDictionary(w) } catch (e) { return }
+  try { spellSession().addWordToSpellCheckerDictionary(w) } catch (e) { /* the editor still knows it */ }
   if (loadedWords.indexOf(w) < 0) { loadedWords.push(w); saveLoadedWords() }
 }
+// The editor (writer.js) checks words itself and skips the project's words: send it the list.
+function sendProjectWords() { send('spell-words', loadedWords.slice()) }
 // The open project changed (opened, new, saved in a new folder): swap its words in.
 function syncProjectWords() {
   if (wordsDir === currentDir && currentDir) return
@@ -771,6 +776,7 @@ function syncProjectWords() {
   if (!currentDir) return
   wordsDir = currentDir
   Dictionary.projectWords(currentDir).forEach(addProjectWord)
+  sendProjectWords()
 }
 // Words left in Electron's dictionary by a run that did not close normally.
 function forgetLeftoverWords() {
@@ -787,6 +793,42 @@ function forgetLeftoverWords() {
 // Right-click menu in the editor (and any other editable field or selection): spelling
 // suggestions and the project's word lists for a misspelled word, then cut / copy / paste.
 function uiText(key) { const d = UI_TEXT[currentLang] || UI_TEXT.tr; return d[key] || UI_TEXT.en[key] || key }
+// The editor's menu for a misspelled word (writer.js finds the word and its suggestions).
+// Resolves with { replace: text } for a suggestion, { known: word } after adding it to one of
+// the project's lists, or null.
+ipcMain.handle('spell-menu', (event, info) => new Promise((resolve) => {
+  const i = info && typeof info === 'object' ? info : {}
+  const word = String(i.word || '')
+  let done = false
+  const finish = (v) => { if (!done) { done = true; resolve(v) } }
+  const items = []
+  const sugg = (Array.isArray(i.suggestions) ? i.suggestions : []).slice(0, 6).map(String)
+  if (sugg.length) sugg.forEach(s => items.push({ label: s, click: () => finish({ replace: s }) }))
+  else items.push({ label: uiText('ctxNoSuggestions'), enabled: false })
+  items.push({ type: 'separator' })
+  const add = (kind) => () => {
+    if (!currentDir) return finish(null)
+    let w = null
+    try { w = Dictionary.add(currentDir, kind, word) } catch (e) { dialog.showErrorBox(uiText('ctxDictionaryError'), e.message); return finish(null) }
+    w = w || Dictionary.clean(word) || word
+    addProjectWord(w)
+    finish({ known: w })
+  }
+  items.push({ label: uiText('ctxAddToDictionary'), enabled: !!currentDir, click: add('dictionary') })
+  items.push({ label: uiText('ctxIgnoreInProject'), enabled: !!currentDir, click: add('ignore') })
+  if (!currentDir) items.push({ label: uiText('ctxSaveFirst'), enabled: false })
+  items.push({ type: 'separator' })
+  items.push({ label: uiText('ctxCut'), role: 'cut', enabled: !!i.hasSelection })
+  items.push({ label: uiText('ctxCopy'), role: 'copy', enabled: !!i.hasSelection })
+  items.push({ label: uiText('ctxPaste'), role: 'paste' })
+  // the editor may be in a text window of its own: show the menu over the window in front
+  const win = BrowserWindow.getFocusedWindow() || BrowserWindow.fromWebContents(event.sender) || undefined
+  // on some systems the click comes after the menu has closed: wait a moment before giving up
+  Menu.buildFromTemplate(items).popup({ window: win, callback: () => setTimeout(() => finish(null), 200) })
+}))
+
+ipcMain.handle('spell-words-get', () => loadedWords.slice())
+
 function attachContextMenu(wc) {
   wc.on('context-menu', (event, params) => {
     const items = []
