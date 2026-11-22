@@ -1351,6 +1351,22 @@ var Writer = (function () {
       view.focus()
       return true
     },
+    // Replace one hit found by the text search (search.js), in the open text, through the editor
+    // (so Ctrl+Z undoes it). Refuses, returning false, unless the text at that place is still
+    // exactly `expected`: if the writer has changed it meanwhile, nothing is replaced.
+    replaceAt: function (path, line, col, len, expected, text) {
+      if (!view || !current || current.path !== path) return false
+      if (previewOn) togglePreview()
+      var doc = view.state.doc
+      if (!(line >= 1 && line <= doc.lines)) return false
+      var l = doc.line(line), from = l.from + (col || 0), to = from + (len || 0)
+      if (to > l.to || view.state.sliceDoc(from, to) !== expected) return false
+      text = String(text == null ? '' : text).replace(/[\r\n]+/g, ' ')
+      view.dispatch({ changes: { from: from, to: to, insert: text }, selection: { anchor: from, head: from + text.length },
+        effects: CM.EditorView.scrollIntoView(from, { y: 'center' }), userEvent: 'input.replace' })
+      view.focus()
+      return true
+    },
     // The selected words in the open text ('' when nothing is selected).
     selectionText: function () {
       if (!view || !current) return ''

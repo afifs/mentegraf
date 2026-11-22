@@ -86,7 +86,7 @@
     <!-- CLASSIFICATION (categories and tags) -->
     <div id="classes">
       <div class="bh"><span class="ctitle" data-l="classesLabel">Sınıflandırma</span><button class="bx" onclick="Classify.toggle()" aria-label="close">✕</button></div>
-      <div class="ssearch"><input id="sQuery" type="search" data-lp="searchPh" aria-label="search in texts" autocomplete="off" spellcheck="false"><div class="sopts"><label class="slens" data-lt="searchExactTip"><input type="checkbox" id="sExact"> <span data-l="searchExact">Harfleri tam eşle</span></label><label class="slens" data-lt="searchWholeTip"><input type="checkbox" id="sWhole"> <span data-l="searchWhole">Bütün sözcük</span></label><a href="#" id="sMakeDefault" class="sdefault" style="visibility:hidden" data-l="searchMakeDefault">Varsayılan yap</a></div><label id="sLensRow" class="slens" style="display:none"><input type="checkbox" id="sInLens" checked> <span data-l="searchInLens">Yalnızca filtredeki metinler</span></label></div>
+      <div class="ssearch"><input id="sQuery" type="search" data-lp="searchPh" aria-label="search in texts" autocomplete="off" spellcheck="false"><input id="sReplace" type="text" data-lp="replacePh" data-lt="replaceTip" aria-label="replace with" autocomplete="off" spellcheck="false"><div class="sopts"><label class="slens" data-lt="searchExactTip"><input type="checkbox" id="sExact"> <span data-l="searchExact">Harfleri tam eşle</span></label><label class="slens" data-lt="searchWholeTip"><input type="checkbox" id="sWhole"> <span data-l="searchWhole">Bütün sözcük</span></label><a href="#" id="sMakeDefault" class="sdefault" style="visibility:hidden" data-l="searchMakeDefault">Varsayılan yap</a></div><label id="sLensRow" class="slens" style="display:none"><input type="checkbox" id="sInLens" checked> <span data-l="searchInLens">Yalnızca filtredeki metinler</span></label></div>
       <div class="bacts"><button class="bt" onclick="Classify.addRoot()" data-l="addCat">+ Kategori</button><button class="bt" onclick="Classify.addChild()" data-l="addSubcat">+ Alt kategori</button></div>
       <div class="cscroll">
         <div class="csec" data-l="catsTitle">Kategoriler</div>
@@ -325,6 +325,7 @@
 <script src="writer.js"></script>
 <script src="figures.js"></script>
 <script src="classify.js"></script>
+<script src="replace.js"></script>
 <script src="search.js"></script>
 <script src="argue.js"></script>
 <script src="queue.js"></script>

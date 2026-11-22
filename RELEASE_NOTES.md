@@ -1,3 +1,11 @@
+# Mentegraf v2.6.0 — Release Notes
+
+## Replace, one hit at a time
+
+- The text search has a **Replace with** box. Each match then shows the change in its context (~~kar~~ **kâr**) with **Replace** and **Skip**. There is no replace-all: every change is seen and decided on its own.
+- **Next** (or Enter) opens the next match not yet handled in the editor, with the word selected, so the sentence is read before deciding. Replace makes the change and opens the next one.
+- Every change goes through the editor: Ctrl+Z undoes it, it is saved like any edit, and the usual text backups apply. If the text at that place has changed meanwhile, nothing is replaced and the search runs again.
+- In flexible search the replacement takes the case of the word it replaces ("Kar" → "Kâr", "KAR" → "KÂR", with Turkish rules); with "Match letters exactly" it goes in as typed. Matches already written as wanted are shown as "already so"; skipped ones can be taken up again.
 
 # Mentegraf v2.5.0 — Release Notes
 
