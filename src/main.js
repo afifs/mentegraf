@@ -695,7 +695,44 @@ function saveLoadedWords() {
   } catch (e) { /* not essential */ }
 }
 
+// What the checker did, for "await mentegraf.spellcheckStatus()" in the developer tools (F12):
+// dictionary downloads (Windows, Linux) and their failures.
+const spellEvents = []
+function spellEvent(kind, lang) {
+  spellEvents.push({ at: new Date().toISOString(), kind, lang })
+  if (spellEvents.length > 40) spellEvents.shift()
+  console.log('Spell checker: ' + kind + ' ' + lang)
+}
+let spellWatched = false
+function watchSpellSession() {
+  if (spellWatched) return
+  spellWatched = true
+  const ses = spellSession()
+  ses.on('spellcheck-dictionary-initialized', (e, lang) => spellEvent('initialized', lang))
+  ses.on('spellcheck-dictionary-download-begin', (e, lang) => spellEvent('download-begin', lang))
+  ses.on('spellcheck-dictionary-download-success', (e, lang) => spellEvent('download-success', lang))
+  ses.on('spellcheck-dictionary-download-failure', (e, lang) => {
+    spellEvent('download-failure', lang)
+    send('spellcheck-problem', { kind: 'download-failure', lang })
+  })
+}
+
+ipcMain.handle('spellcheck-status', async () => {
+  const ses = spellSession()
+  let words = []
+  try { words = await ses.listWordsInSpellCheckerDictionary() } catch (e) { /* not essential */ }
+  return {
+    platform: process.platform, electron: process.versions.electron,
+    wanted: spell, enabled: typeof ses.isSpellCheckerEnabled === 'function' ? ses.isSpellCheckerEnabled() : null,
+    languages: process.platform === 'darwin' ? null : ses.getSpellCheckerLanguages(),
+    available: ses.availableSpellCheckerLanguages || [],
+    dictionaryFolder: path.join(app.getPath('userData'), 'Dictionaries'),
+    projectWords: loadedWords.length, sessionWords: words.length, events: spellEvents.slice()
+  }
+})
+
 function applySpell() {
+  watchSpellSession()
   const ses = spellSession()
   try { if (typeof ses.setSpellCheckerEnabled === 'function') ses.setSpellCheckerEnabled(spell.enabled) } catch (e) { console.warn('Spell checker:', e.message) }
   if (process.platform !== 'darwin') {
@@ -799,6 +836,13 @@ function createWindow() {
   })
 
   mainWindow.loadFile(path.join(srcPath, 'index.html'))
+  // Once the page is up, switch the checker off and on again: on some systems Electron 40+
+  // does not start checking otherwise (electron/electron#50327).
+  mainWindow.webContents.once('did-finish-load', () => {
+    const ses = spellSession()
+    if (!spell.enabled || typeof ses.setSpellCheckerEnabled !== 'function') return
+    try { ses.setSpellCheckerEnabled(false); ses.setSpellCheckerEnabled(true) } catch (e) { /* ignore */ }
+  })
   // A text opened in a window of its own (writer.js): the page fills that window itself, from
   // the main window, so the texts stay one set. It gets no menu (whose shortcuts act on the main
   // window) and closes with the main window. Other windows are not opened from the page.

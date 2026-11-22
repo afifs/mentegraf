@@ -301,6 +301,7 @@
   "ctxCut": "Cut",
   "ctxCopy": "Copy",
   "ctxPaste": "Paste",
+  "spellDownloadFailed": "The spelling dictionary could not be downloaded (%s). Check the internet connection or an ad blocker.",
   "searchCount": "%n matches, %t texts",
   "searchMore": "showing the first 300",
   "searchNone": "No matches.",
