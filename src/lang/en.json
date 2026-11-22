@@ -57,6 +57,7 @@
   "autoSaveOn": "Auto-save on",
   "autoSaveOff": "Auto-save off",
   "autoSaved": "Auto-saved",
+  "autoSaveFailed": "Auto-save failed:",
   "exported": "Exported",
   "loaded": "Loaded",
   "publish": "Publish",

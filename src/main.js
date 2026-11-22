@@ -584,6 +584,7 @@ async function saveFileAs() {
 }
 
 // Save data from renderer
+let lastAutoSaveError = null, lastAutoSaveErrorAt = 0
 ipcMain.handle('save-data', async (event, data, fragments, opts) => {
   const auto = !!(opts && opts.auto)
   if (!currentDir) {
@@ -597,10 +598,20 @@ ipcMain.handle('save-data', async (event, data, fragments, opts) => {
     ProjectStore.writeFragments(currentDir, fragments || [])   // texts first, graph last
     ProjectStore.writeProject(currentDir, data)
   } catch (e) {
-    if (auto) { console.warn('Auto-save failed:', e.message); return false }
+    if (auto) {
+      console.warn('Auto-save failed:', e.message)
+      // say so in the window (not every minute: once per problem, then every 10 minutes)
+      const now = Date.now()
+      if (e.message !== lastAutoSaveError || now - lastAutoSaveErrorAt > 600000) {
+        lastAutoSaveError = e.message; lastAutoSaveErrorAt = now
+        send('autosave-failed', e.message.split('\n')[0])
+      }
+      return false
+    }
     dialog.showErrorBox(labels().saveError, path.basename(currentDir) + '\n\n' + e.message)
     return false
   }
+  lastAutoSaveError = null
   clearRecovery()
   removeQuietly(untitledRecoveryPath())
   if (!textWatchers.length) watchTexts()

@@ -360,6 +360,14 @@ function writeProject(dir, project) {
   })
 
   if (!changed.length && !stale.length) return { written: 0, deleted: 0 }
+  // A read-only file cannot be replaced: stop before making a backup, so that failing saves
+  // (auto-save tries every minute) do not pile up backups in a synced folder.
+  changed.forEach(rel => {
+    const file = path.join(dir, rel)
+    let ro = false
+    try { ro = (fs.statSync(file).mode & 0o200) === 0 } catch (e) { /* new file */ }
+    if (ro) { const e = new Error("EPERM: read-only file '" + file + "'"); e.code = 'EPERM'; throw explainWriteError(e, file) }
+  })
   if (isProjectDir(dir)) backup(dir)
 
   // Content first, manifest last: a manifest on disk means the save completed.

@@ -481,6 +481,9 @@ function doExportCSV(){
 
 
 
+// Auto-save could not save (a read-only or locked file): say so in the status line until it is read.
+function showAutoSaveFailed(msg){var m=document.getElementById('ml');if(!m)return;m.innerHTML='';var s=document.createElement('span');s.style.color='#c4281f';s.textContent='⚠ '+L('autoSaveFailed')+' '+msg;m.appendChild(s);setTimeout(function(){if(m.firstChild===s)m.textContent=''},20000)}
+if(window.mentegraf&&window.mentegraf.onAutoSaveFailed)window.mentegraf.onAutoSaveFailed(showAutoSaveFailed);
 function showMsg(t){var m=document.getElementById('ml');m.innerHTML='<span style="color:var(--accent)">✓ '+t+'</span>';setTimeout(function(){m.textContent=''},2000)}
 function uStats(){var vn=cy?cy.nodes().filter(function(n){return!n.hasClass('filtered-out')}).length:0;var ve=cy?cy.edges().filter(function(e){return!e.hasClass('filtered-out')}).length:0;document.getElementById('stats').textContent=vn+' / '+ve}
 

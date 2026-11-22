@@ -141,6 +141,21 @@ test('refuses newer formats and non-projects', () => {
   assert.throws(() => Store.classify(junk), e => e.code === 'not-a-project')
 })
 
+test('a read-only project file stops the save before a backup is made, with a clear message', () => {
+  const dir = path.join(tmp(), 'Book'); const p = sample(); Store.writeProject(dir, p)
+  const manifest = path.join(dir, 'project.mentegraf'), bdir = path.join(dir, '.mentegraf', 'backups')
+  const backups = () => fs.readdirSync(bdir).filter(n => /^backup-/.test(n)).length
+  const before = backups()
+  fs.chmodSync(manifest, 0o444)
+  try {
+    p.config.nodeSizing = !p.config.nodeSizing                          // something to write
+    assert.throws(() => Store.writeProject(dir, p), e => e.code === 'EPERM' && /read-only/.test(e.message) && /salt okunur/.test(e.message))
+    assert.strictEqual(backups(), before, 'no backup for a save that cannot happen')
+  } finally { fs.chmodSync(manifest, 0o644) }
+  Store.writeProject(dir, p)                                            // writable again: saves
+  assert.strictEqual(JSON.parse(fs.readFileSync(manifest, 'utf8')).settings.nodeSizing, p.config.nodeSizing)
+})
+
 test('Save As target must be new or empty', () => {
   const root = tmp()
   assert.strictEqual(Store.checkNewProjectDir(path.join(root, 'New')), null)
