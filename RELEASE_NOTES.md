@@ -38,6 +38,8 @@
 ## Other
 
 - Project settings other than node sizing are now kept when the project is saved.
+- Saving on Windows waits longer (about 3 s) for a file held by a sync client or an antivirus scan. When it still cannot save, it says why: the file is read-only (often locked in Seafile or OneDrive) or held open by another program.
+- A read-only project file stops the save before a backup is made, so failing auto-saves no longer fill a synced folder with backups. A failed auto-save is shown in the status line.
 
 # Mentegraf v2.1.0 — Release Notes
 
