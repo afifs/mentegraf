@@ -10,6 +10,12 @@ const Obsidian = require('./obsidian')
 const Dictionary = require('./dictionary')
 const UI_TEXT = { tr: require('./lang/tr.json'), en: require('./lang/en.json') }
 
+// Spelling on Windows: Chromium uses Windows' own checker there, through which the page cannot
+// ask about a word (webFrame.isWordMisspelled is always false, electron/electron#28684), so the
+// editor's check (writer.js) found nothing. Use Chromium's Hunspell dictionaries instead, as
+// on Linux: the same results everywhere, and no Windows language pack needed.
+if (process.platform === 'win32') app.commandLine.appendSwitch('disable-features', 'WinUseBrowserSpellChecker')
+
 // Resolve paths
 const isDev = !app.isPackaged
 const srcPath = __dirname

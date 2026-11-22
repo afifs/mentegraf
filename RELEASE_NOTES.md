@@ -19,7 +19,7 @@
 - Right-click menu: suggestions, **Add to dictionary**, **Ignore in this project**, Cut / Copy / Paste — in Turkish and English. Also in texts opened in a window of their own.
 - The project's word lists live in the project folder — `.mentegraf/dictionary.txt` and `.mentegraf/ignore.txt`, one word per line — so they travel and sync with the book. They are loaded when the project opens and removed when it closes, so one book's words never leak into another.
 - If a spelling dictionary cannot be downloaded, the status line says so. `await mentegraf.spellcheckStatus()` in the developer tools (F12) shows the checker's state.
-- On Windows and Linux the checking uses Chromium's Hunspell dictionaries, downloaded once from Google's CDN on first use (the text itself is never sent). On macOS the system checker runs and its language cannot be set from the app; words added there also go to the system dictionary.
+- On Windows and Linux the checking uses Chromium's Hunspell dictionaries (on Windows, Windows' own checker is switched off for this, so no language pack is needed), downloaded once from Google's CDN on first use (the text itself is never sent). On macOS the system checker runs and its language cannot be set from the app; words added there also go to the system dictionary.
 
 ## Other
 
