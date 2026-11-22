@@ -46,6 +46,14 @@ Aynı kategoriye yeniden tıklamak ya da **Filtreyi kaldır** filtreyi kapatır.
 - Aradığınız metin olduğu gibi aranır: başına ya da sonuna koyduğunuz boşluk aramanın bir parçasıdır ("kar " yalnızca boşlukla biten "kar"ı bulur).
 - Kutular projenin varsayılanlarıyla açılır ve yalnızca o aramayı değiştirir. Seçiminiz varsayılandan farklıysa yanlarında **Varsayılan yap** bağlantısı görünür; tıklamak seçimi projeye yazar (`project.mentegraf` → `settings.search`), proje kaydedilince kalıcı olur.
 - Dipnotlar ve şekil alt yazıları da aranır; sonuç satırında **dipnot** ya da **alt yazı** etiketi nerede bulunduğunu söyler. Görselin dosya adı ve `#fig:` kimliği aranmaz.
+
+**Değiştirme.** Arama kutusunun altındaki **Şununla değiştir** kutusuna yazınca her eşleşme yapılacak değişikliği gösterir (~~kar~~ **kâr**) ve iki düğme alır: **Değiştir** ve **Atla**. Toplu değiştirme yoktur; her eşleşme tek tek ele alınır:
+
+- **Sıradaki** (ya da kutuda Enter) ele alınmamış ilk eşleşmeyi metinde açar ve sözcüğü seçer; karar vermeden önce cümleyi okursunuz.
+- **Değiştir** sözcüğü metin bölmesinde değiştirir ve bir sonrakini açar. Değişiklik düzenleyiciden geçer: **Ctrl+Z** geri alır, olağan kayıtla kaydedilir. O arada metni o noktada değiştirdiyseniz hiçbir şey değiştirilmez; arama yenilenir.
+- **Atla** eşleşmeyi olduğu gibi bırakır; "atlandı"ya tıklamak onu yeniden ele alır. Zaten istenen biçimde yazılmış eşleşmeler "zaten böyle" olarak soluk gösterilir.
+- **Harfleri tam eşle** kapalıyken yeni sözcük bulunanın büyük-küçük harfini alır: "Kar" → "Kâr", "KAR" → "KÂR" (Türkçe kurallarla). Açıkken yazdığınız gibi girer.
+- Bir düğüme bağlı olmayan metinler açılamadığı için listede soluk kalır, değiştirilemez.
 - Sonuçlar metin metin gruplanır; bir satıra tıklamak metni açar ve bulunan kelimeyi seçer.
 - Filtre açıkken arama yalnızca filtredeki metinlerde yapılır; "Yalnızca filtredeki metinler" kutusu bunu açıp kapatır.
 - Bir düğüm seçiliyken sonuçlardaki **Bağla** düğmesi o metnin düğümünü seçili düğüme bağlar: arama yaparken haritayı da kurarsınız.

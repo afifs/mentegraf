@@ -8,7 +8,7 @@
 // count; otherwise "kar" also finds "kâr" and "KAR") and "Whole word" ("kar" does not find
 // "karmaşık"). They open with the project's defaults (project.mentegraf → settings.search)
 // and change only the search at hand; "Make default" writes the current choice back.
-/* global cy, L, snapshot, selNode, curLang, Writer, Classify, ProjectFormat, catById, projectSettings, setDirty */
+/* global cy, L, snapshot, selNode, curLang, Writer, Classify, ProjectFormat, catById, projectSettings, setDirty, Replace */
 var TextSearch = (function () {
   'use strict'
 
@@ -20,6 +20,27 @@ var TextSearch = (function () {
 
   // The query exactly as typed: spaces at the start or end are the writer's choice.
   function query() { var i = $('sQuery'); return i ? i.value : '' }
+
+  // ───────── replacing, one hit at a time ─────────
+  // With text in "Replace with", each hit shows the change and has Replace and Skip. Nothing
+  // is replaced in bulk: each hit opens in the editor and is changed there (Ctrl+Z undoes it).
+  var marks = new Replace.Marks()
+  function replText() { var i = $('sReplace'); return i ? i.value : '' }
+  function replacing() { return replText() !== '' }
+  function bookLang() { return window.Spell && Spell.language ? Spell.language() : (curLang === 'en' ? 'en' : 'tr') }
+  // What goes into the text in place of `found`: as typed with "Match letters exactly",
+  // otherwise with the case of the found word (Kar → Kâr, KAR → KÂR).
+  function replacementFor(found) { return choice().exact ? replText() : Replace.matchCase(found, replText(), bookLang()) }
+  function resetMarks() { marks.clear() }
+  // A warning in the status line (showMsg is for things that went well).
+  function warn(msg) {
+    var m = $('ml'); if (!m) return
+    m.innerHTML = ''
+    var sp = document.createElement('span'); sp.style.color = '#b3261e'; sp.textContent = '⚠ ' + msg
+    m.appendChild(sp)
+    setTimeout(function () { if (m.firstChild === sp) m.textContent = '' }, 6000)
+  }
+
   function usable(q) { return q.length >= 2 && !!q.trim() }
   function active() { return usable(query()) }
 
@@ -103,7 +124,8 @@ var TextSearch = (function () {
     if (!count) { box.innerHTML = head + '<div class="cnone">' + esc(L('searchNone')) + '</div>'; return }
     // texts that belong to a node first (they can be opened); order by matches within each group
     var files = last.files.filter(function (f) { return nodes[f.path] }).concat(last.files.filter(function (f) { return !nodes[f.path] }))
-    box.innerHTML = head + files.map(function (f) {
+    var rep = replacing(), left = 0
+    var list = files.map(function (f) {
       var n = nodes[f.path], label = n ? n.data('label') : f.path
       var link = ''
       if (n && sel && sel.id() !== n.id()) {
@@ -116,10 +138,60 @@ var TextSearch = (function () {
         '<span class="ccount">' + f.count + '</span>' + link + '</div>' +
         f.hits.map(function (h) {
           var where = h.where === 'footnote' || h.where === 'caption' ? '<span class="swhere">' + esc(L(h.where === 'footnote' ? 'searchInFootnote' : 'searchInCaption')) + '</span> ' : ''
-          return '<div class="shit" data-line="' + h.line + '" data-col="' + h.col + '" data-len="' + h.len + '"><span class="sline">' + h.line + '</span>' +
-            '<span class="stext">' + where + esc(h.before) + '<mark>' + esc(h.match) + '</mark>' + esc(h.after) + '</span></div>'
+          var data = ' data-line="' + h.line + '" data-col="' + h.col + '" data-len="' + h.len + '" data-match="' + esc(h.match) + '"'
+          if (!rep || !n) {
+            return '<div class="shit"' + data + '><span class="sline">' + h.line + '</span>' +
+              '<span class="stext">' + where + esc(h.before) + '<mark>' + esc(h.match) + '</mark>' + esc(h.after) + '</span></div>'
+          }
+          var target = replacementFor(h.match), same = h.match === target
+          var state = marks.get(f.path, h.line, h.col)
+          if (state === 'replaced' && !same) state = null        // undone in the editor (Ctrl+Z): to do again
+          if (!state && same) state = 'same'                      // already written that way
+          if (!state) left++
+          var word = state ? '<mark>' + esc(h.match) + '</mark>'
+            : '<del>' + esc(h.match) + '</del><ins>' + esc(target) + '</ins>'
+          var tail = state === 'replaced' ? '<span class="sstate">✓ ' + esc(L('replaceDoneLbl')) + '</span>'
+            : state === 'same' ? '<span class="sstate">' + esc(L('replaceSameLbl')) + '</span>'
+            : state === 'skipped' ? '<button class="sact" data-act="unskip" title="' + esc(L('replaceUnskipTip')) + '">' + esc(L('replaceSkippedLbl')) + '</button>'
+            : '<span class="sacts"><button class="sact sdo" data-act="rep">' + esc(L('replaceBtn')) + '</button><button class="sact" data-act="skip">' + esc(L('replaceSkipBtn')) + '</button></span>'
+          return '<div class="shit' + (state ? ' sdone' : '') + '"' + data + '><span class="sline">' + h.line + '</span>' +
+            '<span class="stext">' + where + esc(h.before) + word + esc(h.after) + '</span>' + tail + '</div>'
         }).join('') + '</div>'
     }).join('')
+    if (rep) head += '<div class="sreprow"><span>' + esc(L('replaceLeft').replace('%n', left)) + '</span>' +
+      (left ? '<button class="sact sdo" data-act="next">' + esc(L('replaceNext')) + '</button>' : '') + '</div>'
+    box.innerHTML = head + list
+  }
+
+  // The next hit not yet replaced or skipped: open it in the editor, word selected, to be read
+  // before deciding.
+  async function openNext() {
+    var h = document.querySelector('#sResults .sfile:not(.snonode) .shit:not(.sdone)')
+    document.querySelectorAll('#sResults .shit.scur').forEach(function (e) { e.classList.remove('scur') })
+    if (!h) return false
+    h.classList.add('scur')
+    h.scrollIntoView({ block: 'nearest' })
+    await openHit(h)
+    return true
+  }
+
+  async function act(el, kind) {
+    var h = el.closest('.shit'), file = h && h.closest('.sfile')
+    if (!h || !file) return
+    var path = file.dataset.path, line = +h.dataset.line, col = +h.dataset.col, len = +h.dataset.len, match = h.dataset.match
+    if (kind === 'skip') { marks.skip(path, line, col); render(); await openNext(); return }
+    if (kind === 'unskip') { marks.unskip(path, line, col); render(); return }
+    if (kind !== 'rep') return
+    var text = replacementFor(match)
+    await openHit(h)
+    if (!Writer.replaceAt || !Writer.replaceAt(path, line, col, len, match, text)) {
+      warn(L('replaceStale'))
+      await run()
+      return
+    }
+    marks.replaced(path, line, col, len, text.length)
+    await run()
+    await openNext()
   }
 
   async function openHit(el) {
@@ -159,14 +231,25 @@ var TextSearch = (function () {
     input.addEventListener('keydown', function (e) {
       e.stopPropagation()
       if (e.key === 'Escape') { input.value = ''; schedule(0) }
-      if (e.key === 'Enter') { var first = document.querySelector('#sResults .sfile:not(.snonode) .shit'); if (first) openHit(first) }
+      if (e.key === 'Enter') { if (replacing()) { openNext(); return } var first = document.querySelector('#sResults .sfile:not(.snonode) .shit'); if (first) openHit(first) }
+    })
+    input.addEventListener('input', resetMarks)
+    var repl = $('sReplace')
+    repl.addEventListener('input', function () { resetMarks(); if (last) render() })
+    repl.addEventListener('keydown', function (e) {
+      e.stopPropagation()
+      if (e.key === 'Escape') { repl.value = ''; resetMarks(); if (last) render() }
+      if (e.key === 'Enter') { e.preventDefault(); openNext() }
     })
     $('sInLens').addEventListener('change', function () { schedule(0) })
-    ;['sExact', 'sWhole'].forEach(function (id) { $(id).addEventListener('change', function () { showDefaultLink(); schedule(0) }) })
+    ;['sExact', 'sWhole'].forEach(function (id) { $(id).addEventListener('change', function () { resetMarks(); showDefaultLink(); schedule(0) }) })
     $('sMakeDefault').addEventListener('click', function (e) { e.preventDefault(); makeDefault() })
     applyDefaults()
     $('sResults').addEventListener('click', function (e) {
       if (e.target.closest('[data-act="link"]')) { link(e.target.closest('.sfile')); return }
+      var b = e.target.closest('[data-act]')
+      if (b && b.dataset.act === 'next') { openNext(); return }
+      if (b && /^(rep|skip|unskip)$/.test(b.dataset.act)) { act(b, b.dataset.act); return }
       var h = e.target.closest('.shit'); if (h) openHit(h)
     })
     if (window.cy) {
