@@ -31,6 +31,11 @@ function docxEntry(file, name) {
   return ''
 }
 const plain = file => spawnSync(Exporter.findPandoc(), ['-t', 'plain', '--wrap=none', file], { encoding: 'utf8' }).stdout
+// The paragraphs of a .docx as plain text, read from the file itself. Reading it back with
+// Pandoc depends on its version: from 3.12 on, a figure read from a .docx is shown in plain
+// text by its alt text only, without the caption Mentegraf wrote.
+const docxText = file => docxEntry(file, 'word/document.xml').replace(/<\/w:p>/g, '\n').replace(/<w:tab\/>/g, '\t').replace(/<[^>]+>/g, '')
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
 const native = file => spawnSync(Exporter.findPandoc(), ['-t', 'native', file], { encoding: 'utf8' }).stdout
 
 const TEXTS = {
@@ -140,8 +145,8 @@ const read = rel => TEXTS[rel] != null ? TEXTS[rel] : null
       { kind: 'node', title: 'İki', level: 1, text: '# İki\n\n![Grafik](../assets/g.png){#fig:grafik-bb}\n\n![Nüfus](../assets/t.csv){#tbl:nufus-cc}\n\n@fig:dongu-aa, @fig:grafik-bb ve @tbl:nufus-cc.' }]
     const out = path.join(dir, 'exports', 'k.docx')
     await C.compileBook({ projectDir: dir, items, title: 'K', format: 'docx', lang: 'tr', outFile: out, readText: read })
-    const txt = plain(out)
-    assert.ok(txt.includes('Şekil 2. Grafik') && txt.includes('Tablo 1. Nüfus') && txt.includes('1950'), txt)
+    const txt = plain(out), doc = docxText(out)
+    assert.ok(doc.includes('Şekil 1. Döngü') && doc.includes('Şekil 2. Grafik') && doc.includes('Tablo 1. Nüfus') && doc.includes('1950'), doc)
     assert.ok(txt.includes('Şekil 1, Şekil 2 ve Tablo 1.'), txt)
     assert.ok(docxEntry(out, 'word/_rels/document.xml.rels').includes('media/'), 'image embedded')
   })
