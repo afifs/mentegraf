@@ -44,5 +44,25 @@ var Spell = (function () {
     console.warn(msg)
   })
 
-  return { apply: apply, toggle: toggle, language: language, enabled: enabled }
+  // The project's word lists (main.js sends them when a project opens and after "Add to
+  // dictionary" / "Ignore in this project"): these words are never marked.
+  var known = new Set()
+  function norm(w) { return String(w || '').normalize('NFC') }
+  function isKnown(w) {
+    w = norm(w)
+    return known.has(w) || known.has(w.toLocaleLowerCase(language()))
+  }
+  function addKnown(w) { w = norm(w); if (w) known.add(w) }
+  if (api() && api().onSpellWords) api().onSpellWords(function (words) {
+    known = new Set((words || []).map(norm))
+    if (window.Writer && Writer.spellRefresh) Writer.spellRefresh(false)
+  })
+  // a project may already be open when this page starts (reload)
+  if (api() && api().spellWords) api().spellWords().then(function (words) { if (words && words.length) { (words || []).forEach(addKnown); if (window.Writer && Writer.spellRefresh) Writer.spellRefresh(false) } })
+  // The checker's dictionaries became ready or its languages changed: check again.
+  if (api() && api().onSpellReady) api().onSpellReady(function () {
+    if (window.Writer && Writer.spellRefresh) Writer.spellRefresh(true)
+  })
+
+  return { apply: apply, toggle: toggle, language: language, enabled: enabled, known: isKnown, addKnown: addKnown }
 })()

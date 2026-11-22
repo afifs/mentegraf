@@ -25,10 +25,15 @@ var Writer = (function () {
   var previewOn = false
   var previewTimer = null
   var msgTimer = null
-  // Spell checking: the editor's content is marked spellcheck="true" with the book's language;
-  // everything else in the app is spellcheck="false" (index.html). The checking itself is
-  // Electron's (main.js), with the project's own word list.
+  // Spell checking. Chromium's own marking only looks at words as they are typed, so text
+  // already in a file was never checked. The editor checks the words itself instead (spellPlugin):
+  // every visible word goes to Electron's checker (in the book's language, set in main.js), the
+  // project's word lists are honoured, and misspelled words get a wavy underline. Chromium's own
+  // marking is off (spellcheck="false" everywhere), so nothing is underlined twice. Right-clicking
+  // a marked word opens the spelling menu (main.js); anywhere else the usual Cut/Copy/Paste menu.
   var spell = { on: true, lang: 'tr' }
+  var spellCache = new Map()   // word -> misspelled?
+  var spellVer = 0             // bumped when the language, the word lists or the dictionaries change
   var spellComp = null     // its extension is always extensions[0]
 
   function api() { return window.mentegraf }
@@ -69,6 +74,7 @@ var Writer = (function () {
       '.cm-searchMatch': { backgroundColor: 'rgba(197,160,94,0.35)' },
       '.cm-selectionMatch': { backgroundColor: 'rgba(197,160,94,0.18)' },
       '.cm-fm': { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', lineHeight: '1.6', color: 'var(--dim)' },
+      '.cm-misspelled': { textDecoration: 'underline wavy #d0312d', textDecorationSkipInk: 'none', textUnderlineOffset: '3px' },
       '.cm-fn': { color: 'var(--accent)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.78em', fontWeight: '600' },
       '.cm-cite, .cm-cite span': { color: '#3f8f86 !important', fontFamily: "'DM Sans', sans-serif", fontSize: '0.85em' },
       '.cm-pid': { color: 'var(--dim)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.72em' },
@@ -93,11 +99,10 @@ var Writer = (function () {
       markPlugin(/\[\^[^\]\s]+\]/g, 'cm-fn'),
       markPlugin(/\[[^\][\n]*@[^\][\n]*\]/g, 'cm-cite'),
       markPlugin(/\s\^[a-z0-9]{4,12}$/g, 'cm-pid'),
-      // not prose: web addresses, link and image targets, {attributes}, <autolinks>, @fig:… references
-      markPlugin(/https?:\/\/[^\s)>\]]+|\]\([^)\s]*\)|\{[^}\n]*\}|<[^>\s]+>|@[A-Za-z0-9_:.-]+/g, 'cm-nospell'),
       lensPlugin(),
       argPlugin(),
       hlPlugin(),
+      spellPlugin(),
       CM.syntaxHighlighting(hl),
       CM.search({ top: true }),
       CM.highlightSelectionMatches(),
@@ -105,6 +110,7 @@ var Writer = (function () {
       // Typing ] right before an existing ] just steps over it (leaving a citation).
       // Images pasted or dropped into the text become figure nodes (figures.js).
       CM.EditorView.domEventHandlers({
+        contextmenu: function (e, v) { return spellMenu(e, v) },
         paste: function (e) { return window.Figures ? Figures.onPaste(e) : false },
         drop: function (e, v) { return window.Figures ? Figures.onDrop(e, v) : false },
         mousedown: function (e, v) {
@@ -666,15 +672,124 @@ var Writer = (function () {
   }
 
   function spellAttrs() {
-    return CM.EditorView.contentAttributes.of({ spellcheck: spell.on ? 'true' : 'false', lang: spell.lang })
+    // Chromium's own marking stays off: spellPlugin does the checking (see above)
+    return CM.EditorView.contentAttributes.of({ spellcheck: 'false', lang: spell.lang })
+  }
+
+  // ───────── spell checking in the editor ─────────
+
+  function spellApi() { var a = api(); return a && a.spellCheck ? a : null }
+  function spellActive() { return spell.on && !!spellApi() }
+
+  // Markup that is not prose, blanked with spaces (columns stay): footnote and citation keys,
+  // passage IDs, web addresses, link and image targets, {attributes}, <autolinks>, @fig:…
+  // references and `code`.
+  var NO_SPELL = /\[\^[^\]\s]+\]|\[[^\][\n]*@[^\][\n]*\]|\s\^[a-z0-9]{4,12}\s*$|https?:\/\/\S+|\]\([^)\s]*\)|\{[^}\n]*\}|<[^>\s]+>|@[A-Za-z0-9_:.-]+|`[^`\n]*`/g
+  var WORD = /[\p{L}\p{M}\p{N}]+/gu
+  function proseWords(text) {
+    var line = text.replace(NO_SPELL, function (m) { return ' '.repeat(m.length) }), out = [], m
+    WORD.lastIndex = 0
+    while ((m = WORD.exec(line))) {
+      var w = m[0]
+      if (w.length < 2 || /\p{N}/u.test(w)) continue                       // numbers, 3D, 1950'de
+      if (w === w.toLocaleUpperCase(spell.lang) && w !== w.toLocaleLowerCase(spell.lang)) continue   // AB, NATO
+      out.push({ from: m.index, to: m.index + w.length, word: w })
+    }
+    return out
+  }
+  function misspelled(word) {
+    if (window.Spell && Spell.known(word)) return false
+    if (spellCache.has(word)) return spellCache.get(word)
+    var bad = checkOne(word)
+    // Chromium's Turkish dictionary has no circumflex forms (kâr, hâlâ, kâğıt, hâkim are
+    // marked): a word with â/î/û counts as right when the same word without them is right.
+    // Whether the circumflex belongs there is the suspicious-words check's business.
+    if (bad && /[âîûÂÎÛ]/.test(word)) bad = checkOne(word.replace(/[âÂîÎûÛ]/g, function (c) { return { 'â': 'a', 'Â': 'A', 'î': 'i', 'Î': 'İ', 'û': 'u', 'Û': 'U' }[c] }))
+    spellCache.set(word, bad)
+    return bad
+  }
+  function checkOne(word) {
+    try { return !!spellApi().spellCheck([word.normalize('NFC')])[0] } catch (e) { return false }
+  }
+  // Lines that are not checked: the metadata block and fenced code.
+  function skippedLines(doc, upTo) {
+    var skip = {}, i = 1
+    if (doc.lines > 1 && doc.line(1).text.trim() === '---') {
+      for (var j = 2; j <= Math.min(doc.lines, 60); j++) if (doc.line(j).text.trim() === '---') { for (var k = 1; k <= j; k++) skip[k] = true; i = j + 1; break }
+    }
+    var fence = false
+    for (; i <= Math.min(doc.lines, upTo); i++) {
+      var t = doc.line(i).text
+      if (/^\s*(```|~~~)/.test(t)) { skip[i] = true; fence = !fence; continue }
+      if (fence) skip[i] = true
+    }
+    return skip
+  }
+  function spellPlugin() {
+    var mark = CM.Decoration.mark({ class: 'cm-misspelled' })
+    function find(v) {
+      if (!spellActive()) return CM.Decoration.none
+      var doc = v.state.doc, ranges = []
+      var last = v.visibleRanges.length ? doc.lineAt(v.visibleRanges[v.visibleRanges.length - 1].to).number : 0
+      var skip = skippedLines(doc, last)
+      v.visibleRanges.forEach(function (r) {
+        for (var pos = r.from; pos <= r.to;) {
+          var l = doc.lineAt(pos)
+          if (!skip[l.number]) proseWords(l.text).forEach(function (w) { if (misspelled(w.word)) ranges.push(mark.range(l.from + w.from, l.from + w.to)) })
+          pos = l.to + 1
+        }
+      })
+      return CM.Decoration.set(ranges, true)
+    }
+    return CM.ViewPlugin.fromClass(class {
+      constructor(v) { this.ver = spellVer; this.decorations = find(v) }
+      update(u) {
+        if (u.docChanged || u.viewportChanged || this.ver !== spellVer) { this.ver = spellVer; this.decorations = find(u.view) }
+      }
+    }, { decorations: function (v) { return v.decorations } })
+  }
+  // Something the check depends on changed: check the visible words again.
+  function spellRefresh(clearCache) {
+    if (clearCache) spellCache.clear()
+    spellVer++
+    panes.forEach(function (p) { try { p.view.dispatch({}) } catch (e) { /* closed */ } })
+  }
+
+  // Right-click on a marked word: suggestions and the project's word lists (main.js shows
+  // the menu). Anywhere else the event goes on to the usual menu.
+  function spellMenu(e, v) {
+    if (!spellActive() || !spellApi().spellMenu) return false
+    var pos = v.posAtCoords({ x: e.clientX, y: e.clientY })
+    if (pos == null) return false
+    var l = v.state.doc.lineAt(pos)
+    if (skippedLines(v.state.doc, l.number)[l.number]) return false
+    var at = pos - l.from
+    var w = proseWords(l.text).filter(function (x) { return at >= x.from && at <= x.to })[0]
+    if (!w || !misspelled(w.word)) return false
+    e.preventDefault()
+    var from = l.from + w.from, to = l.from + w.to, word = w.word
+    var sugg = []
+    try { sugg = (spellApi().spellSuggest(word) || []).slice(0, 6) } catch (err) { sugg = [] }
+    spellApi().spellMenu({ word: word, suggestions: sugg, hasSelection: !v.state.selection.main.empty }).then(function (r) {
+      if (!r) return
+      if (r.replace != null && v.state.sliceDoc(from, to) === word) {
+        v.dispatch({ changes: { from: from, to: to, insert: r.replace }, selection: { anchor: from + r.replace.length } })
+        v.focus()
+      }
+      if (r.known && window.Spell) { Spell.addKnown(r.known); spellRefresh(false) }
+    })
+    return true
   }
 
   // The book's language or the on/off switch changed (spell.js): every pane, every text kept in
   // memory and every text opened later follow it. The search panel (Ctrl+F) lower-cases with
   // the same language, so that in Turkish I/ı and İ/i pair up.
   function setSpellcheck(on, lang) {
+    var langChanged = spell.lang !== (lang === 'en' ? 'en' : 'tr')
     spell = { on: !!on, lang: lang === 'en' ? 'en' : 'tr' }
     window.MENTEGRAF_SEARCH_LOCALE = spell.lang
+    if (langChanged) spellCache.clear()
+    spellVer++
     if (!extensions) return
     extensions[0] = spellComp.of(spellAttrs())           // for texts opened from now on
     var effect = spellComp.reconfigure(spellAttrs())
@@ -1179,7 +1294,7 @@ var Writer = (function () {
     openBeside: openBeside, openInWindow: openInWindow, sideMenu: sideMenu, detachMain: detachMain, panes: function () { return panes.map(function (p) { return { kind: p.kind, path: p.current && p.current.path } }) },
     init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull, run: run, togglePreview: togglePreview, exportDocx: exportDocx,
     updatePanel: updatePanel, dirtyFragments: dirtyFragments, willSave: willSave, markSaved: markSaved,
-    hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu, setSpellcheck: setSpellcheck,
+    hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu, setSpellcheck: setSpellcheck, spellRefresh: spellRefresh,
     // Text of a loaded buffer (including unsaved edits), or null if not loaded.
     textFor: function (path) { return buffers[path] ? textOf(path) : null },
     // Argument capture (argue.js).
