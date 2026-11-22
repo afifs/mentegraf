@@ -57,6 +57,7 @@
   "autoSaveOn": "Otomatik kayıt açık",
   "autoSaveOff": "Otomatik kayıt kapalı",
   "autoSaved": "Otomatik kaydedildi",
+  "autoSaveFailed": "Otomatik kaydedilemedi:",
   "exported": "Dışa aktarıldı",
   "loaded": "Yüklendi",
   "publish": "Yayımla",

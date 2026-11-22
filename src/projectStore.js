@@ -61,13 +61,30 @@ function atomicWrite(file, text) {
     else fs.writeSync(fd, text, null, 'utf8')
     fs.fsyncSync(fd)
   } finally { fs.closeSync(fd) }
-  // Windows: antivirus or a sync client may hold the file briefly.
+  // Windows: antivirus or a sync client (Seafile, OneDrive) may hold the file for a while;
+  // keep trying for about three seconds.
   for (let i = 0; ; i++) {
     try { fs.renameSync(tmp, file); return } catch (e) {
-      if (i < 4 && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) { sleepMs(100 * (i + 1)); continue }
-      throw e
+      if (i < 9 && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) { sleepMs(Math.min(100 * (i + 1), 500)); continue }
+      throw explainWriteError(e, file)
     }
   }
+}
+
+// Say why a file could not be replaced, in words the writer can act on. The original error
+// stays in the message (and its code on the error) for anyone who needs it.
+function explainWriteError(e, file) {
+  if (!['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) return e
+  let readOnly = false
+  try { readOnly = (fs.statSync(file).mode & 0o200) === 0 } catch (err) { /* gone */ }
+  const why = readOnly
+    ? path.basename(file) + ' is read-only. If the folder is synced (Seafile, OneDrive), the file may be locked there: unlock it, or clear "Read-only" in its Properties. / ' +
+      path.basename(file) + ' salt okunur. Klasör eşitleniyorsa (Seafile, OneDrive) dosya orada kilitlenmiş olabilir: kilidi kaldırın ya da Özellikler\'de "Salt okunur"u kaldırın.'
+    : path.basename(file) + ' is held open by another program — often a sync client (Seafile, OneDrive), an antivirus scan or a second Mentegraf window with the same project. Wait a moment and save again. / ' +
+      path.basename(file) + ' başka bir program tarafından açık tutuluyor — çoğunlukla eşitleme istemcisi (Seafile, OneDrive), virüs taraması ya da aynı projeyi açmış ikinci bir Mentegraf penceresi. Biraz bekleyip yeniden kaydedin.'
+  const err = new Error(why + '\n\n' + e.message)
+  err.code = e.code
+  return err
 }
 
 // ───────── manuscript (book structure) ─────────
@@ -343,6 +360,14 @@ function writeProject(dir, project) {
   })
 
   if (!changed.length && !stale.length) return { written: 0, deleted: 0 }
+  // A read-only file cannot be replaced: stop before making a backup, so that failing saves
+  // (auto-save tries every minute) do not pile up backups in a synced folder.
+  changed.forEach(rel => {
+    const file = path.join(dir, rel)
+    let ro = false
+    try { ro = (fs.statSync(file).mode & 0o200) === 0 } catch (e) { /* new file */ }
+    if (ro) { const e = new Error("EPERM: read-only file '" + file + "'"); e.code = 'EPERM'; throw explainWriteError(e, file) }
+  })
   if (isProjectDir(dir)) backup(dir)
 
   // Content first, manifest last: a manifest on disk means the save completed.

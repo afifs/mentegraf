@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron')
 contextBridge.exposeInMainWorld('mentegraf', {
   onMenuAction: (cb) => ipcRenderer.on('menu-action', (e, action) => cb(action)),
   onFileOpened: (cb) => ipcRenderer.on('file-opened', (e, data, path, opts) => cb(data, path, opts)),
+  onAutoSaveFailed: (cb) => ipcRenderer.on('autosave-failed', (e, msg) => cb(msg)),
   saveData: (data, fragments, opts) => ipcRenderer.invoke('save-data', data, fragments, opts),
   fragmentNewPath: (label, type, nodeId, taken) => ipcRenderer.invoke('fragment-new-path', label, type, nodeId, taken),
   fragmentRead: (p) => ipcRenderer.invoke('fragment-read', p),
