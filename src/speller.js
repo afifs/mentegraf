@@ -48,7 +48,20 @@ function createSpeller() {
     return langs.filter(c => loaded[c])
   }
 
-  function knows(word) { return langs.some(c => loaded[c] && loaded[c].correct(word)) }
+  // nspell changes case with English rules, so in Turkish "İlerideki" became "i̇lerideki"
+  // (i + a separate dot) and "Ilık" became "ilık": neither is in the dictionary. For Turkish
+  // the word is also tried with its first letter, and all of it, in Turkish small letters.
+  const LOCALE = { tr: 'tr' }
+  function lowerFirst(w, loc) { return w.charAt(0).toLocaleLowerCase(loc) + w.slice(1) }
+  function upperFirst(w, loc) { return w.charAt(0).toLocaleUpperCase(loc) + w.slice(1) }
+  function forms(w, code) {
+    const loc = LOCALE[code]
+    if (!loc) return [w]
+    const out = [w]
+    ;[lowerFirst(w, loc), w.toLocaleLowerCase(loc)].forEach(f => { if (out.indexOf(f) < 0) out.push(f) })
+    return out
+  }
+  function knows(word) { return langs.some(c => loaded[c] && forms(word, c).some(f => loaded[c].correct(f))) }
 
   // A circumflex the dictionary does not have (kâğıt, resmî) is not a spelling mistake: whether
   // it belongs there is the suspicious-words check's business.
@@ -70,8 +83,13 @@ function createSpeller() {
     const caps = w === w.toUpperCase() && w !== w.toLowerCase()
     langs.forEach(c => {
       if (!loaded[c]) return
-      loaded[c].suggest(w).forEach(s => {
-        if (!caps && s.length > 1 && s === s.toUpperCase() && s !== s.toLowerCase()) s = s.toLowerCase()
+      const loc = LOCALE[c]
+      // in Turkish, a word with a capital first letter is looked up in small letters and
+      // the suggestions get their capital back with Turkish rules (İlerideki, not Ilerideki)
+      const cap = !!loc && !caps && w.charAt(0) !== w.charAt(0).toLocaleLowerCase(loc)
+      loaded[c].suggest(cap ? lowerFirst(w, loc) : w).forEach(s => {
+        if (!caps && s.length > 1 && s === s.toUpperCase() && s !== s.toLowerCase()) s = loc ? s.toLocaleLowerCase(loc) : s.toLowerCase()
+        if (cap) s = upperFirst(s, loc)
         if (s !== w && out.indexOf(s) < 0) out.push(s)
       })
     })
