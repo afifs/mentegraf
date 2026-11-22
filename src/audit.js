@@ -10,6 +10,8 @@
 //  marks        a chapter still has highlighted changes ([..]{.mark}) waiting to be accepted.
 //  term         a concept or term is written under more than one name: the label and a name in
 //               its parentheses ("Geri besleme (geribildirim)") both occur in the chapters.
+//  suspicious   a word from the project's list of easily confused words (kar / kâr, hala /
+//               hâlâ; .mentegraf/suspicious.txt): every place it occurs, to be read once more
 //  spelling     a word is written in more than one way across the chapters ("geri bildirim" /
 //               "geribildirim", "hâlâ" / "hala"); the most used way is taken as the house style.
 //  repeat       paragraphs in different chapters say much the same thing (a concept explained
@@ -184,6 +186,13 @@ var Audit = (function () {
       ;((sv && sv.groups) || []).forEach(function (g) {
         var first = g.hits[0] && byPath[g.hits[0].path]
         if (!first) return
+        if (g.kind === 'suspicious') {
+          // a word from the project's suspicious list (.mentegraf/suspicious.txt): every place it occurs
+          out.push({ sub: 'suspicious', key: g.key, node: first.node, group: null, book: true, hits: g.hits,
+            text: g.forms.filter(function (f) { return f.n }).map(function (f) { return quote(f.form) + ' ' + L('au_times').replace('%n', f.n) }).join(' · ') + (g.note ? ' — ' + g.note : ''),
+            done: keyOk(g.key) })
+          return
+        }
         out.push({ sub: 'spelling', key: g.key, node: first.node, group: null, book: true, hits: g.hits,
           text: g.forms.map(function (f) { return L('au_style_' + f.style) + ' ' + quote(f.form) + ' ' + L('au_times').replace('%n', f.n) }).join(' · '), done: keyOk(g.key) })
       })

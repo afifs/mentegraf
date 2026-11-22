@@ -75,7 +75,7 @@ var Writer = (function () {
       '.cm-searchMatch': { backgroundColor: 'rgba(197,160,94,0.35)' },
       '.cm-selectionMatch': { backgroundColor: 'rgba(197,160,94,0.18)' },
       '.cm-fm': { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', lineHeight: '1.6', color: 'var(--dim)' },
-      '.cm-misspelled': { textDecorationLine: 'underline', textDecorationStyle: 'wavy', textDecorationColor: 'rgba(214, 83, 74, 0.55)', textDecorationThickness: '1px', textDecorationSkipInk: 'none', textUnderlineOffset: '3px' },
+      '.cm-misspelled': { textDecorationLine: 'underline', textDecorationStyle: 'wavy', textDecorationColor: 'rgba(196, 40, 32, 0.8)', textDecorationThickness: '1px', textDecorationSkipInk: 'none', textUnderlineOffset: '3px' },
       '.cm-fn': { color: 'var(--accent)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.78em', fontWeight: '600' },
       '.cm-cite, .cm-cite span': { color: '#3f8f86 !important', fontFamily: "'DM Sans', sans-serif", fontSize: '0.85em' },
       '.cm-pid': { color: 'var(--dim)', fontFamily: "'DM Sans', sans-serif", fontSize: '0.72em' },

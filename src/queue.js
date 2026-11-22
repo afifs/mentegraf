@@ -105,7 +105,7 @@ var Work = (function () {
     var box = $('qList')
     if (!box || !window.cy) return
     var items = collect(), order = planOrder(), groups = {}, keys = []
-    // book-wide checks (spelling, repeats, names) get a group of their own, after the chapters
+    // book-wide checks (spelling, suspicious words, repeats, names) get a group of their own, after the chapters
     items.forEach(function (it) { var k = it.book ? '~book' : it.group ? it.group.id() : ''; if (!groups[k]) { groups[k] = []; keys.push(k) } groups[k].push(it) })
     keys.sort(function (a, b) {
       if (!a) return 1; if (!b) return -1
@@ -150,7 +150,7 @@ var Work = (function () {
     if (el.dataset.kind === 'audit') {
       var a = Audit.items()[+el.dataset.audit]
       selNode(n)
-      if (a && /^(early|marks|term|spelling|repeat|punct)$/.test(a.sub)) { await Audit.open(a); return }
+      if (a && /^(early|marks|term|spelling|suspicious|repeat|punct)$/.test(a.sub)) { await Audit.open(a); return }
       if (a && a.passage && await Argue.goToPassage(a.passage)) return
       if (typeof focusNeighborhood === 'function') focusNeighborhood(n)
       return
