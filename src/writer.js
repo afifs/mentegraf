@@ -25,6 +25,11 @@ var Writer = (function () {
   var previewOn = false
   var previewTimer = null
   var msgTimer = null
+  // Spell checking: the editor's content is marked spellcheck="true" with the book's language;
+  // everything else in the app is spellcheck="false" (index.html). The checking itself is
+  // Electron's (main.js), with the project's own word list.
+  var spell = { on: true, lang: 'tr' }
+  var spellComp = null     // its extension is always extensions[0]
 
   function api() { return window.mentegraf }
   function $(id) { return document.getElementById(id) }
@@ -77,7 +82,9 @@ var Writer = (function () {
       '.cm-pid-arg': { cursor: 'pointer', color: '#c0683f !important' },
       '.cm-pid-arg::after': { content: 'attr(data-arg)', marginLeft: '4px', padding: '0 5px', borderRadius: '8px', background: 'rgba(192,104,63,0.14)', color: '#a0532f', fontFamily: "'DM Sans', sans-serif", fontSize: '11px' }
     })
+    spellComp = new CM.Compartment()
     extensions = [
+      spellComp.of(spellAttrs()),
       CM.history(),
       CM.drawSelection(),
       CM.EditorView.lineWrapping,
@@ -86,6 +93,8 @@ var Writer = (function () {
       markPlugin(/\[\^[^\]\s]+\]/g, 'cm-fn'),
       markPlugin(/\[[^\][\n]*@[^\][\n]*\]/g, 'cm-cite'),
       markPlugin(/\s\^[a-z0-9]{4,12}$/g, 'cm-pid'),
+      // not prose: web addresses, link and image targets, {attributes}, <autolinks>, @fig:… references
+      markPlugin(/https?:\/\/[^\s)>\]]+|\]\([^)\s]*\)|\{[^}\n]*\}|<[^>\s]+>|@[A-Za-z0-9_:.-]+/g, 'cm-nospell'),
       lensPlugin(),
       argPlugin(),
       hlPlugin(),
@@ -155,9 +164,10 @@ var Writer = (function () {
     view.dom.addEventListener('mousedown', function () { activate(primary) })
   }
 
-  // Colour footnote markers, citations and passage IDs.
+  // Colour footnote markers, citations and passage IDs. These are markup, not words, so the
+  // spell checker leaves them alone.
   function markPlugin(re, cls) {
-    var deco = new CM.MatchDecorator({ regexp: re, decoration: CM.Decoration.mark({ class: cls }) })
+    var deco = new CM.MatchDecorator({ regexp: re, decoration: CM.Decoration.mark({ class: cls, attributes: { spellcheck: 'false' } }) })
     return CM.ViewPlugin.fromClass(class {
       constructor(v) { this.decorations = deco.createDeco(v) }
       update(u) { this.decorations = deco.updateDeco(u, this.decorations) }
@@ -639,7 +649,7 @@ var Writer = (function () {
 
   // Dim the metadata block (--- … ---) at the top of a text.
   function frontMatterLines() {
-    var deco = CM.Decoration.line({ class: 'cm-fm' })
+    var deco = CM.Decoration.line({ class: 'cm-fm', attributes: { spellcheck: 'false' } })
     function find(view) {
       var doc = view.state.doc, ranges = []
       if (doc.lines > 1 && doc.line(1).text.trim() === '---') {
@@ -653,6 +663,25 @@ var Writer = (function () {
       constructor(v) { this.decorations = find(v) }
       update(u) { if (u.docChanged) this.decorations = find(u.view) }
     }, { decorations: function (v) { return v.decorations } })
+  }
+
+  function spellAttrs() {
+    return CM.EditorView.contentAttributes.of({ spellcheck: spell.on ? 'true' : 'false', lang: spell.lang })
+  }
+
+  // The book's language or the on/off switch changed (spell.js): every pane, every text kept in
+  // memory and every text opened later follow it. The search panel (Ctrl+F) lower-cases with
+  // the same language, so that in Turkish I/ı and İ/i pair up.
+  function setSpellcheck(on, lang) {
+    spell = { on: !!on, lang: lang === 'en' ? 'en' : 'tr' }
+    window.MENTEGRAF_SEARCH_LOCALE = spell.lang
+    if (!extensions) return
+    extensions[0] = spellComp.of(spellAttrs())           // for texts opened from now on
+    var effect = spellComp.reconfigure(spellAttrs())
+    syncCurrent()
+    Object.keys(buffers).forEach(function (p) { var b = buffers[p]; if (b && b.state) b.state = b.state.update({ effects: effect }).state })
+    panes.forEach(function (p) { try { p.view.dispatch({ effects: effect }) } catch (e) { /* closed */ } })
+    syncCurrent()
   }
 
   function makeState(text) {
@@ -891,7 +920,7 @@ var Writer = (function () {
     doc.open()
     // the layout is set inline so the window is right before the stylesheet arrives
     doc.write('<!doctype html><html><head><meta charset="utf-8"><title></title><style>html,body{margin:0;height:100%;overflow:hidden}' +
-      '.wpane{display:flex;flex-direction:column;height:100vh}.wpane-ed{flex:1;min-height:0;overflow:hidden}.wpane-ed .cm-editor{height:100%}</style></head><body class="wwin"></body></html>')
+      '.wpane{display:flex;flex-direction:column;height:100vh}.wpane-ed{flex:1;min-height:0;overflow:hidden}.wpane-ed .cm-editor{height:100%}</style></head><body class="wwin" spellcheck="false"></body></html>')
     doc.close()
     var loads = []
     Array.prototype.forEach.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) {
@@ -1150,7 +1179,7 @@ var Writer = (function () {
     openBeside: openBeside, openInWindow: openInWindow, sideMenu: sideMenu, detachMain: detachMain, panes: function () { return panes.map(function (p) { return { kind: p.kind, path: p.current && p.current.path } }) },
     init: init, reset: reset, openForNode: openForNode, close: close, toggleFull: toggleFull, run: run, togglePreview: togglePreview, exportDocx: exportDocx,
     updatePanel: updatePanel, dirtyFragments: dirtyFragments, willSave: willSave, markSaved: markSaved,
-    hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu,
+    hasUnsaved: hasUnsaved, loadRecovered: loadRecovered, handleMenu: handleMenu, setSpellcheck: setSpellcheck,
     // Text of a loaded buffer (including unsaved edits), or null if not loaded.
     textFor: function (path) { return buffers[path] ? textOf(path) : null },
     // Argument capture (argue.js).

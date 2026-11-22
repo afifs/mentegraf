@@ -321,6 +321,10 @@ node.multi-sel{border-width:3;border-color:#c5a05e;border-opacity:1;border-style
 .ssearch{padding:2px 10px 8px;display:flex;flex-direction:column;gap:5px}
 #sQuery{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);font:13px 'DM Sans',sans-serif;outline:none}
 #sQuery:focus{border-color:var(--accent)}
+.sopts{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
+.sdefault{font-size:11px;color:var(--dim);text-decoration:underline;margin-left:auto}
+.sdefault:hover{color:var(--text)}
+.swhere{display:inline-block;font-size:10px;line-height:1.4;padding:0 5px;border-radius:7px;background:var(--hover);color:var(--dim);vertical-align:1px}
 .slens{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:4px;cursor:pointer}
 #sResults{display:none}
 #classes.searching #sResults{display:block;flex:1 1 65%}

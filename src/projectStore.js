@@ -120,6 +120,13 @@ function countWords(text) {
 
 // ───────── pure mapping (no file system; unit-tested) ─────────
 
+// project.mentegraf settings other than nodeSizing (which has its own place in config).
+function otherSettings(s) {
+  const out = {}
+  if (s && typeof s === 'object' && !Array.isArray(s)) Object.keys(s).forEach(k => { if (k !== 'nodeSizing') out[k] = s[k] })
+  return out
+}
+
 // In-memory project -> file texts.
 function toFiles(project) {
   const p = ProjectFormat.migrate(project).data
@@ -128,7 +135,8 @@ function toFiles(project) {
     format: FORMAT,
     app: 'Mentegraf',
     lang: p.lang || 'tr',
-    settings: { nodeSizing: cfg.nodeSizing !== false },
+    // other settings (search defaults, spell checking) are kept as they are
+    settings: Object.assign({}, cfg.settings && typeof cfg.settings === 'object' ? cfg.settings : {}, { nodeSizing: cfg.nodeSizing !== false }),
     export: cfg.export && typeof cfg.export === 'object' ? cfg.export : {},
     nodeTypes: cfg.categories || [],
     connectionTypes: cfg.connectionTypes || []
@@ -205,6 +213,7 @@ function fromFiles({ manifestText, edgesText, layoutText, manuscriptText, catego
       categories: types,
       connectionTypes: Array.isArray(m.connectionTypes) ? m.connectionTypes : [],
       nodeSizing: !(m.settings && m.settings.nodeSizing === false),
+      settings: otherSettings(m.settings),
       export: m.export && typeof m.export === 'object' ? m.export : {}
     },
     elements: { nodes, edges: edgeData.map(d => ({ data: d })) }
@@ -468,9 +477,6 @@ function listTexts(dir) {
   return out.sort()
 }
 
-// query: words to find (as a phrase). opts: { overrides: { path: text } (unsaved editor texts),
-// only: [paths] (limit to these), limit: total hits }. Returns { files: [{ path, count, hits }], total, truncated }.
-// A hit: { line (1-based), col, len, before, match, after } — a short window of the line around the match.
 // How often each term occurs in each text: case- and accent-folded, counted only where the
 // term starts a word. terms: [string]; opts.only: paths to look in; opts.overrides: { path: text }.
 // Returns { counts: { term: { path: n } } } (paths with no occurrence are left out).
@@ -505,10 +511,53 @@ function mentionCounts(dir, terms, opts) {
   return { counts }
 }
 
+// A letter, a combining mark (a circumflex typed as a separate character) or a digit.
+// JavaScript's \b knows only ASCII letters, so word edges are found with this instead.
+const WORD_CHAR = /[\p{L}\p{M}\p{N}]/u
+function charBefore(s, at) {
+  if (at <= 0) return ''
+  const lo = s.charCodeAt(at - 1)
+  return lo >= 0xdc00 && lo <= 0xdfff && at >= 2 ? s.slice(at - 2, at) : s[at - 1]
+}
+function charAt(s, at) { if (at >= s.length) return ''; const cp = s.codePointAt(at); return String.fromCodePoint(cp) }
+// Does s[at, at+len) stand as a whole word? Only an edge of the query that is itself a
+// letter needs a non-letter next to it ("kar " ends with a space, so its end is free).
+function wholeWordAt(s, at, len) {
+  const first = charAt(s, at), last = charBefore(s, at + len)
+  if (WORD_CHAR.test(first) && WORD_CHAR.test(charBefore(s, at))) return false
+  if (WORD_CHAR.test(last) && WORD_CHAR.test(charAt(s, at + len))) return false
+  return true
+}
+
+// Where a match stands on its line. Footnote texts ([^x]: … and their indented
+// continuation lines) and figure captions (![caption](file){#fig:…}) are told apart from the
+// running text. Returns null when the match is in a figure's file name or attributes.
+const IMAGE_RE = /!\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\([^)\n]*\)(?:\{[^}\n]*\})?/g
+function placeOf(line, at, len, inFootnote) {
+  IMAGE_RE.lastIndex = 0
+  let m
+  while ((m = IMAGE_RE.exec(line))) {
+    const capFrom = m.index + 2, capTo = capFrom + m[1].length, end = m.index + m[0].length
+    if (at >= capFrom && at + len <= capTo) return 'caption'
+    if (at < end && at + len > m.index) return null
+  }
+  return inFootnote ? 'footnote' : 'text'
+}
+
+// query: the text to find, exactly as typed (spaces at either end are kept). opts: {
+//   exact: letters must match as written — case, circumflex and Turkish letters (default:
+//          folded, so "dusunme" finds "Düşünme"),
+//   wholeWord: the match must not start or end inside a word,
+//   overrides: { path: text } (unsaved editor texts), only: [paths] (limit to these), limit: total hits }.
+// Returns { files: [{ path, count, hits }], total, truncated }.
+// A hit: { line (1-based), col, len, where, before, match, after } — a short window of the line around the match.
+// Each hit also tells where it is: where = 'text' | 'footnote' | 'caption'.
 function searchTexts(dir, query, opts) {
   opts = opts || {}
-  const q = foldText(String(query || '').replace(/\s+/g, ' ').trim())
-  if (q.length < 2) return { files: [], total: 0, truncated: false }
+  const raw = String(query == null ? '' : query)
+  if (raw.length < 2 || !raw.trim()) return { files: [], total: 0, truncated: false }
+  const exact = !!opts.exact, wholeWord = !!opts.wholeWord
+  const q = exact ? raw : foldText(raw)
   const overrides = opts.overrides && typeof opts.overrides === 'object' ? opts.overrides : {}
   let paths = listTexts(dir)
   Object.keys(overrides).forEach(p => { if (paths.indexOf(p) < 0) paths.push(p) })
@@ -524,16 +573,22 @@ function searchTexts(dir, query, opts) {
     let start = 0                                            // skip the metadata block
     if (lines[0] === '---') { const end = lines.indexOf('---', 1); if (end > 0) start = end + 1 }
     const hits = []
-    let count = 0
+    let count = 0, inFootnote = false
     for (let i = start; i < lines.length; i++) {
-      const line = lines[i], f = foldText(line)
+      const line = lines[i]
+      // folding keeps every character in place, so positions in f are positions in line
+      const f = exact ? line : foldText(line)
+      if (/^\s*\[\^[^\]\s]+\]:/.test(line)) inFootnote = true
+      else if (line.trim() && !/^(\s{4}|\t)/.test(line)) inFootnote = false
       let at = f.indexOf(q)
       while (at >= 0) {
+        const where = (!wholeWord || wholeWordAt(line, at, q.length)) ? placeOf(line, at, q.length, inFootnote) : null
+        if (!where) { at = f.indexOf(q, at + 1); continue }
         count++
         if (total < limit) {
           total++
           const from = Math.max(0, at - 50), to = Math.min(line.length, at + q.length + 70)
-          hits.push({ line: i + 1, col: at, len: q.length, before: (from > 0 ? '…' : '') + line.slice(from, at), match: line.slice(at, at + q.length), after: line.slice(at + q.length, to) + (to < line.length ? '…' : '') })
+          hits.push({ line: i + 1, col: at, len: q.length, where, before: (from > 0 ? '…' : '') + line.slice(from, at), match: line.slice(at, at + q.length), after: line.slice(at + q.length, to) + (to < line.length ? '…' : '') })
         } else truncated = true
         at = f.indexOf(q, at + q.length)
       }

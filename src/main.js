@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, Menu, session } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const ProjectFormat = require('./projectFormat')
@@ -7,6 +7,8 @@ const Exporter = require('./exporter')
 const Styles = require('./styles')
 const Compiler = require('./compiler')
 const Obsidian = require('./obsidian')
+const Dictionary = require('./dictionary')
+const UI_TEXT = { tr: require('./lang/tr.json'), en: require('./lang/en.json') }
 
 // Resolve paths
 const isDev = !app.isPackaged
@@ -54,7 +56,7 @@ const MENU_LABELS = {
     pandocOld: 'Pandoc sürümü çok eski (%s). pandoc.org adresinden güncel sürümü kurun.',
     importStyleTitle: 'Kaynak gösterme biçimi seçin (.csl)', importTemplateTitle: 'Word şablonu seçin (.docx)',
     compileTitle: 'Kitabı derle', compileDone: 'Kitap derlendi.',
-    textSearch: 'Metinlerde ara',
+    textSearch: 'Metinlerde ara', spellcheck: 'Yazım denetimi',
     assetFigureTitle: 'Görsel seçin', assetTableTitle: 'Tablo için CSV dosyası seçin', imagesLabel: 'Görseller'
   },
   en: {
@@ -88,7 +90,7 @@ const MENU_LABELS = {
     pandocOld: 'Pandoc %s is too old. Install the current version from pandoc.org.',
     importStyleTitle: 'Choose a citation style (.csl)', importTemplateTitle: 'Choose a Word template (.docx)',
     compileTitle: 'Compile the book', compileDone: 'The book was compiled.',
-    textSearch: 'Search in texts',
+    textSearch: 'Search in texts', spellcheck: 'Spell checking',
     assetFigureTitle: 'Choose an image', assetTableTitle: 'Choose a CSV file for the table', imagesLabel: 'Images'
   }
 }
@@ -333,6 +335,7 @@ ipcMain.handle('text-search', (event, query, opts) => {
     return ProjectStore.searchTexts(currentDir || null, String(query || '').slice(0, 200), {
       overrides: o.overrides && typeof o.overrides === 'object' ? o.overrides : {},
       only: Array.isArray(o.only) ? o.only.slice(0, 5000) : undefined,
+      exact: !!o.exact, wholeWord: !!o.wholeWord,
       limit: 300
     })
   } catch (e) { return { files: [], total: 0, truncated: false, error: e.message } }
@@ -485,6 +488,7 @@ function loadDir(dir) {
   }
   currentDir = dir
   watchTexts()
+  syncProjectWords()
   // Older builds kept the recovery file inside the project: move it out.
   const oldRecovery = path.join(dir, '.mentegraf', 'recovery.json')
   if (fs.existsSync(oldRecovery)) {
@@ -538,6 +542,7 @@ function newProject() {
   if (!confirmDiscard()) return
   currentDir = null
   unwatchTexts()
+  syncProjectWords()
   isDirty = false
   updateTitle()
   send('menu-action', 'new')
@@ -570,8 +575,10 @@ async function saveFileAs() {
     }
   }
   clearRecovery()        // the old location's recovery no longer applies
+  try { Dictionary.copy(currentDir, dir) } catch (e) { console.warn('Word lists not copied:', e.message) }
   currentDir = dir
   watchTexts()
+  syncProjectWords()
   updateTitle()
   send('menu-action', 'save')
 }
@@ -584,6 +591,7 @@ ipcMain.handle('save-data', async (event, data, fragments, opts) => {
     const dir = await chooseNewProjectDir()
     if (!dir) return false
     currentDir = dir
+    syncProjectWords()
   }
   try {
     ProjectStore.writeFragments(currentDir, fragments || [])   // texts first, graph last
@@ -654,6 +662,7 @@ function buildMenu() {
         { label: L.relayout, accelerator: 'CmdOrCtrl+R', click: () => mainWindow.webContents.send('menu-action', 'relayout') },
         { label: L.fitAll, accelerator: 'CmdOrCtrl+0', click: () => mainWindow.webContents.send('menu-action', 'fit') },
         { label: L.textSearch, accelerator: 'CmdOrCtrl+Shift+H', click: () => mainWindow.webContents.send('menu-action', 'text-search') },
+        { label: L.spellcheck, type: 'checkbox', checked: spell.enabled, click: () => send('menu-action', 'toggle-spellcheck') },
         { type: 'separator' },
         { label: L.devTools, accelerator: 'F12', click: () => mainWindow.webContents.toggleDevTools() },
         { type: 'separator' },
@@ -664,6 +673,116 @@ function buildMenu() {
   Menu.setApplicationMenu(menu)
 }
 
+// ───────── spell checking ─────────
+//
+// Electron checks the spelling; the renderer (spell.js) says whether it is on and which
+// language the book is in. A Turkish book is checked in Turkish and US English together.
+// The project's word lists (dictionary.js) are added to Electron's dictionary while the
+// project is open and taken out when it closes. Electron keeps added words on disk, so the
+// words currently added are also written down (userData); after a crash they are taken out
+// at the next start. On macOS the system's own checker is used: the language follows the
+// system and added words go to the system dictionary, so they are not taken out there.
+let spell = { enabled: true, lang: 'tr' }
+let loadedWords = []          // project words currently in Electron's dictionary
+let wordsDir = null           // the project they came from
+
+function spellSession() { return session.defaultSession }
+function loadedWordsFile() { return path.join(app.getPath('userData'), 'spellcheck-project-words.json') }
+function saveLoadedWords() {
+  try {
+    if (loadedWords.length) fs.writeFileSync(loadedWordsFile(), JSON.stringify(loadedWords), 'utf8')
+    else if (fs.existsSync(loadedWordsFile())) fs.unlinkSync(loadedWordsFile())
+  } catch (e) { /* not essential */ }
+}
+
+function applySpell() {
+  const ses = spellSession()
+  try { if (typeof ses.setSpellCheckerEnabled === 'function') ses.setSpellCheckerEnabled(spell.enabled) } catch (e) { console.warn('Spell checker:', e.message) }
+  if (process.platform !== 'darwin') {
+    const langs = Dictionary.spellLanguages(spell.lang, ses.availableSpellCheckerLanguages || [])
+    try { if (langs.length) ses.setSpellCheckerLanguages(langs) } catch (e) { console.warn('Spell checker languages:', e.message) }
+  }
+}
+
+ipcMain.on('spellcheck-config', (event, cfg) => {
+  const c = cfg && typeof cfg === 'object' ? cfg : {}
+  const next = { enabled: c.enabled !== false, lang: c.lang === 'en' ? 'en' : 'tr' }
+  const menuChanged = next.enabled !== spell.enabled
+  spell = next
+  applySpell()
+  if (menuChanged) buildMenu()
+})
+
+function unloadProjectWords() {
+  if (!loadedWords.length) { wordsDir = null; return }
+  if (process.platform !== 'darwin') {
+    const ses = spellSession()
+    loadedWords.forEach(w => { try { ses.removeWordFromSpellCheckerDictionary(w) } catch (e) { /* gone already */ } })
+  }
+  loadedWords = []
+  wordsDir = null
+  saveLoadedWords()
+}
+function addProjectWord(w) {
+  try { spellSession().addWordToSpellCheckerDictionary(w) } catch (e) { return }
+  if (loadedWords.indexOf(w) < 0) { loadedWords.push(w); saveLoadedWords() }
+}
+// The open project changed (opened, new, saved in a new folder): swap its words in.
+function syncProjectWords() {
+  if (wordsDir === currentDir && currentDir) return
+  unloadProjectWords()
+  if (!currentDir) return
+  wordsDir = currentDir
+  Dictionary.projectWords(currentDir).forEach(addProjectWord)
+}
+// Words left in Electron's dictionary by a run that did not close normally.
+function forgetLeftoverWords() {
+  let words = []
+  try { words = JSON.parse(fs.readFileSync(loadedWordsFile(), 'utf8')) } catch (e) { return }
+  if (Array.isArray(words) && process.platform !== 'darwin') {
+    const ses = spellSession()
+    words.forEach(w => { try { ses.removeWordFromSpellCheckerDictionary(String(w)) } catch (e) { /* ignore */ } })
+  }
+  loadedWords = []
+  saveLoadedWords()
+}
+
+// Right-click menu in the editor (and any other editable field or selection): spelling
+// suggestions and the project's word lists for a misspelled word, then cut / copy / paste.
+function uiText(key) { const d = UI_TEXT[currentLang] || UI_TEXT.tr; return d[key] || UI_TEXT.en[key] || key }
+function attachContextMenu(wc) {
+  wc.on('context-menu', (event, params) => {
+    const items = []
+    const word = params.misspelledWord
+    if (word && spell.enabled) {
+      const sugg = (params.dictionarySuggestions || []).slice(0, 6)
+      if (sugg.length) sugg.forEach(s => items.push({ label: s, click: () => wc.replaceMisspelling(s) }))
+      else items.push({ label: uiText('ctxNoSuggestions'), enabled: false })
+      items.push({ type: 'separator' })
+      const add = (kind) => () => {
+        if (!currentDir) return
+        let w = null
+        try { w = Dictionary.add(currentDir, kind, word) } catch (e) { dialog.showErrorBox(uiText('ctxDictionaryError'), e.message); return }
+        addProjectWord(w || Dictionary.clean(word) || word)
+      }
+      items.push({ label: uiText('ctxAddToDictionary'), enabled: !!currentDir, click: add('dictionary') })
+      items.push({ label: uiText('ctxIgnoreInProject'), enabled: !!currentDir, click: add('ignore') })
+      if (!currentDir) items.push({ label: uiText('ctxSaveFirst'), enabled: false })
+      items.push({ type: 'separator' })
+    }
+    const f = params.editFlags || {}
+    if (params.isEditable) {
+      items.push({ label: uiText('ctxCut'), role: 'cut', enabled: !!f.canCut })
+      items.push({ label: uiText('ctxCopy'), role: 'copy', enabled: !!f.canCopy })
+      items.push({ label: uiText('ctxPaste'), role: 'paste', enabled: !!f.canPaste })
+    } else if (params.selectionText && params.selectionText.trim()) {
+      items.push({ label: uiText('ctxCopy'), role: 'copy', enabled: !!f.canCopy })
+    }
+    if (!items.length) return
+    Menu.buildFromTemplate(items).popup({ window: BrowserWindow.fromWebContents(wc) || undefined })
+  })
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400, height: 900,
@@ -672,6 +791,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      spellcheck: true,
       preload: path.join(srcPath, 'preload.js')
     },
     backgroundColor: '#0e0e14',
@@ -689,12 +809,15 @@ function createWindow() {
       overrideBrowserWindowOptions: {
         width: 900, height: 1000, minWidth: 420, minHeight: 400, autoHideMenuBar: true,
         backgroundColor: '#ffffff',
+        webPreferences: { spellcheck: true },
         icon: path.join(assetsPath, process.platform === 'win32' ? 'icon.ico' : 'icon.png')
       }
     }
   })
+  attachContextMenu(mainWindow.webContents)
   mainWindow.webContents.on('did-create-window', (win) => {
     win.removeMenu()
+    attachContextMenu(win.webContents)
     const closeIt = () => { if (!win.isDestroyed()) win.destroy() }
     mainWindow.once('closed', closeIt)
     win.once('closed', () => { if (mainWindow) mainWindow.removeListener('closed', closeIt) })
@@ -825,5 +948,7 @@ ipcMain.handle('zotero-search', async (event, query) => {
 })
 
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => { forgetLeftoverWords(); applySpell(); createWindow() })
+// The project's words are taken out of Electron's dictionary again, so they never reach another project.
+app.on('will-quit', () => { unloadProjectWords() })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

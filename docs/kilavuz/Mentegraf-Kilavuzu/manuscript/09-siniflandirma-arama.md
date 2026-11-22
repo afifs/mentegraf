@@ -40,7 +40,12 @@ Aynı kategoriye yeniden tıklamak ya da **Filtreyi kaldır** filtreyi kapatır.
 
 **Ctrl+Shift+H** ya da bölmenin üstündeki kutu, projedeki bütün metinlerde arar (@fig:arama): `manuscript/` ve `notes/` klasörleri, kaydedilmemiş değişiklikler dahil.
 
-- Büyük-küçük harf ve aksan fark etmez: "dusunme" "Düşünme"yi bulur; ı/i/I/İ aynı harf sayılır.
+- Varsayılan arama esnektir: büyük-küçük harf ve aksan fark etmez; "dusunme" "Düşünme"yi, "kar" "kâr"ı bulur; ı/i/I/İ aynı harf sayılır.
+- **Harfleri tam eşle** kutusu bunu kapatır: büyük-küçük harf, şapka ve Türkçe harfler ayırt edilir. "kâr" yalnızca "kâr"ı, "kar" yalnızca "kar"ı bulur.
+- **Bütün sözcük** kutusu, sözcüğün bir parçası olarak geçenleri saymaz: "kar" artık "karmaşık"ı bulmaz. Türkçe harfler sözcük harfi sayılır; kesme işareti ve tire sözcüğü bitirir, yani "Ankara" "Ankara'da"yı bulur. İki kutu birlikte de, ayrı ayrı da çalışır.
+- Aradığınız metin olduğu gibi aranır: başına ya da sonuna koyduğunuz boşluk aramanın bir parçasıdır ("kar " yalnızca boşlukla biten "kar"ı bulur).
+- Kutular projenin varsayılanlarıyla açılır ve yalnızca o aramayı değiştirir. Seçiminiz varsayılandan farklıysa yanlarında **Varsayılan yap** bağlantısı görünür; tıklamak seçimi projeye yazar (`project.mentegraf` → `settings.search`), proje kaydedilince kalıcı olur.
+- Dipnotlar ve şekil alt yazıları da aranır; sonuç satırında **dipnot** ya da **alt yazı** etiketi nerede bulunduğunu söyler. Görselin dosya adı ve `#fig:` kimliği aranmaz.
 - Sonuçlar metin metin gruplanır; bir satıra tıklamak metni açar ve bulunan kelimeyi seçer.
 - Filtre açıkken arama yalnızca filtredeki metinlerde yapılır; "Yalnızca filtredeki metinler" kutusu bunu açıp kapatır.
 - Bir düğüm seçiliyken sonuçlardaki **Bağla** düğmesi o metnin düğümünü seçili düğüme bağlar: arama yaparken haritayı da kurarsınız.
