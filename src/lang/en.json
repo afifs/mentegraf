@@ -302,6 +302,7 @@
   "ctxCopy": "Copy",
   "ctxPaste": "Paste",
   "spellDownloadFailed": "The spelling dictionary could not be downloaded (%s). Check the internet connection or an ad blocker.",
+  "spellNoDictionary": "The spelling dictionary could not be loaded (%s). Run npm install in the project folder.",
   "searchCount": "%n matches, %t texts",
   "searchMore": "showing the first 300",
   "searchNone": "No matches.",

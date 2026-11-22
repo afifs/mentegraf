@@ -79,13 +79,4 @@ test('an unknown list name is an error', () => {
   assert.throws(() => Dict.add(tmp(), 'other', 'x'))
 })
 
-test('spell languages: a Turkish book is checked in Turkish and US English', () => {
-  assert.deepStrictEqual(Dict.spellLanguages('tr', ['en-GB', 'en-US', 'tr']), ['tr', 'en-US'])
-  assert.deepStrictEqual(Dict.spellLanguages('tr', ['tr-TR', 'en-US']), ['tr-TR', 'en-US'])
-  assert.deepStrictEqual(Dict.spellLanguages('tr', ['tr', 'en']), ['tr', 'en'])
-  assert.deepStrictEqual(Dict.spellLanguages('en', ['tr', 'en-GB', 'en-US']), ['en-US'])
-  assert.deepStrictEqual(Dict.spellLanguages('tr', ['en-US']), ['en-US'])     // no Turkish on this computer
-  assert.deepStrictEqual(Dict.spellLanguages('tr', []), [])
-})
-
 console.log(passed + ' passed')

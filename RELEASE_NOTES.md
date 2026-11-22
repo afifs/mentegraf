@@ -13,13 +13,13 @@
 ## Spell checking
 
 - The editor checks every visible word itself — text already in a file too, not only what you type — and marks misspellings with a wavy red underline. Footnotes and captions are checked; node names, file names, the metadata block, code, web addresses, footnote and citation keys, passage IDs, `{…}` blocks, numbers and all-caps abbreviations are not.
-- Chromium's Turkish dictionary has no circumflex forms (kâr, hâlâ, kâğıt, hâkim): a word with â/î/û counts as right when the same word without them is right.
+- Words with a circumflex the dictionary lacks count as right when the same word without it is right; whether the circumflex belongs there is for the suspicious-words check (next version). The suffix after an apostrophe (Goethe’nin, Ankara'da) is not checked on its own.
 - The language is the book's language (Settings → document language), not the menu language. A Turkish book is checked in Turkish and US English together.
 - **View → Spell checking** switches it on or off; the choice is kept in the project (`settings.spellcheck`, on by default).
 - Right-click menu: suggestions, **Add to dictionary**, **Ignore in this project**, Cut / Copy / Paste — in Turkish and English. Also in texts opened in a window of their own.
 - The project's word lists live in the project folder — `.mentegraf/dictionary.txt` and `.mentegraf/ignore.txt`, one word per line — so they travel and sync with the book. They are loaded when the project opens and removed when it closes, so one book's words never leak into another.
-- If a spelling dictionary cannot be downloaded, the status line says so. `await mentegraf.spellcheckStatus()` in the developer tools (F12) shows the checker's state.
-- On Windows and Linux the checking uses Chromium's Hunspell dictionaries (on Windows, Windows' own checker is switched off for this, so no language pack is needed), downloaded once from Google's CDN on first use (the text itself is never sent). On macOS the system checker runs and its language cannot be set from the app; words added there also go to the system dictionary.
+- `await mentegraf.spellcheckStatus()` in the developer tools (F12) shows the checker's state.
+- The Turkish and US English Hunspell dictionaries ship with Mentegraf (npm packages `dictionary-tr`, MIT, and `dictionary-en`, MIT AND BSD; read with `nspell`) and are loaded in a process of their own. Spelling works the same on Windows, macOS and Linux, needs no internet and no Windows language pack. Chromium's built-in checker is not used: it only looks at words as they are typed, and on Windows it cannot be asked about a word.
 
 ## Other
 

@@ -25,14 +25,15 @@ var Writer = (function () {
   var previewOn = false
   var previewTimer = null
   var msgTimer = null
-  // Spell checking. Chromium's own marking only looks at words as they are typed, so text
-  // already in a file was never checked. The editor checks the words itself instead (spellPlugin):
-  // every visible word goes to Electron's checker (in the book's language, set in main.js), the
-  // project's word lists are honoured, and misspelled words get a wavy underline. Chromium's own
-  // marking is off (spellcheck="false" everywhere), so nothing is underlined twice. Right-clicking
-  // a marked word opens the spelling menu (main.js); anywhere else the usual Cut/Copy/Paste menu.
+  // Spell checking. The editor checks the words itself (spellPlugin): every visible word is
+  // asked about in the book's language (main.js, with the Hunspell dictionaries that ship with
+  // Mentegraf), the project's word lists are honoured, and misspelled words get a wavy
+  // underline. Chromium's checker is not used: it only looks at words as they are typed, and on
+  // Windows it cannot be asked about a word at all. Right-clicking a marked word opens the
+  // spelling menu (main.js); anywhere else the usual Cut/Copy/Paste menu.
   var spell = { on: true, lang: 'tr' }
   var spellCache = new Map()   // word -> misspelled?
+  var spellGen = 0             // bumped whenever spellCache is emptied
   var spellVer = 0             // bumped when the language, the word lists or the dictionaries change
   var spellComp = null     // its extension is always extensions[0]
 
@@ -692,24 +693,35 @@ var Writer = (function () {
     while ((m = WORD.exec(line))) {
       var w = m[0]
       if (w.length < 2 || /\p{N}/u.test(w)) continue                       // numbers, 3D, 1950'de
+      if (/['’]/.test(line[m.index - 1] || '') && /[\p{L}\p{M}]/u.test(line[m.index - 2] || '')) continue   // the suffix in Goethe'nin, Faust’ta
       if (w === w.toLocaleUpperCase(spell.lang) && w !== w.toLocaleLowerCase(spell.lang)) continue   // AB, NATO
       out.push({ from: m.index, to: m.index + w.length, word: w })
     }
     return out
   }
+  // A word's answer, if known (true: misspelled). Words not asked about yet are queued and
+  // asked together (main.js checks them with the dictionaries that ship with Mentegraf);
+  // the answer marks them a moment later.
+  var spellQueue = new Set(), spellTimer = null
   function misspelled(word) {
     if (window.Spell && Spell.known(word)) return false
     if (spellCache.has(word)) return spellCache.get(word)
-    var bad = checkOne(word)
-    // Chromium's Turkish dictionary has no circumflex forms (kâr, hâlâ, kâğıt, hâkim are
-    // marked): a word with â/î/û counts as right when the same word without them is right.
-    // Whether the circumflex belongs there is the suspicious-words check's business.
-    if (bad && /[âîûÂÎÛ]/.test(word)) bad = checkOne(word.replace(/[âÂîÎûÛ]/g, function (c) { return { 'â': 'a', 'Â': 'A', 'î': 'i', 'Î': 'İ', 'û': 'u', 'Û': 'U' }[c] }))
-    spellCache.set(word, bad)
-    return bad
+    spellQueue.add(word)
+    if (!spellTimer) spellTimer = setTimeout(askSpelling, 30)
+    return false
   }
-  function checkOne(word) {
-    try { return !!spellApi().spellCheck([word.normalize('NFC')])[0] } catch (e) { return false }
+  function askSpelling() {
+    spellTimer = null
+    var words = Array.from(spellQueue).slice(0, 2000), gen = spellGen
+    words.forEach(function (w) { spellQueue.delete(w) })
+    if (!words.length || !spellApi()) return
+    Promise.resolve(spellApi().spellCheck(words)).then(function (bad) {
+      if (!Array.isArray(bad) || gen !== spellGen) return   // the language changed meanwhile
+      var any = false
+      words.forEach(function (w, i) { spellCache.set(w, !!bad[i]); if (bad[i]) any = true })
+      if (any) spellRefresh(false)
+      if (spellQueue.size && !spellTimer) spellTimer = setTimeout(askSpelling, 30)
+    }, function () { /* no answer: leave the words unmarked */ })
   }
   // Lines that are not checked: the metadata block and fenced code.
   function skippedLines(doc, upTo) {
@@ -750,7 +762,7 @@ var Writer = (function () {
   }
   // Something the check depends on changed: check the visible words again.
   function spellRefresh(clearCache) {
-    if (clearCache) spellCache.clear()
+    if (clearCache) { spellCache.clear(); spellGen++ }
     spellVer++
     panes.forEach(function (p) { try { p.view.dispatch({}) } catch (e) { /* closed */ } })
   }
@@ -768,9 +780,10 @@ var Writer = (function () {
     if (!w || !misspelled(w.word)) return false
     e.preventDefault()
     var from = l.from + w.from, to = l.from + w.to, word = w.word
-    var sugg = []
-    try { sugg = (spellApi().spellSuggest(word) || []).slice(0, 6) } catch (err) { sugg = [] }
-    spellApi().spellMenu({ word: word, suggestions: sugg, hasSelection: !v.state.selection.main.empty }).then(function (r) {
+    var hasSelection = !v.state.selection.main.empty
+    Promise.resolve(spellApi().spellSuggest(word)).catch(function () { return [] }).then(function (sugg) {
+      return spellApi().spellMenu({ word: word, suggestions: (sugg || []).slice(0, 6), hasSelection: hasSelection })
+    }).then(function (r) {
       if (!r) return
       if (r.replace != null && v.state.sliceDoc(from, to) === word) {
         v.dispatch({ changes: { from: from, to: to, insert: r.replace }, selection: { anchor: from + r.replace.length } })
@@ -788,7 +801,7 @@ var Writer = (function () {
     var langChanged = spell.lang !== (lang === 'en' ? 'en' : 'tr')
     spell = { on: !!on, lang: lang === 'en' ? 'en' : 'tr' }
     window.MENTEGRAF_SEARCH_LOCALE = spell.lang
-    if (langChanged) spellCache.clear()
+    if (langChanged) { spellCache.clear(); spellGen++ }
     spellVer++
     if (!extensions) return
     extensions[0] = spellComp.of(spellAttrs())           // for texts opened from now on
