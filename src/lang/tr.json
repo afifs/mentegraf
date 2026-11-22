@@ -302,6 +302,7 @@
   "ctxCopy": "Kopyala",
   "ctxPaste": "Yapıştır",
   "spellDownloadFailed": "Yazım sözlüğü indirilemedi (%s). İnternet bağlantısını ya da reklam engelleyiciyi denetleyin.",
+  "spellNoDictionary": "Yazım sözlüğü yüklenemedi (%s). Proje klasöründe npm install çalıştırın.",
   "searchCount": "%n eşleşme, %t metin",
   "searchMore": "ilk 300 gösteriliyor",
   "searchNone": "Eşleşme yok.",

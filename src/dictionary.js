@@ -76,23 +76,4 @@ function copy(fromDir, toDir) {
   })
 }
 
-// Spell checker languages for a book: a Turkish book is checked in Turkish and US English
-// together, so English terms in it are not marked. The codes are matched to the ones this
-// computer's checker offers ("tr" may be offered as "tr-TR", "en-US" only as "en"); codes it
-// does not have are left out.
-const SPELL_LANGS = { tr: ['tr', 'en-US'], en: ['en-US'] }
-function spellLanguages(lang, available) {
-  const avail = Array.isArray(available) ? available.map(String) : []
-  const low = avail.map(a => a.toLowerCase()), base = c => c.split('-')[0]
-  const out = []
-  ;(SPELL_LANGS[lang] || SPELL_LANGS.tr).forEach(code => {
-    const c = code.toLowerCase()
-    let i = low.indexOf(c)
-    if (i < 0) i = low.indexOf(base(c))
-    if (i < 0) i = low.findIndex(a => base(a) === base(c))
-    if (i >= 0 && out.indexOf(avail[i]) < 0) out.push(avail[i])
-  })
-  return out
-}
-
-module.exports = { FILES, clean, parse, read, add, projectWords, copy, filePath, spellLanguages }
+module.exports = { FILES, clean, parse, read, add, projectWords, copy, filePath }

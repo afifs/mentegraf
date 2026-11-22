@@ -33,7 +33,7 @@ Metin Markdown olarak saklanır ve öyle görünür: `#`, `**`, `_` gibi işaret
 
 Mentegraf metindeki yazım yanlışlarının altını kırmızı dalgalı bir çizgiyle çizer: yalnızca yazdıklarınızın değil, dosyada önceden duran metnin de. Denetim yalnızca metin bölmesinde yapılır (dipnotlar ve şekil alt yazıları dahil). Düğüm adları, dosya adları, metnin başındaki üst bilgi bloğu, kod blokları, web adresleri, dipnot ve atıf işaretleri, pasaj kimlikleri, `{…}` blokları, sayı içeren sözcükler ve büyük harfli kısaltmalar (NATO, AB) denetlenmez.
 
-Türkçe sözlük şapkalı yazımları tanımaz; bu yüzden "kâr", "hâlâ", "kâğıt" gibi sözcükler, şapkasız hâlleri doğruysa doğru sayılır. Şapkanın yerinde kullanılıp kullanılmadığı yazım denetiminin işi değildir.
+Sözlükte şapkalı hâli bulunmayan bir sözcük, şapkasız hâli doğruysa doğru sayılır. Şapkanın yerinde kullanılıp kullanılmadığı yazım denetiminin işi değildir. Kesmeden sonra gelen ek ("Goethe’nin", "Ankara'da") ayrıca denetlenmez.
 
 - **Dil** menülerin dili değil, kitabın dilidir (Ayarlar → belge dili). Türkçe bir kitap Türkçe ve İngilizce birlikte denetlenir; böylece metindeki İngilizce terimler yanlış görünmez.
 - **Görünüm → Yazım denetimi** denetimi açıp kapatır. Varsayılanı açıktır; seçim projeye yazılır.
@@ -44,10 +44,9 @@ Türkçe sözlük şapkalı yazımları tanımaz; bu yüzden "kâr", "hâlâ", "
 - İki dosya da düz metindir, satır başına bir sözcük; `#` ile başlayan satırlar açıklamadır. Elle de düzenlenebilirler. Proje klasöründe durdukları için kitapla birlikte taşınır ve Seafile gibi eşitleme araçlarıyla öbür bilgisayarlara gider. Bir projenin sözcükleri yalnızca o proje açıkken geçerlidir.
 - Projeyi ilk kez kaydetmeden önce sözlüğe sözcük eklenemez; sözlük proje klasöründe tutulur.
 
-**Windows ve Linux:** Denetim Chromium'un Hunspell sözlükleriyle yapılır. Türkçe ve İngilizce sözlükler ilk kullanımda bir kez Google'ın sunucusundan indirilir; bu yüzden ilk açılışta internet bağlantısı gerekir. Metniniz hiçbir yere gönderilmez, yalnızca sözlük dosyaları indirilir.
+**Sözlükler:** Türkçe ve İngilizce Hunspell sözlükleri Mentegraf'la birlikte gelir. Denetim Windows, macOS ve Linux'ta aynı biçimde çalışır; internet bağlantısı ya da Windows dil paketi gerekmez. Sözlük her sözcüğü tanımaz (özellikle ek almış bazı Türkçe sözcükleri); doğru olduğunu bildiğiniz bir sözcüğü bir kez **Sözlüğe ekle** ile eklemeniz yeter.
 
-**macOS:** Sistemin kendi denetleyicisi çalışır ve dil seçimi uygulamadan yönetilemez; macOS metnin dilini kendisi tanır ya da *Sistem Ayarları → Klavye → Metin girişi*'nde seçilen dilleri kullanır. "Sözlüğe ekle" ile eklenen sözcükler sistemin sözlüğüne de gider ve proje kapanınca orada kalır.
-
+## Önizleme
 
 Göz düğmesi (Ctrl+E) metni dizgi hâlinde gösterir: dipnotlar sayfa altında, şekiller numaralı başlıklarıyla, şekil atıfları "Şekil 3" olarak. Önizleme salt okunurdur; yazmaya dönmek için yeniden basın.
 

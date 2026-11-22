@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, webUtils, webFrame } = require('electron')
+const { contextBridge, ipcRenderer, webUtils } = require('electron')
 
 contextBridge.exposeInMainWorld('mentegraf', {
   onMenuAction: (cb) => ipcRenderer.on('menu-action', (e, action) => cb(action)),
@@ -34,9 +34,9 @@ contextBridge.exposeInMainWorld('mentegraf', {
   setAutoSave: (on) => ipcRenderer.send('autosave-state', !!on),
   spellcheckConfig: (cfg) => ipcRenderer.send('spellcheck-config', cfg),
   spellcheckStatus: () => ipcRenderer.invoke('spellcheck-status'),
-  // spelling, checked word by word by the editor (writer.js)
-  spellCheck: (words) => (Array.isArray(words) ? words : []).map(w => { try { return webFrame.isWordMisspelled(String(w)) } catch (e) { return false } }),
-  spellSuggest: (word) => { try { return webFrame.getWordSuggestions(String(word)) } catch (e) { return [] } },
+  // spelling, checked by the editor (writer.js) with the dictionaries in main.js
+  spellCheck: (words) => ipcRenderer.invoke('spell-check', words),
+  spellSuggest: (word) => ipcRenderer.invoke('spell-suggest', word),
   spellMenu: (info) => ipcRenderer.invoke('spell-menu', info),
   onSpellWords: (cb) => ipcRenderer.on('spell-words', (e, words) => cb(words)),
   spellWords: () => ipcRenderer.invoke('spell-words-get'),

@@ -14,9 +14,13 @@
     "build:linux": "electron-builder --linux",
     "build": "electron-builder",
     "build:cm": "node tools/build-codemirror.mjs",
-    "test": "node test/projectStore.test.js && node test/exporter.test.js && node test/styles.test.js && node test/compiler.test.js && node test/search.test.js && node test/dictionary.test.js"
+    "test": "node test/projectStore.test.js && node test/exporter.test.js && node test/styles.test.js && node test/compiler.test.js && node test/search.test.js && node test/dictionary.test.js && node test/speller.test.js"
   },
-  "dependencies": {},
+  "dependencies": {
+    "dictionary-en": "4.0.0",
+    "dictionary-tr": "2.0.0",
+    "nspell": "2.1.5"
+  },
   "devDependencies": {
     "@codemirror/commands": "6.11.1",
     "@codemirror/lang-markdown": "6.5.2",

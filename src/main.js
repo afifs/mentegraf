@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, session } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, Menu, session, utilityProcess } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const ProjectFormat = require('./projectFormat')
@@ -9,12 +9,6 @@ const Compiler = require('./compiler')
 const Obsidian = require('./obsidian')
 const Dictionary = require('./dictionary')
 const UI_TEXT = { tr: require('./lang/tr.json'), en: require('./lang/en.json') }
-
-// Spelling on Windows: Chromium uses Windows' own checker there, through which the page cannot
-// ask about a word (webFrame.isWordMisspelled is always false, electron/electron#28684), so the
-// editor's check (writer.js) found nothing. Use Chromium's Hunspell dictionaries instead, as
-// on Linux: the same results everywhere, and no Windows language pack needed.
-if (process.platform === 'win32') app.commandLine.appendSwitch('disable-features', 'WinUseBrowserSpellChecker')
 
 // Resolve paths
 const isDev = !app.isPackaged
@@ -681,72 +675,85 @@ function buildMenu() {
 
 // ───────── spell checking ─────────
 //
-// Electron checks the spelling; the renderer (spell.js) says whether it is on and which
-// language the book is in. A Turkish book is checked in Turkish and US English together.
-// The project's word lists (dictionary.js) are added to Electron's dictionary while the
-// project is open and taken out when it closes. Electron keeps added words on disk, so the
-// words currently added are also written down (userData); after a crash they are taken out
-// at the next start. On macOS the system's own checker is used: the language follows the
-// system and added words go to the system dictionary, so they are not taken out there.
+// The editor (writer.js) checks the words it shows; this process answers with the
+// dictionaries that ship with Mentegraf (speller.js), in a process of its own
+// (spellerProcess.js) so that loading them never holds up the windows. Chromium's own checker
+// is not used: on Windows it cannot be asked about a word, and it downloads its dictionaries
+// from Google. The renderer (spell.js) says whether checking is on and which language the book
+// is in; a Turkish book is checked in Turkish and US English together. The project's word
+// lists (dictionary.js) are sent to the editor, which never marks those words.
 let spell = { enabled: true, lang: 'tr' }
-let loadedWords = []          // project words currently in Electron's dictionary
+let loadedWords = []          // the open project's words (dictionary.txt + ignore.txt)
 let wordsDir = null           // the project they came from
 
-function spellSession() { return session.defaultSession }
-function loadedWordsFile() { return path.join(app.getPath('userData'), 'spellcheck-project-words.json') }
-function saveLoadedWords() {
-  try {
-    if (loadedWords.length) fs.writeFileSync(loadedWordsFile(), JSON.stringify(loadedWords), 'utf8')
-    else if (fs.existsSync(loadedWordsFile())) fs.unlinkSync(loadedWordsFile())
-  } catch (e) { /* not essential */ }
-}
+const SPELL_CODES = { tr: ['tr', 'en-US'], en: ['en-US'] }
+let speller = null            // the utility process
+let spellerState = { languages: [], ms: null, status: null, error: null, started: null }
+let spellerLangs = null       // languages last asked for
+const spellerCalls = new Map() // id -> resolve
+let spellerSeq = 0
 
-// What the checker did, for "await mentegraf.spellcheckStatus()" in the developer tools (F12):
-// dictionary downloads (Windows, Linux) and their failures.
-const spellEvents = []
-function spellEvent(kind, lang) {
-  spellEvents.push({ at: new Date().toISOString(), kind, lang })
-  if (spellEvents.length > 40) spellEvents.shift()
-  console.log('Spell checker: ' + kind + ' ' + lang)
+function startSpeller() {
+  if (speller) return speller
+  try {
+    speller = utilityProcess.fork(path.join(srcPath, 'spellerProcess.js'), [], { serviceName: 'Mentegraf spelling' })
+  } catch (e) { spellerState.error = e.message; speller = null; return null }
+  spellerState.started = new Date().toISOString()
+  speller.on('message', (m) => {
+    if (!m || typeof m !== 'object') return
+    if (m.type === 'ready') {
+      spellerState = Object.assign({}, spellerState, { languages: m.languages, ms: m.ms, status: m.status, error: null })
+      console.log('Spelling: ' + (m.languages.join(', ') || 'no dictionary') + ' (' + m.ms + ' ms)')
+      if (!m.languages.length) send('spellcheck-problem', { kind: 'no-dictionary', lang: (spellerLangs || []).join(', ') })
+      send('spell-ready')
+    } else if (m.type === 'result') {
+      const done = spellerCalls.get(m.id)
+      if (done) { spellerCalls.delete(m.id); done(m.value) }
+    }
+  })
+  speller.on('exit', (code) => {
+    speller = null
+    spellerState.error = 'spelling process ended (' + code + ')'
+    spellerCalls.forEach(done => done(null))
+    spellerCalls.clear()
+    spellerLangs = null
+  })
+  return speller
 }
-let spellWatched = false
-function watchSpellSession() {
-  if (spellWatched) return
-  spellWatched = true
-  const ses = spellSession()
-  ses.on('spellcheck-dictionary-initialized', (e, lang) => { spellEvent('initialized', lang); send('spell-ready') })
-  ses.on('spellcheck-dictionary-download-begin', (e, lang) => spellEvent('download-begin', lang))
-  ses.on('spellcheck-dictionary-download-success', (e, lang) => { spellEvent('download-success', lang); send('spell-ready') })
-  ses.on('spellcheck-dictionary-download-failure', (e, lang) => {
-    spellEvent('download-failure', lang)
-    send('spellcheck-problem', { kind: 'download-failure', lang })
+function askSpeller(msg) {
+  const p = startSpeller()
+  if (!p) return Promise.resolve(null)
+  const id = ++spellerSeq
+  return new Promise((resolve) => {
+    spellerCalls.set(id, resolve)
+    p.postMessage(Object.assign({ id }, msg))
+    setTimeout(() => { if (spellerCalls.has(id)) { spellerCalls.delete(id); resolve(null) } }, 30000)
   })
 }
 
-ipcMain.handle('spellcheck-status', async () => {
-  const ses = spellSession()
-  let words = []
-  try { words = await ses.listWordsInSpellCheckerDictionary() } catch (e) { /* not essential */ }
-  return {
-    platform: process.platform, electron: process.versions.electron,
-    wanted: spell, enabled: typeof ses.isSpellCheckerEnabled === 'function' ? ses.isSpellCheckerEnabled() : null,
-    languages: process.platform === 'darwin' ? null : ses.getSpellCheckerLanguages(),
-    available: ses.availableSpellCheckerLanguages || [],
-    dictionaryFolder: path.join(app.getPath('userData'), 'Dictionaries'),
-    projectWords: loadedWords.length, sessionWords: words.length, events: spellEvents.slice()
-  }
+ipcMain.handle('spell-check', (event, words) => {
+  if (!spell.enabled) return []
+  const list = (Array.isArray(words) ? words : []).slice(0, 2000).map(String)
+  return askSpeller({ type: 'check', words: list }).then(v => Array.isArray(v) ? v : list.map(() => false))
 })
+ipcMain.handle('spell-suggest', (event, word) => askSpeller({ type: 'suggest', word: String(word || '') }).then(v => Array.isArray(v) ? v : []))
+
+// For "await mentegraf.spellcheckStatus()" in the developer tools (F12).
+ipcMain.handle('spellcheck-status', () => ({
+  platform: process.platform, electron: process.versions.electron,
+  wanted: spell, running: !!speller, speller: spellerState,
+  projectWords: loadedWords.length
+}))
 
 function applySpell() {
-  watchSpellSession()
-  const ses = spellSession()
-  try { if (typeof ses.setSpellCheckerEnabled === 'function') ses.setSpellCheckerEnabled(spell.enabled) } catch (e) { console.warn('Spell checker:', e.message) }
-  if (process.platform !== 'darwin') {
-    const langs = Dictionary.spellLanguages(spell.lang, ses.availableSpellCheckerLanguages || [])
-    try { if (langs.length) ses.setSpellCheckerLanguages(langs) } catch (e) { console.warn('Spell checker languages:', e.message) }
-  }
-  // the editor checks words itself (writer.js): let it check again with the new languages
-  setTimeout(() => send('spell-ready'), 300)
+  // Chromium's own checker stays off (see above)
+  try { session.defaultSession.setSpellCheckerEnabled(false) } catch (e) { /* older Electron */ }
+  if (!spell.enabled) return
+  const codes = SPELL_CODES[spell.lang] || SPELL_CODES.tr
+  if (spellerLangs && spellerLangs.join() === codes.join() && speller) return
+  spellerLangs = codes
+  const p = startSpeller()
+  if (p) p.postMessage({ type: 'languages', codes })
 }
 
 ipcMain.on('spellcheck-config', (event, cfg) => {
@@ -755,25 +762,19 @@ ipcMain.on('spellcheck-config', (event, cfg) => {
   const menuChanged = next.enabled !== spell.enabled
   spell = next
   applySpell()
+  send('spell-ready')
   if (menuChanged) buildMenu()
 })
 
 function unloadProjectWords() {
-  if (!loadedWords.length) { wordsDir = null; sendProjectWords(); return }
-  if (process.platform !== 'darwin') {
-    const ses = spellSession()
-    loadedWords.forEach(w => { try { ses.removeWordFromSpellCheckerDictionary(w) } catch (e) { /* gone already */ } })
-  }
   loadedWords = []
   wordsDir = null
-  saveLoadedWords()
   sendProjectWords()
 }
 function addProjectWord(w) {
-  try { spellSession().addWordToSpellCheckerDictionary(w) } catch (e) { /* the editor still knows it */ }
-  if (loadedWords.indexOf(w) < 0) { loadedWords.push(w); saveLoadedWords() }
+  if (loadedWords.indexOf(w) < 0) loadedWords.push(w)
 }
-// The editor (writer.js) checks words itself and skips the project's words: send it the list.
+// The editor (writer.js) skips the project's words: send it the list.
 function sendProjectWords() { send('spell-words', loadedWords.slice()) }
 // The open project changed (opened, new, saved in a new folder): swap its words in.
 function syncProjectWords() {
@@ -784,20 +785,20 @@ function syncProjectWords() {
   Dictionary.projectWords(currentDir).forEach(addProjectWord)
   sendProjectWords()
 }
-// Words left in Electron's dictionary by a run that did not close normally.
+// Version 2.4.0 builds before this one put project words into Electron's own dictionary,
+// which keeps them on disk; take any such words out again.
 function forgetLeftoverWords() {
+  const file = path.join(app.getPath('userData'), 'spellcheck-project-words.json')
   let words = []
-  try { words = JSON.parse(fs.readFileSync(loadedWordsFile(), 'utf8')) } catch (e) { return }
+  try { words = JSON.parse(fs.readFileSync(file, 'utf8')) } catch (e) { return }
   if (Array.isArray(words) && process.platform !== 'darwin') {
-    const ses = spellSession()
-    words.forEach(w => { try { ses.removeWordFromSpellCheckerDictionary(String(w)) } catch (e) { /* ignore */ } })
+    words.forEach(w => { try { session.defaultSession.removeWordFromSpellCheckerDictionary(String(w)) } catch (e) { /* ignore */ } })
   }
-  loadedWords = []
-  saveLoadedWords()
+  try { fs.unlinkSync(file) } catch (e) { /* ignore */ }
 }
 
-// Right-click menu in the editor (and any other editable field or selection): spelling
-// suggestions and the project's word lists for a misspelled word, then cut / copy / paste.
+// Right-click menu in editable fields and on selected text: cut / copy / paste. (On a
+// misspelled word in the editor, writer.js opens the spelling menu below instead.)
 function uiText(key) { const d = UI_TEXT[currentLang] || UI_TEXT.tr; return d[key] || UI_TEXT.en[key] || key }
 // The editor's menu for a misspelled word (writer.js finds the word and its suggestions).
 // Resolves with { replace: text } for a suggestion, { known: word } after adding it to one of
@@ -838,23 +839,6 @@ ipcMain.handle('spell-words-get', () => loadedWords.slice())
 function attachContextMenu(wc) {
   wc.on('context-menu', (event, params) => {
     const items = []
-    const word = params.misspelledWord
-    if (word && spell.enabled) {
-      const sugg = (params.dictionarySuggestions || []).slice(0, 6)
-      if (sugg.length) sugg.forEach(s => items.push({ label: s, click: () => wc.replaceMisspelling(s) }))
-      else items.push({ label: uiText('ctxNoSuggestions'), enabled: false })
-      items.push({ type: 'separator' })
-      const add = (kind) => () => {
-        if (!currentDir) return
-        let w = null
-        try { w = Dictionary.add(currentDir, kind, word) } catch (e) { dialog.showErrorBox(uiText('ctxDictionaryError'), e.message); return }
-        addProjectWord(w || Dictionary.clean(word) || word)
-      }
-      items.push({ label: uiText('ctxAddToDictionary'), enabled: !!currentDir, click: add('dictionary') })
-      items.push({ label: uiText('ctxIgnoreInProject'), enabled: !!currentDir, click: add('ignore') })
-      if (!currentDir) items.push({ label: uiText('ctxSaveFirst'), enabled: false })
-      items.push({ type: 'separator' })
-    }
     const f = params.editFlags || {}
     if (params.isEditable) {
       items.push({ label: uiText('ctxCut'), role: 'cut', enabled: !!f.canCut })
@@ -876,7 +860,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      spellcheck: true,
+      spellcheck: false,          // the editor checks spelling itself (see "spell checking")
       preload: path.join(srcPath, 'preload.js')
     },
     backgroundColor: '#0e0e14',
@@ -884,13 +868,6 @@ function createWindow() {
   })
 
   mainWindow.loadFile(path.join(srcPath, 'index.html'))
-  // Once the page is up, switch the checker off and on again: on some systems Electron 40+
-  // does not start checking otherwise (electron/electron#50327).
-  mainWindow.webContents.once('did-finish-load', () => {
-    const ses = spellSession()
-    if (!spell.enabled || typeof ses.setSpellCheckerEnabled !== 'function') return
-    try { ses.setSpellCheckerEnabled(false); ses.setSpellCheckerEnabled(true) } catch (e) { /* ignore */ }
-  })
   // A text opened in a window of its own (writer.js): the page fills that window itself, from
   // the main window, so the texts stay one set. It gets no menu (whose shortcuts act on the main
   // window) and closes with the main window. Other windows are not opened from the page.
@@ -901,7 +878,7 @@ function createWindow() {
       overrideBrowserWindowOptions: {
         width: 900, height: 1000, minWidth: 420, minHeight: 400, autoHideMenuBar: true,
         backgroundColor: '#ffffff',
-        webPreferences: { spellcheck: true },
+        webPreferences: { spellcheck: false },
         icon: path.join(assetsPath, process.platform === 'win32' ? 'icon.ico' : 'icon.png')
       }
     }
@@ -1042,5 +1019,5 @@ ipcMain.handle('zotero-search', async (event, query) => {
 
 app.whenReady().then(() => { forgetLeftoverWords(); applySpell(); createWindow() })
 // The project's words are taken out of Electron's dictionary again, so they never reach another project.
-app.on('will-quit', () => { unloadProjectWords() })
+app.on('will-quit', () => { if (speller) { try { speller.kill() } catch (e) { /* gone */ } } })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
