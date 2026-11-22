@@ -3,7 +3,12 @@
 // The main process reads the files; texts open in the editor are sent along so that
 // unsaved changes are searched too. With a category or tag filter on, the search can be
 // limited to the texts of the matching nodes. A result opens its text at the line.
-/* global cy, L, snapshot, selNode, curLang, Writer, Classify, ProjectFormat, catById */
+//
+// Two boxes shape the search: "Match letters exactly" (case, circumflex and Turkish letters
+// count; otherwise "kar" also finds "kâr" and "KAR") and "Whole word" ("kar" does not find
+// "karmaşık"). They open with the project's defaults (project.mentegraf → settings.search)
+// and change only the search at hand; "Make default" writes the current choice back.
+/* global cy, L, snapshot, selNode, curLang, Writer, Classify, ProjectFormat, catById, projectSettings, setDirty */
 var TextSearch = (function () {
   'use strict'
 
@@ -13,8 +18,37 @@ var TextSearch = (function () {
   function api() { return window.mentegraf }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] }) }
 
-  function query() { var i = $('sQuery'); return i ? i.value.replace(/\s+/g, ' ').trim() : '' }
-  function active() { return query().length >= 2 }
+  // The query exactly as typed: spaces at the start or end are the writer's choice.
+  function query() { var i = $('sQuery'); return i ? i.value : '' }
+  function usable(q) { return q.length >= 2 && !!q.trim() }
+  function active() { return usable(query()) }
+
+  function checked(id) { var c = $(id); return !!(c && c.checked) }
+  function choice() { return { exact: checked('sExact'), wholeWord: checked('sWhole') } }
+  function defaults() {
+    var s = window.projectSettings && projectSettings.search
+    return { exact: !!(s && s.exact), wholeWord: !!(s && s.wholeWord) }
+  }
+  // Put the boxes back to the project's defaults (a project was opened or created).
+  function applyDefaults() {
+    var d = defaults()
+    if ($('sExact')) $('sExact').checked = d.exact
+    if ($('sWhole')) $('sWhole').checked = d.wholeWord
+    showDefaultLink()
+    if (active()) schedule(0)
+  }
+  // "Make default" is offered only while the boxes differ from the project's defaults.
+  function showDefaultLink() {
+    var a = $('sMakeDefault'); if (!a) return
+    var c = choice(), d = defaults()
+    a.style.visibility = c.exact !== d.exact || c.wholeWord !== d.wholeWord ? 'visible' : 'hidden'
+  }
+  function makeDefault() {
+    if (!window.projectSettings) return
+    projectSettings.search = choice()
+    if (typeof setDirty === 'function') setDirty(true)
+    showDefaultLink()
+  }
 
   // path -> node, for the texts that belong to a node
   function nodeByPath() {
@@ -27,14 +61,15 @@ var TextSearch = (function () {
   function onlyInLens() { var c = $('sInLens'); return lensOn() && c && c.checked }
 
   async function run() {
-    var q = query(), pane = $('classes')
-    pane.classList.toggle('searching', q.length >= 2)
-    $('sLensRow').style.display = lensOn() && q.length >= 2 ? '' : 'none'
-    if (q.length < 2) { $('sResults').innerHTML = q ? '<div class="cnone">' + esc(L('searchShort')) + '</div>' : ''; last = null; return }
+    var q = query(), pane = $('classes'), on = usable(q)
+    pane.classList.toggle('searching', on)
+    $('sLensRow').style.display = lensOn() && on ? '' : 'none'
+    if (!on) { $('sResults').innerHTML = q ? '<div class="cnone">' + esc(L('searchShort')) + '</div>' : ''; last = null; return }
     if (!api() || !api().textSearch) return
     var overrides = {}
     if (window.Writer && Writer.dirtyFragments) Writer.dirtyFragments().forEach(function (f) { overrides[f.path] = f.text })
-    var opts = { overrides: overrides }
+    var c = choice()
+    var opts = { overrides: overrides, exact: c.exact, wholeWord: c.wholeWord }
     if (onlyInLens()) {
       var only = []
       cy.nodes().forEach(function (n) {
@@ -80,8 +115,9 @@ var TextSearch = (function () {
         '<div class="sfh"><span class="cdot" style="background:' + esc(typeColor(n)) + '"></span><span class="sname">' + esc(label) + '</span>' +
         '<span class="ccount">' + f.count + '</span>' + link + '</div>' +
         f.hits.map(function (h) {
+          var where = h.where === 'footnote' || h.where === 'caption' ? '<span class="swhere">' + esc(L(h.where === 'footnote' ? 'searchInFootnote' : 'searchInCaption')) + '</span> ' : ''
           return '<div class="shit" data-line="' + h.line + '" data-col="' + h.col + '" data-len="' + h.len + '"><span class="sline">' + h.line + '</span>' +
-            '<span class="stext">' + esc(h.before) + '<mark>' + esc(h.match) + '</mark>' + esc(h.after) + '</span></div>'
+            '<span class="stext">' + where + esc(h.before) + '<mark>' + esc(h.match) + '</mark>' + esc(h.after) + '</span></div>'
         }).join('') + '</div>'
     }).join('')
   }
@@ -126,6 +162,9 @@ var TextSearch = (function () {
       if (e.key === 'Enter') { var first = document.querySelector('#sResults .sfile:not(.snonode) .shit'); if (first) openHit(first) }
     })
     $('sInLens').addEventListener('change', function () { schedule(0) })
+    ;['sExact', 'sWhole'].forEach(function (id) { $(id).addEventListener('change', function () { showDefaultLink(); schedule(0) }) })
+    $('sMakeDefault').addEventListener('click', function (e) { e.preventDefault(); makeDefault() })
+    applyDefaults()
     $('sResults').addEventListener('click', function (e) {
       if (e.target.closest('[data-act="link"]')) { link(e.target.closest('.sfile')); return }
       var h = e.target.closest('.shit'); if (h) openHit(h)
@@ -138,5 +177,5 @@ var TextSearch = (function () {
   // The filter changed: limit or widen the results.
   function lensChanged() { if (active()) schedule(0) }
 
-  return { init: init, open: open, run: run, textChanged: textChanged, lensChanged: lensChanged, active: active }
+  return { init: init, open: open, run: run, textChanged: textChanged, lensChanged: lensChanged, active: active, applyDefaults: applyDefaults }
 })()

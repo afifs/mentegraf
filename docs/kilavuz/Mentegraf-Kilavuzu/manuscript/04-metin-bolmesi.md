@@ -29,7 +29,23 @@ Metin Markdown olarak saklanır ve öyle görünür: `#`, `**`, `_` gibi işaret
 | iddia | Ctrl+Shift+K / U / T | iddia, soru, görev |
 | göz | Ctrl+E | önizleme |
 
-## Önizleme
+## Yazım denetimi
+
+Mentegraf yazarken yazım yanlışlarının altını çizer. Denetim yalnızca metin bölmesinde yapılır (dipnotlar ve şekil alt yazıları dahil); düğüm adları, dosya adları, web adresleri, dipnot ve atıf işaretleri, pasaj kimlikleri ve `{…}` blokları denetlenmez.
+
+- **Dil** menülerin dili değil, kitabın dilidir (Ayarlar → belge dili). Türkçe bir kitap Türkçe ve İngilizce birlikte denetlenir; böylece metindeki İngilizce terimler yanlış görünmez.
+- **Görünüm → Yazım denetimi** denetimi açıp kapatır. Varsayılanı açıktır; seçim projeye yazılır.
+- Altı çizili sözcüğe **sağ tıklayınca** öneriler çıkar; birini seçmek sözcüğü düzeltir. Aynı menüde:
+  - **Sözlüğe ekle**: sözcük doğrudur, denetleyici bilmiyor. Projenin sözlüğüne yazılır: `.mentegraf/dictionary.txt`.
+  - **Bu projede yok say**: sözcük bu kitapta doğrudur ama genel bir sözcük değildir (bir ad, bir alıntı). `.mentegraf/ignore.txt` dosyasına yazılır.
+  - **Kes / Kopyala / Yapıştır**.
+- İki dosya da düz metindir, satır başına bir sözcük; `#` ile başlayan satırlar açıklamadır. Elle de düzenlenebilirler. Proje klasöründe durdukları için kitapla birlikte taşınır ve Seafile gibi eşitleme araçlarıyla öbür bilgisayarlara gider. Bir projenin sözcükleri yalnızca o proje açıkken geçerlidir.
+- Projeyi ilk kez kaydetmeden önce sözlüğe sözcük eklenemez; sözlük proje klasöründe tutulur.
+
+**Windows ve Linux:** Denetim Chromium'un Hunspell sözlükleriyle yapılır. Türkçe ve İngilizce sözlükler ilk kullanımda bir kez Google'ın sunucusundan indirilir; bu yüzden ilk açılışta internet bağlantısı gerekir. Metniniz hiçbir yere gönderilmez, yalnızca sözlük dosyaları indirilir.
+
+**macOS:** Sistemin kendi denetleyicisi çalışır ve dil seçimi uygulamadan yönetilemez; macOS metnin dilini kendisi tanır ya da *Sistem Ayarları → Klavye → Metin girişi*'nde seçilen dilleri kullanır. "Sözlüğe ekle" ile eklenen sözcükler sistemin sözlüğüne de gider ve proje kapanınca orada kalır.
+
 
 Göz düğmesi (Ctrl+E) metni dizgi hâlinde gösterir: dipnotlar sayfa altında, şekiller numaralı başlıklarıyla, şekil atıfları "Şekil 3" olarak. Önizleme salt okunurdur; yazmaya dönmek için yeniden basın.
 

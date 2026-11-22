@@ -91,6 +91,7 @@ var ExportSettings = (function () {
       } catch (e) { alert(L('cfgImportError') + '\n\n' + e.message) }
     }
     window.exportSettings = s
+    if (window.Spell) Spell.apply()          // the book's language decides the spelling dictionary
   }
 
   function bind() {

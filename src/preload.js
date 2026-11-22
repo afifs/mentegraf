@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('mentegraf', {
   rendererReady: () => ipcRenderer.send('renderer-ready'),
   setLang: (lang) => ipcRenderer.send('lang-changed', lang),
   setAutoSave: (on) => ipcRenderer.send('autosave-state', !!on),
+  spellcheckConfig: (cfg) => ipcRenderer.send('spellcheck-config', cfg),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   // Zotero
   zoteroCheck: () => ipcRenderer.invoke('zotero-check'),

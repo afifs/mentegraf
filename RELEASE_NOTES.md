@@ -1,4 +1,28 @@
 
+# Mentegraf v2.4.0 — Release Notes
+
+## Search in texts
+
+- **Match letters exactly** (new box): case, circumflex and Turkish letters count — "kâr" finds only "kâr", "kar" only "kar", "ılık" not "ILIK". Off by default; the flexible search stays as it was.
+- **Whole word** (new box, off by default): "kar" no longer finds "karmaşık". Word edges follow Unicode, so Turkish letters (and circumflexes typed as separate marks) are word letters; an apostrophe or hyphen ends a word ("Ankara" finds "Ankara'da"). Works in both flexible and exact search.
+- The query is no longer trimmed: spaces at the start or end are part of it.
+- Hits in footnotes and figure captions are labelled **footnote** / **caption**. A figure's file name and `#fig:` id are no longer searched.
+- The boxes open with the project's defaults (`project.mentegraf` → `settings.search`) and change only the search at hand; **Make default** writes the current choice to the project.
+- The editor's own search panel (Ctrl+F), with "match case" off, now lower-cases by the book's language: in a Turkish book "ılık" finds "ILIK" and "ilik" finds "İLİK".
+
+## Spell checking
+
+- The editor (with footnotes and captions) is spell checked as you type. Node names, file names, web addresses, footnote and citation keys, passage IDs and `{…}` blocks are not checked.
+- The language is the book's language (Settings → document language), not the menu language. A Turkish book is checked in Turkish and US English together.
+- **View → Spell checking** switches it on or off; the choice is kept in the project (`settings.spellcheck`, on by default).
+- Right-click menu: suggestions, **Add to dictionary**, **Ignore in this project**, Cut / Copy / Paste — in Turkish and English. Also in texts opened in a window of their own.
+- The project's word lists live in the project folder — `.mentegraf/dictionary.txt` and `.mentegraf/ignore.txt`, one word per line — so they travel and sync with the book. They are loaded when the project opens and removed when it closes, so one book's words never leak into another.
+- On Windows and Linux the checking uses Chromium's Hunspell dictionaries, downloaded once from Google's CDN on first use (the text itself is never sent). On macOS the system checker runs and its language cannot be set from the app; words added there also go to the system dictionary.
+
+## Other
+
+- Project settings other than node sizing are now kept when the project is saved.
+
 # Mentegraf v2.1.0 — Release Notes
 
 ## New Features

@@ -17,7 +17,7 @@ async function loadConfigs() {
 
 
 
-var categories=[],connTypes=[];var nodeSizingOn=true;var exportSettings={};
+var categories=[],connTypes=[];var nodeSizingOn=true;var exportSettings={};var projectSettings={};
 function initConfig(){categories=JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));connTypes=JSON.parse(JSON.stringify(DEFAULT_CONN_TYPES))}
 function catById(id){return categories.find(function(c){return c.id===id})}
 function catLabel(c){return curLang==='en'?c.en:c.tr}
@@ -42,7 +42,7 @@ async function loadLangs() {
 
 var curLang='tr';
 function L(k){var d=LANG_DATA[curLang]||LANG_DATA.tr||{};return d[k]||k}
-function applyLang(){curLang=localStorage.getItem('mentegraf-lang')||'tr';if(window.mentegraf&&window.mentegraf.setLang)window.mentegraf.setLang(curLang);document.querySelectorAll('[data-l]').forEach(function(el){var v=L(el.dataset.l);if(v)el.textContent=v});document.querySelectorAll('[data-lp]').forEach(function(el){var v=L(el.dataset.lp);if(v)el.placeholder=v});rebuildETS()}
+function applyLang(){curLang=localStorage.getItem('mentegraf-lang')||'tr';if(window.mentegraf&&window.mentegraf.setLang)window.mentegraf.setLang(curLang);document.querySelectorAll('[data-l]').forEach(function(el){var v=L(el.dataset.l);if(v)el.textContent=v});document.querySelectorAll('[data-lp]').forEach(function(el){var v=L(el.dataset.lp);if(v)el.placeholder=v});document.querySelectorAll('[data-lt]').forEach(function(el){var v=L(el.dataset.lt);if(v)el.title=v});rebuildETS()}
 function toggleLang(){curLang=curLang==='tr'?'en':'tr';localStorage.setItem('mentegraf-lang',curLang);applyLang();Binder.render();buildTF();if(selEle&&selEle.isNode())selNode(selEle);if(window.mentegraf&&window.mentegraf.setLang)window.mentegraf.setLang(curLang)}
 function rebuildETS(){var s=document.getElementById('eType');if(!s)return;var cv=s.value;s.innerHTML='';connTypes.forEach(function(ct){var o=document.createElement('option');o.value=ct.id;o.textContent=(ct.marker?ct.marker+' ':'')+connLabel(ct);o.style.color=ct.color||'';s.appendChild(o)});s.value=cv}
 
@@ -59,11 +59,13 @@ function saveSettings(){
 var cy,selEle=null,nid=1,curTheme='dark',altHeld=false,dragCanvas,dragCtx,activeTypes;
 var undoStack=[],redoStack=[],maxUndo=40,autoSaveTimer=null;
 var isDirty=false;
+// Project settings were loaded or reset: search defaults and spell checking follow them.
+function settingsLoaded(){if(window.TextSearch&&TextSearch.applyDefaults)TextSearch.applyDefaults();if(window.Spell)Spell.apply()}
 function setDirty(v){v=!!v;if(isDirty===v)return;isDirty=v;if(window.mentegraf&&window.mentegraf.setDirty)window.mentegraf.setDirty(v)}
 function addStarterNode(){if(cy.nodes().length)return;var c=catById('book')||categories[0];cy.add({data:{id:ProjectFormat.newId('n'),label:L('bookTitle'),type:c.id,color:c.color,description:'',notes:'',tags:[]},position:{x:400,y:300}})}
 // New Project: empty the existing graph and restore default settings. init() is not
 // re-run: it is a one-time setup (it would rebuild Cytoscape and lose #dragCanvas).
-function resetForNewProject(){initConfig();exportSettings={};Binder.load(null);nodeSizingOn=true;NodeSizing.enable(cy);multiClear();clrSel();Writer.reset();cy.elements().remove();cy.style().update();buildTF();rebuildETS();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}
+function resetForNewProject(){initConfig();exportSettings={};projectSettings={};settingsLoaded();Binder.load(null);nodeSizingOn=true;NodeSizing.enable(cy);multiClear();clrSel();Writer.reset();cy.elements().remove();cy.style().update();buildTF();rebuildETS();addStarterNode();cy.fit(null,100);uStats();resetHistory();setDirty(false)}
 function resetHistory(){undoStack=[JSON.stringify(getProject())];redoStack=[];updateUB()}
 function snapshot(){var s=JSON.stringify(getProject());if(undoStack.length>0&&undoStack[undoStack.length-1]===s)return;undoStack.push(s);setDirty(true);if(undoStack.length>maxUndo)undoStack.shift();redoStack=[];updateUB()}
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());loadProject(JSON.parse(undoStack[undoStack.length-1]),true);setDirty(true);updateUB()}
@@ -184,8 +186,8 @@ function clrHL(){cy.batch(function(){cy.elements().removeClass('dim hl hle')})}
 function doLayout(){cy.layout({name:'cose',animate:true,animationDuration:800,randomize:false,nodeDimensionsIncludeLabels:true,idealEdgeLength:function(){return 130},nodeRepulsion:function(){return 8000},gravity:.35,numIter:2000,padding:50}).run()}
 function toggleTheme(){curTheme=curTheme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',curTheme);localStorage.setItem('mentegraf-theme',curTheme);cy.style().update()}
 
-function getProject(){var nodes=[],edges=[];cy.nodes().forEach(function(n){var d=n.data(),p=n.position();var nd=ProjectFormat.cleanData(d);nd.description=d.description||'';nd.notes=d.notes||'';nd.tags=d.tags||[];nd.x=p.x;nd.y=p.y;nodes.push({data:nd,position:{x:p.x,y:p.y}})});cy.edges().forEach(function(e){var d=e.data();var ed=ProjectFormat.cleanData(d);ed.weight=d.weight||3;ed.edgeType=d.edgeType||'';ed.note=d.note||'';edges.push({data:ed})});return{version:ProjectFormat.CURRENT_VERSION,app:'Mentegraf',manuscript:Binder.get(),classification:Classify.get(),lang:curLang,config:{categories:categories,connectionTypes:connTypes,nodeSizing:nodeSizingOn,export:exportSettings},elements:{nodes:nodes,edges:edges}}}
-function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();exportSettings=(data.config&&data.config.export&&typeof data.config.export==='object')?data.config.export:{};Binder.load(data.manuscript);Classify.load(data.classification);if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;Figures.ensureTypes();if(data.config.connectionTypes&&data.config.connectionTypes.length){
+function getProject(){var nodes=[],edges=[];cy.nodes().forEach(function(n){var d=n.data(),p=n.position();var nd=ProjectFormat.cleanData(d);nd.description=d.description||'';nd.notes=d.notes||'';nd.tags=d.tags||[];nd.x=p.x;nd.y=p.y;nodes.push({data:nd,position:{x:p.x,y:p.y}})});cy.edges().forEach(function(e){var d=e.data();var ed=ProjectFormat.cleanData(d);ed.weight=d.weight||3;ed.edgeType=d.edgeType||'';ed.note=d.note||'';edges.push({data:ed})});return{version:ProjectFormat.CURRENT_VERSION,app:'Mentegraf',manuscript:Binder.get(),classification:Classify.get(),lang:curLang,config:{categories:categories,connectionTypes:connTypes,nodeSizing:nodeSizingOn,export:exportSettings,settings:projectSettings},elements:{nodes:nodes,edges:edges}}}
+function loadProject(data,noSnap){try{data=ProjectFormat.migrate(data).data}catch(err){alert(err.message);return false}if(!data.config)initConfig();exportSettings=(data.config&&data.config.export&&typeof data.config.export==='object')?data.config.export:{};projectSettings=(data.config&&data.config.settings&&typeof data.config.settings==='object')?data.config.settings:{};settingsLoaded();Binder.load(data.manuscript);Classify.load(data.classification);if(data.config){if(data.config.categories&&data.config.categories.length)categories=data.config.categories;Figures.ensureTypes();if(data.config.connectionTypes&&data.config.connectionTypes.length){
   connTypes=data.config.connectionTypes;
   var defMap={};DEFAULT_CONN_TYPES.forEach(function(d){defMap[d.id]=d});
   connTypes.forEach(function(ct){var df=defMap[ct.id];if(df){if(!ct.color)ct.color=df.color;if(!ct.marker)ct.marker=df.marker;if(!ct.style)ct.style=df.style}else{if(!ct.color)ct.color='#888';if(!ct.marker)ct.marker='';if(!ct.style)ct.style='solid'}})
@@ -482,13 +484,13 @@ function doExportCSV(){
 function showMsg(t){var m=document.getElementById('ml');m.innerHTML='<span style="color:var(--accent)">✓ '+t+'</span>';setTimeout(function(){m.textContent=''},2000)}
 function uStats(){var vn=cy?cy.nodes().filter(function(n){return!n.hasClass('filtered-out')}).length:0;var ve=cy?cy.edges().filter(function(e){return!e.hasClass('filtered-out')}).length:0;document.getElementById('stats').textContent=vn+' / '+ve}
 
-if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='toggle-autosave')setAutoSave(!autoSaveOn);if(a==='new')resetForNewProject();if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo();if(a==='text-search')TextSearch.open();if(a==='obsidian-import')ObsidianIn.open()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
+if(window.mentegraf){window.mentegraf.onMenuAction(function(a){if(Writer.handleMenu(a))return;if(a==='add-node')addNodeFree();if(a==='delete')delSel();if(a==='relayout')doLayout();if(a==='fit')cy.fit(null,50);if(a==='save')void doSave();if(a==='toggle-autosave')setAutoSave(!autoSaveOn);if(a==='new')resetForNewProject();if(a==='save-then-close'){doSave().then(function(ok){if(ok)window.mentegraf.closeWindow()})}if(a==='undo')undo();if(a==='redo')redo();if(a==='text-search')TextSearch.open();if(a==='toggle-spellcheck'&&window.Spell)Spell.toggle();if(a==='obsidian-import')ObsidianIn.open()});window.mentegraf.onFileOpened(function(data,p,opts){if(loadProject(data)!==false){Writer.reset();if(opts&&opts.recovered&&data.unsavedFragments)Writer.loadRecovered(data.unsavedFragments);resetHistory();setDirty(!!(opts&&opts.recovered))}})}
 
 document.addEventListener('DOMContentLoaded',async function(){
   await loadConfigs();
   await loadLangs();
 
   var st=localStorage.getItem('mentegraf-theme');if(st){curTheme=st;document.documentElement.setAttribute('data-theme',curTheme)}
-  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();Classify.init();TextSearch.init();Argue.init();Work.init();doLoad();
+  curLang=localStorage.getItem('mentegraf-lang')||'tr';initConfig();applyLang();init();Writer.init();Figures.init();ExportSettings.bind();Binder.init();Classify.init();TextSearch.init();Argue.init();Work.init();Spell.apply();doLoad();
   addStarterNode();
   cy.fit(null,100);uStats();resetHistory();setDirty(false);startAutoSave();startRealAutoSave();if(window.mentegraf&&window.mentegraf.rendererReady)window.mentegraf.rendererReady()});
