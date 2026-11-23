@@ -1,6 +1,6 @@
 {
   "name": "mentegraf",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "Author's Visual Knowledge Graph Tool",
   "main": "src/main.js",
   "author": "Afif Say",
@@ -14,7 +14,7 @@
     "build:linux": "electron-builder --linux",
     "build": "electron-builder",
     "build:cm": "node tools/build-codemirror.mjs",
-    "test": "node test/projectStore.test.js && node test/exporter.test.js && node test/styles.test.js && node test/compiler.test.js && node test/search.test.js && node test/dictionary.test.js && node test/speller.test.js && node test/suspicious.test.js && node test/replace.test.js"
+    "test": "node test/projectStore.test.js && node test/exporter.test.js && node test/styles.test.js && node test/compiler.test.js && node test/search.test.js && node test/dictionary.test.js && node test/speller.test.js && node test/suspicious.test.js && node test/replace.test.js && node test/markup.test.js"
   },
   "dependencies": {
     "dictionary-en": "4.0.0",

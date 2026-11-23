@@ -29,6 +29,8 @@ Metin Markdown olarak saklanır ve öyle görünür: `#`, `**`, `_` gibi işaret
 | iddia | Ctrl+Shift+K / U / T | iddia, soru, görev |
 | göz | Ctrl+E | önizleme |
 
+İtalik `*` ile yazılır: `*kâr*ı`. Alt çizgiyle (`_kâr_ı`) yazılan italik, ardından ek bitişik geldiğinde dışa aktarımda italik olmaz; alt çizgiler metinde kalır. `_Faust_’ta` gibi kesmeyle ayrılan durumlarda ikisi de çalışır. Ctrl+I eski `_..._` italikleri de kaldırır.
+
 ## Yazım denetimi
 
 Mentegraf metindeki yazım yanlışlarının altını kırmızı dalgalı bir çizgiyle çizer: yalnızca yazdıklarınızın değil, dosyada önceden duran metnin de. Denetim yalnızca metin bölmesinde yapılır (dipnotlar ve şekil alt yazıları dahil). Düğüm adları, dosya adları, metnin başındaki üst bilgi bloğu, kod blokları, web adresleri, dipnot ve atıf işaretleri, pasaj kimlikleri, `{…}` blokları, sayı içeren sözcükler ve büyük harfli kısaltmalar (NATO, AB) denetlenmez.

@@ -1,3 +1,7 @@
+# Mentegraf v2.6.1 — Release Notes
+
+- **Italic with asterisks:** Ctrl+I and the I button now write `*italic*` instead of `_italic_`. Pandoc does not read an underscore inside a word, so `_kâr_ı` stayed as typed in exports, while `*kâr*ı` gives *kâr* in italics with the suffix upright. Pressing again takes the italic off; bold `**…**` is not mistaken for italic, and italics written earlier with underscores are taken off too. Existing texts are not changed.
+
 # Mentegraf v2.6.0 — Release Notes
 
 ## Replace, one hit at a time

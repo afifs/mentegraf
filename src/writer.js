@@ -140,7 +140,7 @@ var Writer = (function () {
         { key: 'Delete', run: keyCmd('delete', CM.deleteCharForward) },
         { key: 'Mod-s', run: keyCmd('save', function () { if (typeof doSave === 'function') doSave(); return true }), preventDefault: true },
         { key: 'Mod-b', run: wrap('**'), preventDefault: true },
-        { key: 'Mod-i', run: wrap('_'), preventDefault: true },
+        { key: 'Mod-i', run: italic, preventDefault: true },
         { key: 'Mod-k', run: link, preventDefault: true },
         { key: 'Mod-Shift-f', run: footnote, preventDefault: true },
         { key: 'Mod-Shift-c', run: cite, preventDefault: true },
@@ -375,7 +375,22 @@ var Writer = (function () {
 
   // ───────── formatting commands (toolbar and shortcuts) ─────────
 
-  // Toggle **bold** / _italic_ around each selection.
+  // Toggle *italic* around each selection (markup.js: asterisks, so a suffix can follow
+  // directly — "*kâr*ı"; bold's ** is told apart; old _italic_ is taken off too).
+  function italic(v) {
+    var st = v.state, len = st.doc.length
+    v.dispatch(st.update(st.changeByRange(function (r) {
+      var start = Math.max(0, r.from - 3), end = Math.min(len, r.to + 3)
+      var res = Markup.toggleItalic(st.sliceDoc(start, end), r.from - start, r.to - start)
+      return {
+        changes: res.changes.map(function (c) { return { from: c.from + start, to: c.to + start, insert: c.insert } }),
+        range: CM.EditorSelection.range(res.from + start, res.to + start)
+      }
+    }), { scrollIntoView: true, userEvent: 'input' }))
+    return true
+  }
+
+  // Toggle **bold** around each selection.
   function wrap(mark) {
     return function (v) {
       var st = v.state, n = mark.length
@@ -541,7 +556,7 @@ var Writer = (function () {
   }
 
   var COMMANDS = {
-    bold: wrap('**'), italic: wrap('_'), heading: linePrefix('heading'), quote: linePrefix('quote'),
+    bold: wrap('**'), italic: italic, heading: linePrefix('heading'), quote: linePrefix('quote'),
     bullet: linePrefix('bullet'), number: linePrefix('number'), link: link,
     footnote: footnote, cite: cite, passage: passageId, accept: acceptMark, nextmark: nextMark, acceptall: acceptAllMarks, markadd: addMark
   }
